@@ -1,0 +1,57 @@
+services:
+  db:
+    image: postgis/postgis:16-3.4-alpine
+    container_name: nirby-db
+    env_file:
+      - .env
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-nirby}
+      - POSTGRES_USER=${POSTGRES_USER:-nirby}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-nirby_password}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-nirby} -d ${POSTGRES_DB:-nirby}",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - nirby-net
+  backend:
+    build:
+      context: ./backend
+    container_name: nirby-backend
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - DATABASE_URL=postgresql://nirby:${POSTGRES_PASSWORD}@db:5432/nirby
+    ports:
+      - "3000:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - nirby-net
+  frontend:
+    build:
+      context: ./frontend
+    container_name: nirby-frontend
+    depends_on:
+      - backend
+    ports:
+      - "5173:5173"
+    networks:
+      - nirby-net
+
+networks:
+  nirby-net:
+
+volumes:
+  postgres_data:
