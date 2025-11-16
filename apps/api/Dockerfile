@@ -3,7 +3,7 @@ ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable
 
-# Deps layer (cache-friendly)
+# Install deps
 FROM base AS deps
 WORKDIR /repo
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
@@ -17,22 +17,19 @@ COPY turbo.json ./
 RUN pnpm -C apps/api prisma:generate
 RUN pnpm -C apps/api build
 
-# Deploy (prod bundle sans husky)
-FROM base AS deploy
-WORKDIR /repo
-ENV CI=true
-COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
-COPY apps/api/package.json ./apps/api/
-COPY --from=build /repo/apps/api/dist ./apps/api/dist
-COPY --from=build /repo/apps/api/prisma ./apps/api/prisma
-RUN pnpm install --frozen-lockfile --prod --ignore-scripts
-RUN pnpm -C apps/api exec prisma generate
-RUN pnpm deploy --filter=@nirby/api --prod --legacy /out
-
-# Runtime
-FROM node:20-alpine
+# Runtime (copie manuelle des fichiers nécessaires, sans deploy)
+FROM node:20-alpine AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
-COPY --from=deploy /out .
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+RUN corepack enable
+
+# Copie uniquement ce qu'il faut pour l'app en prod
+COPY --from=build /repo/apps/api/dist ./dist
+COPY --from=build /repo/apps/api/package.json ./package.json
+COPY --from=build /repo/apps/api/prisma ./prisma
+COPY --from=deps /repo/node_modules ./node_modules
+
 EXPOSE 4000
 CMD ["node", "dist/index.js"]
