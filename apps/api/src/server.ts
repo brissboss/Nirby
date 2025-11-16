@@ -1,8 +1,9 @@
-import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
+import express, { Request, Response, NextFunction } from "express";
 import helmet from "helmet";
 import pino from "pino";
 import pinoHttp from "pino-http";
+
 import { prisma } from "./db";
 
 export function createServer() {
