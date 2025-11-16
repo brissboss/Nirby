@@ -1,8 +1,8 @@
 # Nirby
 
-Application full-stack avec API Express, PostgreSQL (PostGIS), et Redis.
+Full-stack application with Express API, PostgreSQL (PostGIS), and Redis.
 
-## Prérequis
+## Prerequisites
 
 - Node.js 20+
 - pnpm 10.14+
@@ -10,7 +10,7 @@ Application full-stack avec API Express, PostgreSQL (PostGIS), et Redis.
 
 ## Installation
 
-### 1. Installer les dépendances
+### 1. Install dependencies
 
 ```bash
 pnpm install
@@ -18,7 +18,7 @@ pnpm install
 
 ### 2. Configuration
 
-Créer un fichier `.env` dans `apps/api/` :
+Create a `.env` file in `apps/api/`:
 
 ```env
 DATABASE_URL="postgresql://nirby:nirby@localhost:5432/nirby"
@@ -27,51 +27,51 @@ PORT=4000
 LOG_LEVEL=info
 ```
 
-## Développement
+## Development
 
-### Lancer avec Docker (recommandé)
+### Run with Docker (recommended)
 
-Démarre tous les services (PostgreSQL, Redis, API) :
+Starts all services (PostgreSQL, Redis, API):
 
 ```bash
 cd infra
 docker-compose up
 ```
 
-Pour reconstruire les images :
+To rebuild images:
 
 ```bash
 docker-compose up --build
 ```
 
-Pour lancer en arrière-plan :
+To run in background:
 
 ```bash
 docker-compose up -d
 ```
 
-Voir les logs :
+View logs:
 
 ```bash
 docker-compose logs -f api
 ```
 
-Arrêter les services :
+Stop services:
 
 ```bash
 docker-compose down
 ```
 
-### Lancer en local (développement)
+### Run locally (development)
 
-1. Démarrer uniquement la DB et Redis avec Docker :
+1. Start only DB and Redis with Docker:
 
 ```bash
 cd infra
 docker-compose up db redis -d
 ```
 
-2. Lancer l'API en mode développement :
+2. Run the API in development mode:
 
 ```bash
 cd apps/api
@@ -80,82 +80,82 @@ pnpm dev
 
 ## Services
 
-Une fois démarré, les services sont accessibles sur :
+Once started, services are accessible at:
 
-- **API** : http://localhost:4000
-  - Health check : http://localhost:4000/health
-  - DB Health check : http://localhost:4000/db/health
-- **PostgreSQL** : localhost:5432
-- **Redis** : localhost:6379
+- **API**: http://localhost:4000
+  - Health check: http://localhost:4000/health
+  - DB Health check: http://localhost:4000/db/health
+- **PostgreSQL**: localhost:5432
+- **Redis**: localhost:6379
 
-## Base de données
+## Database
 
-### Migrations Prisma
+### Prisma Migrations
 
-Créer une nouvelle migration :
+Create a new migration:
 
 ```bash
 cd apps/api
 pnpm prisma:migrate
 ```
 
-Générer le client Prisma :
+Generate Prisma Client:
 
 ```bash
 cd apps/api
 pnpm prisma:generate
 ```
 
-Ouvrir Prisma Studio :
+Open Prisma Studio:
 
 ```bash
 cd apps/api
 npx prisma studio
 ```
 
-## Structure du projet
+## Project Structure
 
 ```
 .
 ├── apps/
-│   └── api/                # API Express
-│       ├── prisma/         # Schéma et migrations Prisma
-│       ├── src/            # Code source
-│       └── Dockerfile      # Image Docker de l'API
+│   └── api/                # Express API
+│       ├── prisma/         # Prisma schema and migrations
+│       ├── src/            # Source code
+│       └── Dockerfile      # API Docker image
 ├── infra/
-│   └── docker-compose.yaml # Configuration Docker
-├── packages/               # Packages partagés
-└── pnpm-workspace.yaml     # Configuration monorepo
+│   └── docker-compose.yaml # Docker configuration
+├── packages/               # Shared packages
+└── pnpm-workspace.yaml     # Monorepo configuration
 ```
 
-## Scripts disponibles
+## Available Scripts
 
 ### Root
 
 ```bash
-pnpm build    # Build tous les packages
-pnpm dev      # Lancer en mode développement
-pnpm lint     # Linter le code
-pnpm test     # Lancer les tests
+pnpm build    # Build all packages
+pnpm dev      # Run in development mode
+pnpm lint     # Lint code
+pnpm test     # Run tests
 ```
 
 ### API (`apps/api`)
 
 ```bash
-pnpm dev              # Développement avec hot-reload
-pnpm build            # Build pour production
-pnpm start            # Lancer la version buildée
-pnpm prisma:migrate   # Créer une migration
-pnpm prisma:generate  # Générer le client Prisma
+pnpm dev              # Development with hot-reload
+pnpm build            # Build for production
+pnpm start            # Run built version
+pnpm prisma:migrate   # Create a migration
+pnpm prisma:generate  # Generate Prisma Client
 ```
 
 ## Technologies
 
-- **API** : Express, TypeScript
-- **Base de données** : PostgreSQL avec PostGIS
-- **Cache** : Redis
-- **ORM** : Prisma
-- **Logs** : Pino
-- **Package Manager** : pnpm
-- **Build** : Turborepo
-- **Containerisation** : Docker
+- **API**: Express, TypeScript
+- **Database**: PostgreSQL with PostGIS
+- **Cache**: Redis
+- **ORM**: Prisma
+- **Logging**: Pino
+- **Package Manager**: pnpm
+- **Build**: Turborepo
+- **Containerization**: Docker

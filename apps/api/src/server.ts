@@ -5,12 +5,13 @@ import pino from "pino";
 import pinoHttp from "pino-http";
 
 import { prisma } from "./db";
+import { env } from "./env";
 
 export function createServer() {
   const app = express();
 
   const logger = pino({
-    level: process.env.LOG_LEVEL ?? "info",
+    level: env.LOG_LEVEL,
   });
   app.use(pinoHttp({ logger }));
 
