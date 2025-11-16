@@ -12,34 +12,27 @@ RUN pnpm install --frozen-lockfile
 
 # Build
 FROM deps AS build
-COPY apps/api/src ./apps/api/src
-COPY apps/api/tsconfig.json ./apps/api/
-COPY apps/api/prisma ./apps/api/prisma
+COPY apps/api ./apps/api
 COPY turbo.json ./
-WORKDIR /repo/apps/api
-RUN pnpm prisma:generate
-RUN pnpm build
+RUN pnpm -C apps/api prisma:generate
+RUN pnpm -C apps/api build
 
-# Runtime dependencies
-FROM base AS runtime-deps
+# Deploy (prod bundle sans husky)
+FROM base AS deploy
 WORKDIR /repo
+ENV CI=true
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
 COPY apps/api/package.json ./apps/api/
-COPY apps/api/prisma ./apps/api/prisma
-RUN pnpm install --frozen-lockfile --prod
-WORKDIR /repo/apps/api
-RUN pnpm prisma:generate
+COPY --from=build /repo/apps/api/dist ./apps/api/dist
+COPY --from=build /repo/apps/api/prisma ./apps/api/prisma
+RUN pnpm install --frozen-lockfile --prod --ignore-scripts
+RUN pnpm -C apps/api exec prisma generate
+RUN pnpm deploy --filter=@nirby/api --prod --legacy /out
 
 # Runtime
-FROM base
-WORKDIR /repo
+FROM node:20-alpine
+WORKDIR /app
 ENV NODE_ENV=production
-COPY pnpm-workspace.yaml package.json ./
-COPY --from=runtime-deps /repo/node_modules ./node_modules
-COPY --from=build /repo/apps/api/package.json ./apps/api/package.json
-COPY --from=build /repo/apps/api/dist ./apps/api/dist
-COPY --from=runtime-deps /repo/apps/api/prisma ./apps/api/prisma
-COPY --from=runtime-deps /repo/apps/api/node_modules ./apps/api/node_modules
-WORKDIR /repo/apps/api
+COPY --from=deploy /out .
 EXPOSE 4000
 CMD ["node", "dist/index.js"]
