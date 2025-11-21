@@ -21,12 +21,12 @@ jobs:
             echo "DEPLOY_ENV=prod" >> $GITHUB_OUTPUT
             echo "DEPLOY_PATH=/opt/nirby/prod" >> $GITHUB_OUTPUT
             echo "JWT_SECRET=${{ secrets.PROD_JWT_SECRET }}" >> $GITHUB_OUTPUT
-            echo "PORT=4000" >> $GITHUB_OUTPUT
+            echo "HEALTH_URL=http://api.nirby.theobrissiaud.fr/health" >> $GITHUB_OUTPUT
           else
             echo "DEPLOY_ENV=staging" >> $GITHUB_OUTPUT
             echo "DEPLOY_PATH=/opt/nirby/staging" >> $GITHUB_OUTPUT
             echo "JWT_SECRET=${{ secrets.STAGING_JWT_SECRET }}" >> $GITHUB_OUTPUT
-            echo "PORT=4001" >> $GITHUB_OUTPUT
+            echo "HEALTH_URL=http://staging.api.nirby.theobrissiaud.fr/health" >> $GITHUB_OUTPUT
           fi
 
       - name: Build Docker Image
@@ -76,4 +76,4 @@ jobs:
       - name: Health check
         run: |
           sleep 10
-          curl -f http://${{ secrets.SSH_HOST }}:${{ steps.env.outputs.PORT }}/health || echo "Warning: Health check failed"
+          curl -f ${{ steps.env.outputs.HEALTH_URL }} || echo "Warning: Health check failed"
