@@ -8,6 +8,15 @@ export const SwaggerSpec = swaggerJsdoc({
       version: "1.0.0",
       description: "API for the Nirby application",
     },
+    components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: "http",
+          scheme: "bearer",
+          bearerFormat: "JWT",
+        },
+      },
+    },
   },
   apis: ["./src/**/*.ts"],
 });
