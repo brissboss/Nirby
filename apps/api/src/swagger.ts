@@ -14,9 +14,11 @@ export const SwaggerSpec = swaggerJsdoc({
           type: "http",
           scheme: "bearer",
           bearerFormat: "JWT",
+          description: "Enter your JWT access token",
         },
       },
     },
   },
-  apis: ["./src/**/*.ts"],
+  // En dev, scan les fichiers .ts, en prod scan les .js compilés
+  apis: process.env.NODE_ENV === "production" ? ["./dist/**/*.js"] : ["./src/**/*.ts"],
 });
