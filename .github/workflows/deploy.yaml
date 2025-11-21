@@ -35,14 +35,15 @@ jobs:
       - name: Save Docker Image
         run: docker save nirby-api:${{ github.sha }} | gzip > nirby-api.tar.gz
 
-      - name: Copy image to server
+      - name: Copy files to server
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: "nirby-api.tar.gz"
-          target: "/tmp/"
+          source: "nirby-api.tar.gz,infra/${{ steps.env.outputs.DEPLOY_ENV }}/docker-compose.yaml"
+          target: "/tmp/deploy/"
+          strip_components: 0
 
       - name: Deploy on server
         uses: appleboy/ssh-action@v1.0.3
@@ -54,16 +55,20 @@ jobs:
             set -e
 
             # Load the new image
-            docker load < /tmp/nirby-api.tar.gz
+            docker load < /tmp/deploy/nirby-api.tar.gz
             docker tag nirby-api:${{ github.sha }} nirby-api:latest
+
+            # Copy docker-compose to deploy path
+            mkdir -p ${{ steps.env.outputs.DEPLOY_PATH }}
+            cp /tmp/deploy/infra/${{ steps.env.outputs.DEPLOY_ENV }}/docker-compose.yaml ${{ steps.env.outputs.DEPLOY_PATH }}/
 
             # Deploy
             cd ${{ steps.env.outputs.DEPLOY_PATH }}
             export JWT_SECRET="${{ steps.env.outputs.JWT_SECRET }}"
-            docker-compose up -d --force-recreate api
+            docker-compose up -d --force-recreate
 
             # Cleanup
-            rm /tmp/nirby-api.tar.gz
+            rm -rf /tmp/deploy
 
             # Show logs
             docker-compose logs --tail=50 api

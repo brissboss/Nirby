@@ -1,0 +1,49 @@
+services:
+  db:
+    image: postgis/postgis:16-3.5
+    container_name: nirby-prod-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: nirby
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: nirby
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    networks:
+      - nirby-prod
+
+  redis:
+    image: redis:7-alpine
+    container_name: nirby-prod-redis
+    restart: unless-stopped
+    networks:
+      - nirby-prod
+
+  api:
+    image: nirby-api:latest
+    container_name: nirby-prod-api
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      LOG_LEVEL: info
+      DATABASE_URL: postgresql://nirby:${DB_PASSWORD}@db:5432/nirby
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET}
+      ACCESS_TOKEN_TTL: 900
+      REFRESH_TOKEN_TTL: 604800
+    depends_on:
+      - db
+      - redis
+    networks:
+      - nirby-prod
+    ports:
+      - "4000:4000"
+    command: sh -c "npx prisma migrate deploy && node dist/index.js"
+
+volumes:
+  db_data:
+
+networks:
+  nirby-prod:
+    driver: bridge
