@@ -1,13 +1,16 @@
+import { apiReference } from "@scalar/express-api-reference";
 import cors from "cors";
 import express, { Request, Response, NextFunction } from "express";
 import helmet from "helmet";
 import pino from "pino";
 import pinoHttp from "pino-http";
-import swaggerUi from "swagger-ui-express";
 
+import { authRouter } from "./auth/routes";
 import { prisma } from "./db";
 import { env } from "./env";
 import { SwaggerSpec } from "./swagger";
+import { ErrorCode, ErrorCodes } from "./utils/error-codes";
+import { ApiError, formatError } from "./utils/errors";
 
 export function createServer() {
   const app = express();
@@ -17,7 +20,14 @@ export function createServer() {
   });
   app.use(pinoHttp({ logger }));
 
-  app.use(helmet());
+  // app.use(helmet());
+  app.use((req, res, next) => {
+    if (req.path.startsWith("/docs")) {
+      return next();
+    }
+    helmet()(req, res, next);
+  });
+
   app.use(
     cors({
       origin: true,
@@ -26,13 +36,61 @@ export function createServer() {
   );
   app.use(express.json({ limit: "1mb" }));
 
-  app.use("/docs", swaggerUi.serve, swaggerUi.setup(SwaggerSpec));
+  app.use(
+    "/docs",
+    apiReference({
+      spec: {
+        url: "/docs.json",
+      },
+      layout: "modern",
+      hideClientButton: true,
+      theme: "deepSpace",
+      showSidebar: true,
+      showDeveloperTools: "never",
+      showToolbar: "localhost",
+      operationTitleSource: "summary",
+      persistAuth: false,
+      telemetry: true,
+      isEditable: false,
+      isLoading: false,
+      hideModels: false,
+      documentDownloadType: "both",
+      hideTestRequestButton: false,
+      hideSearch: false,
+      showOperationId: false,
+      hideDarkModeToggle: false,
+      withDefaultFonts: true,
+      defaultOpenAllTags: false,
+      expandAllModelSections: false,
+      expandAllResponses: false,
+      orderSchemaPropertiesBy: "alpha",
+      orderRequiredPropertiesFirst: true,
+      authentication: {
+        preferredSecurityScheme: "bearerAuth",
+        http: {
+          bearer: {
+            token: "",
+          },
+        },
+      },
+      _integration: "express",
+      default: false,
+      slug: "api-1",
+      title: "API #1",
+    })
+  );
+
+  app.get("/docs.json", (_req, res) => res.json(SwaggerSpec));
+
+  app.use("/auth", authRouter);
 
   /**
    * @openapi
    * /health:
    *   get:
    *     summary: Health check
+   *     tags:
+   *       - Health
    *     responses:
    *       200:
    *         description: API is alive
@@ -46,6 +104,8 @@ export function createServer() {
    * /db/health:
    *   get:
    *     summary: Database health check
+   *     tags:
+   *       - Health
    *     responses:
    *       200:
    *         description: Database is alive
@@ -56,12 +116,19 @@ export function createServer() {
   });
 
   app.use((req: Request, res: Response) => {
-    res.status(404).json({ error: "Not Found" });
+    res.status(404).json(formatError(ErrorCodes.NOT_FOUND, "Not Found"));
   });
 
-  app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
+  app.use((err: unknown, req: Request, res: Response) => {
     req.log?.error({ err }, "Unhandled error");
-    res.status(500).json({ error: "Internal Server Error" });
+
+    if (err instanceof ApiError) {
+      return res
+        .status(err.statusCode)
+        .json(formatError(err.code as ErrorCode, err.message, err.details));
+    }
+
+    return res.status(500).json(formatError(ErrorCodes.INTERNAL_ERROR, "Internal server error"));
   });
 
   return app;
