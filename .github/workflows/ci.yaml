@@ -83,17 +83,7 @@ jobs:
       - name: Build API image
         run: docker build -t nirby-api:ci -f apps/api/Dockerfile .
 
-      - name: Debug env vars
-        run: |
-          echo "JWT_SECRET length: ${#JWT_SECRET}"
-          echo "ACCESS_TOKEN_TTL: 900"
-          echo "REFRESH_TOKEN_TTL: 604800"
-        env:
-          JWT_SECRET: ${{ secrets.JWT_SECRET }}
-
       - name: Run API container
-        env:
-          JWT_SECRET: ${{ secrets.JWT_SECRET }}
         run: |
           docker run -d \
             --name nirby-api-test \
@@ -103,7 +93,7 @@ jobs:
             -e PORT=4000 \
             -e LOG_LEVEL=info \
             -e NODE_ENV=production \
-            -e JWT_SECRET="${JWT_SECRET}" \
+            -e JWT_SECRET=${{ secrets.JWT_SECRET }} \
             -e ACCESS_TOKEN_TTL=900 \
             -e REFRESH_TOKEN_TTL=604800 \
             nirby-api:ci
