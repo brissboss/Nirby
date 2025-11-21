@@ -33,10 +33,19 @@ jobs:
         run: docker build -t nirby-api:${{ github.sha }} -f apps/api/Dockerfile .
 
       - name: Save Docker Image
-        run: docker save nirby-api:${{ github.sha }} | gzip > nirby-api-${{ github.sha }}.tar.gz
+        run: docker save nirby-api:${{ github.sha }} | gzip > nirby-api.tar.gz
 
       - name: Copy image to server
         uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "nirby-api.tar.gz"
+          target: "/tmp/"
+
+      - name: Deploy on server
+        uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
@@ -58,6 +67,7 @@ jobs:
 
             # Show logs
             docker-compose logs --tail=50 api
+
       - name: Health check
         run: |
           sleep 10
