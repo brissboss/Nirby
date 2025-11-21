@@ -4,9 +4,9 @@ export const SwaggerSpec = swaggerJsdoc({
   definition: {
     openapi: "3.0.0",
     info: {
-      title: "Nirby staging API",
+      title: "Nirby API",
       version: "0.0.1",
-      description: "Staging API for the Nirby application",
+      description: "API for the Nirby application",
     },
     components: {
       securitySchemes: {
