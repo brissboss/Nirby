@@ -1,4 +1,4 @@
-# Nirby
+# Nirby test
 
 Full-stack application with Express API, PostgreSQL (PostGIS), and Redis.
 
