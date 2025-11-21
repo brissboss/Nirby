@@ -38,7 +38,7 @@ services:
     networks:
       - nirby-staging
     ports:
-      - "4001:4000"
+      - "127.0.0.1:4001:4000"
     command: sh -c "npx prisma migrate deploy && node dist/index.js"
 
 volumes:

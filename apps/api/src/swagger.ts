@@ -14,7 +14,6 @@ export const SwaggerSpec = swaggerJsdoc({
           type: "http",
           scheme: "bearer",
           bearerFormat: "JWT",
-          description: "Enter your JWT access token",
         },
       },
     },

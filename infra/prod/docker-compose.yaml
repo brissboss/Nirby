@@ -38,7 +38,7 @@ services:
     networks:
       - nirby-prod
     ports:
-      - "4000:4000"
+      - "127.0.0.1:4000:4000"
     command: sh -c "npx prisma migrate deploy && node dist/index.js"
 
 volumes:
