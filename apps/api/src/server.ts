@@ -49,7 +49,7 @@ export function createServer() {
       showDeveloperTools: "never",
       showToolbar: "localhost",
       operationTitleSource: "summary",
-      persistAuth: false,
+      persistAuth: true,
       telemetry: true,
       isEditable: false,
       isLoading: false,

@@ -18,6 +18,5 @@ export const SwaggerSpec = swaggerJsdoc({
       },
     },
   },
-  // En dev, scan les fichiers .ts, en prod scan les .js compilés
-  apis: process.env.NODE_ENV === "production" ? ["./dist/**/*.js"] : ["./src/**/*.ts"],
+  apis: process.env.NODE_ENV === "development" ? ["./src/**/*.ts"] : ["./dist/**/*.js"],
 });
