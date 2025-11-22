@@ -19,6 +19,17 @@ services:
     networks:
       - nirby-staging
 
+  adminer:
+    image: adminer:latest
+    container_name: nirby-staging-adminer
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8081:8080"
+    networks:
+      - nirby-staging
+    environment:
+      ADMINER_DEFAULT_SERVER: db
+
   api:
     image: nirby-api:latest
     container_name: nirby-staging-api
