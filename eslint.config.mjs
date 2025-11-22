@@ -4,7 +4,17 @@ import tseslint from "typescript-eslint";
 
 export default tseslint.config(
   {
-    ignores: ["node_modules", "dist", ".turbo", "coverage", "**/node_modules", "**/dist"],
+    ignores: [
+      "node_modules",
+      "dist",
+      ".turbo",
+      "coverage",
+      "**/node_modules",
+      "**/dist",
+      "**/vitest.config.ts",
+      "**/__test__/**",
+      "**/test/**",
+    ],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
