@@ -10,6 +10,26 @@ jobs:
   ci:
     runs-on: ubuntu-latest
 
+    services:
+      db:
+        image: postgis/postgis:16-3.5
+        env:
+          POSTGRES_USER: nirby
+          POSTGRES_PASSWORD: nirby
+          POSTGRES_DB: nirby_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U nirby -d nirby_test"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -43,11 +63,25 @@ jobs:
       - name: Generate Prisma Client
         run: pnpm -C apps/api prisma:generate
 
+      - name: Run migrations on test DB
+        run: |
+          cd apps/api
+          DATABASE_URL="postgresql://nirby:nirby@localhost:5432/nirby_test" pnpm prisma migrate deploy
+        env:
+          DATABASE_URL: postgresql://nirby:nirby@localhost:5432/nirby_test
+
       - name: Lint
         run: pnpm lint
 
       - name: Test
         run: pnpm test
+        env:
+          DATABASE_URL: postgresql://nirby:nirby@localhost:5432/nirby_test
+          REDIS_URL: redis://localhost:6379
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          ACCESS_TOKEN_TTL: 900
+          REFRESH_TOKEN_TTL: 604800
+          NODE_ENV: test
 
       - name: Build
         run: pnpm build
