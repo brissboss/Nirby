@@ -74,7 +74,7 @@ jobs:
         run: pnpm lint
 
       - name: Test
-        run: pnpm test
+        run: pnpm test -- --reporter=verbose
         env:
           DATABASE_URL: postgresql://nirby:nirby@localhost:5432/nirby_test
           REDIS_URL: redis://localhost:6379
