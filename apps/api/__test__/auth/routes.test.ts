@@ -1,8 +1,11 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
+import crypto from "crypto";
 import request from "supertest";
 import { createServer } from "../../src/server";
 import { prisma } from "../../src/db";
 import { ErrorCodes } from "../../src/utils/error-codes";
+import { hashPassword } from "../../src/auth/hash";
+import { signAccessToken } from "../../src/auth/token";
 
 const app = createServer();
 
@@ -32,9 +35,14 @@ describe("Auth routes", () => {
 
       expect(res.status).toBe(201);
       expect(res.body).toHaveProperty("user");
-      expect(res.body).toHaveProperty("accessToken");
-      expect(res.body).toHaveProperty("refreshToken");
+      expect(res.body).toHaveProperty("message");
       expect(res.body.user.email).toBe("test@example.com");
+
+      const user = await prisma.user.findUnique({ where: { email: "test@example.com" } });
+
+      expect(user).toBeTruthy();
+      expect(user?.emailVerified).toBe(false);
+      expect(user?.emailVerificationToken).toBeTruthy();
     });
 
     it("should reject duplicate email", async () => {
@@ -118,11 +126,23 @@ describe("Auth routes", () => {
     let refreshToken: string;
 
     beforeEach(async () => {
-      const signupRes = await request(app).post("/auth/signup").send({
-        email: "refresh@example.com",
-        password: "password123",
+      const passwordHash = await hashPassword("password123");
+      const user = await prisma.user.create({
+        data: {
+          email: "refresh@example.com",
+          passwordHash,
+          emailVerified: true,
+        },
       });
-      refreshToken = signupRes.body.refreshToken;
+
+      refreshToken = crypto.randomBytes(64).toString("hex");
+      await prisma.session.create({
+        data: {
+          userId: user.id,
+          refreshToken,
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        },
+      });
     });
 
     it("should refresh access token", async () => {
@@ -176,11 +196,23 @@ describe("Auth routes", () => {
     let refreshToken: string;
 
     beforeEach(async () => {
-      const signupRes = await request(app).post("/auth/signup").send({
-        email: "logout@example.com",
-        password: "password123",
+      const passwordHash = await hashPassword("password123");
+      const user = await prisma.user.create({
+        data: {
+          email: "logout@example.com",
+          passwordHash,
+          emailVerified: true,
+        },
       });
-      refreshToken = signupRes.body.refreshToken;
+
+      refreshToken = crypto.randomBytes(64).toString("hex");
+      await prisma.session.create({
+        data: {
+          userId: user.id,
+          refreshToken,
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        },
+      });
     });
 
     it("should logout successfully", async () => {
@@ -202,11 +234,16 @@ describe("Auth routes", () => {
     let accessToken: string;
 
     beforeEach(async () => {
-      const signupRes = await request(app).post("/auth/signup").send({
-        email: "me@example.com",
-        password: "password123",
+      const passwordHash = await hashPassword("password123");
+      const user = await prisma.user.create({
+        data: {
+          email: "me@example.com",
+          passwordHash,
+          emailVerified: true,
+        },
       });
-      accessToken = signupRes.body.accessToken;
+
+      accessToken = signAccessToken({ userId: user.id, email: user.email });
     });
 
     it("should return user profile with valid token", async () => {
@@ -267,9 +304,160 @@ describe("Auth routes", () => {
 
       expect(res.status).toBe(201);
       expect(res.body).toHaveProperty("user");
-      expect(res.body).toHaveProperty("accessToken");
-      expect(res.body).toHaveProperty("refreshToken");
       expect(res.body.user.email).toBe("strong@example.com");
+    });
+  });
+
+  describe("Get /auth/verify-email", () => {
+    it("should verify email with valid token", async () => {
+      const user = await prisma.user.create({
+        data: {
+          email: "verify@example.com",
+          passwordHash: "dummy-hash",
+          emailVerified: false,
+          emailVerificationToken: "valid-token-123",
+          emailVerificationExpiresAt: new Date(Date.now() + 1000 * 60 * 60 * 1000),
+        },
+      });
+
+      const res = await request(app)
+        .get("/auth/verify-email")
+        .query({ token: "valid-token-123" })
+        .set("Accept", "application/json");
+
+      expect(res.status).toBe(200);
+      expect(res.body.message).toBe("Email verified successfully");
+      expect(res.body.user.email).toBe("verify@example.com");
+
+      const updatedUser = await prisma.user.findUnique({ where: { id: user.id } });
+
+      expect(updatedUser?.emailVerified).toBe(true);
+      expect(updatedUser?.emailVerificationToken).toBeNull();
+    });
+
+    it("should reject invalid token", async () => {
+      const res = await request(app)
+        .get("/auth/verify-email")
+        .query({ token: "invalid-token-that-does-not-exist" })
+        .set("Accept", "application/json");
+
+      expect(res.status).toBe(404);
+      expect(res.body.error.code).toBe(ErrorCodes.TOKEN_EXPIRED);
+      expect(res.body.error.message).toBe("Invalid or expired token");
+    });
+
+    it("should reject expired token", async () => {
+      await prisma.user.create({
+        data: {
+          email: "expired@example.com",
+          passwordHash: "dummy-hash",
+          emailVerified: false,
+          emailVerificationToken: "expired-token-123",
+          emailVerificationExpiresAt: new Date(Date.now() - 1000),
+        },
+      });
+
+      const res = await request(app)
+        .get("/auth/verify-email")
+        .query({ token: "expired-token-123" })
+        .set("Accept", "application/json");
+
+      expect(res.status).toBe(404);
+      expect(res.body.error.code).toBe(ErrorCodes.TOKEN_EXPIRED);
+      expect(res.body.error.message).toContain("Invalid or expired token");
+    });
+
+    it("should reject already verified email", async () => {
+      await prisma.user.create({
+        data: {
+          email: "already@example.com",
+          passwordHash: "dummy-hash",
+          emailVerified: true,
+          emailVerificationToken: "some-token-123",
+          emailVerificationExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+        },
+      });
+
+      const res = await request(app)
+        .get("/auth/verify-email")
+        .query({ token: "some-token-123" })
+        .set("Accept", "application/json");
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe(ErrorCodes.EMAIL_ALREADY_VERIFIED);
+      expect(res.body.error.message).toBe("Email already verified");
+    });
+
+    it("should require token parameter", async () => {
+      const res = await request(app).get("/auth/verify-email").set("Accept", "application/json");
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe(ErrorCodes.TOKEN_REQUIRED);
+      expect(res.body.error.message).toBe("Token is required");
+    });
+  });
+
+  describe("POST /auth/resend-verification", () => {
+    it("should resend verification email for unverified user", async () => {
+      const user = await prisma.user.create({
+        data: {
+          email: "resend@example.com",
+          passwordHash: "dummy-hash",
+          emailVerified: false,
+          emailVerificationToken: "old-token-123",
+          emailVerificationExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+        },
+      });
+
+      const res = await request(app)
+        .post("/auth/resend-verification")
+        .send({ email: "resend@example.com" });
+
+      expect(res.status).toBe(200);
+      expect(res.body.message).toContain("verification email has been sent");
+
+      const updatedUser = await prisma.user.findUnique({
+        where: { id: user.id },
+      });
+      expect(updatedUser?.emailVerificationToken).not.toBe("old-token-123");
+      expect(updatedUser?.emailVerificationToken).toBeTruthy();
+      expect(updatedUser?.emailVerificationExpiresAt).toBeTruthy();
+    });
+
+    it("should reject already verified email", async () => {
+      await prisma.user.create({
+        data: {
+          email: "verified@example.com",
+          passwordHash: "dummy-hash",
+          emailVerified: true,
+        },
+      });
+
+      const res = await request(app)
+        .post("/auth/resend-verification")
+        .send({ email: "verified@example.com" });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe(ErrorCodes.EMAIL_ALREADY_VERIFIED);
+      expect(res.body.error.message).toBe("Email already verified");
+    });
+
+    it("should return success even if email doesn't exist (security)", async () => {
+      const res = await request(app)
+        .post("/auth/resend-verification")
+        .send({ email: "nonexistent@example.com" });
+
+      expect(res.status).toBe(200);
+      expect(res.body.message).toContain("verification email has been sent");
+    });
+
+    it("should validate email format", async () => {
+      const res = await request(app)
+        .post("/auth/resend-verification")
+        .send({ email: "invalid-email" });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe(ErrorCodes.VALIDATION_ERROR);
     });
   });
 });

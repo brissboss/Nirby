@@ -4,13 +4,16 @@ import { Router } from "express";
 import { z } from "zod";
 
 import { prisma } from "../db";
+import { sendVerificationEmail } from "../email/service";
 import { env } from "../env";
+import { SUPPORTED_LANGUAGES } from "../types";
 import { ErrorCodes } from "../utils/error-codes";
 import { formatError, handleZodError } from "../utils/errors";
 
 import { hashPassword, verifyPassword } from "./hash";
 import { requireAuth } from "./middleware";
 import { signAccessToken } from "./token";
+import { generateVerificationToken, getVerificationTokenExpiration } from "./verification";
 
 export const authRouter = Router();
 
@@ -23,6 +26,15 @@ const authSchema = z.object({
     .string({ required_error: ErrorCodes.PASSWORD_REQUIRED })
     .min(8, ErrorCodes.PASSWORD_TOO_SHORT)
     .max(255, ErrorCodes.PASSWORD_TOO_LONG),
+  language: z.enum(SUPPORTED_LANGUAGES).optional().default("en"),
+});
+
+const resendVerificationEmailSchema = z.object({
+  email: z
+    .string({ required_error: ErrorCodes.EMAIL_REQUIRED })
+    .email(ErrorCodes.INVALID_EMAIL)
+    .max(255, ErrorCodes.EMAIL_TOO_LONG),
+  language: z.enum(SUPPORTED_LANGUAGES).optional().default("en"),
 });
 
 /**
@@ -46,6 +58,10 @@ const authSchema = z.object({
  *                 type: string
  *                 minLength: 8
  *                 example: "password123"
+ *               language:
+ *                 type: string
+ *                 enum: [fr, en]
+ *                 default: en
  *             required:
  *               - email
  *               - password
@@ -59,7 +75,7 @@ const authSchema = z.object({
  */
 authRouter.post("/signup", async (req, res) => {
   try {
-    const { email, password } = authSchema.parse(req.body);
+    const { email, password, language } = authSchema.parse(req.body);
 
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
@@ -70,27 +86,34 @@ authRouter.post("/signup", async (req, res) => {
 
     const passwordHash = await hashPassword(password);
 
+    const verificationToken = generateVerificationToken();
+    const verificationExpires = getVerificationTokenExpiration(24);
+
     const user = await prisma.user.create({
-      data: { email, passwordHash },
-    });
-
-    const accessToken = signAccessToken({ userId: user.id, email: user.email });
-    const refreshToken = crypto.randomBytes(64).toString("hex");
-
-    const expiresAt = new Date(Date.now() + env.REFRESH_TOKEN_TTL * 1000);
-
-    await prisma.session.create({
       data: {
-        userId: user.id,
-        refreshToken,
-        expiresAt,
+        email,
+        passwordHash,
+        emailVerified: false,
+        emailVerificationToken: verificationToken,
+        emailVerificationExpiresAt: verificationExpires,
       },
     });
 
+    try {
+      await sendVerificationEmail(email, verificationToken, language);
+    } catch (emailError) {
+      req.log?.error(
+        {
+          emailError,
+          userId: user.id,
+        },
+        "Failed to send verification email"
+      );
+    }
+
     res.status(201).json({
+      message: "User created. Please check your email to verify your account",
       user: { id: user.id, email: user.email },
-      accessToken,
-      refreshToken,
     });
   } catch (err) {
     if (err instanceof z.ZodError) {
@@ -102,6 +125,177 @@ authRouter.post("/signup", async (req, res) => {
     req.log?.error({ err });
 
     return res.status(500).json(formatError(ErrorCodes.INTERNAL_ERROR, "Internal server error"));
+  }
+});
+
+/**
+ * @openapi
+ * /auth/verify-email:
+ *   get:
+ *     summary: Verify user email address
+ *     tags: [Auth]
+ *     parameters:
+ *       - in: query
+ *         name: token
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Email verification token
+ *     responses:
+ *       200:
+ *         description: Email verified successfully
+ *       400:
+ *         description: Invalid or expired token
+ *       404:
+ *         description: Token not found
+ *       500:
+ *         description: Internal server error
+ */
+authRouter.get("/verify-email", async (req, res) => {
+  try {
+    const { token } = req.query;
+
+    if (!token || typeof token !== "string") {
+      return res.status(400).json(formatError(ErrorCodes.TOKEN_REQUIRED, "Token is required"));
+    }
+
+    const user = await prisma.user.findFirst({
+      where: {
+        emailVerificationToken: token,
+        emailVerificationExpiresAt: {
+          gt: new Date(),
+        },
+      },
+    });
+
+    if (!user) {
+      return res
+        .status(404)
+        .json(formatError(ErrorCodes.TOKEN_EXPIRED, "Invalid or expired token"));
+    }
+
+    if (user.emailVerified) {
+      return res
+        .status(400)
+        .json(formatError(ErrorCodes.EMAIL_ALREADY_VERIFIED, "Email already verified"));
+    }
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        emailVerified: true,
+        emailVerificationToken: null,
+        emailVerificationExpiresAt: null,
+      },
+    });
+
+    // Check if the request is from Scalar or an API request
+    const isFromScalar = req.headers.referer?.includes("/docs");
+    const isApiRequest =
+      req.headers.accept?.includes("application/json") ||
+      req.query.format === "json" ||
+      isFromScalar;
+
+    if (isApiRequest) {
+      return res.status(200).json({
+        message: "Email verified successfully",
+        user: { id: user.id, email: user.email },
+        redirectUrl: `${env.FRONTEND_URL}/verify-email?success=true`,
+      });
+    } else {
+      const redirectUrl = `${env.FRONTEND_URL}/verify-email?success=true`;
+      return res.redirect(redirectUrl);
+    }
+  } catch (err) {
+    req.log?.error({ err });
+
+    return res.status(500).json(formatError(ErrorCodes.INTERNAL_ERROR, "Internal server error"));
+  }
+});
+
+/**
+ * @openapi
+ * /auth/resend-verification:
+ *   post:
+ *     summary: Resend email verification
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               language:
+ *                 type: string
+ *                 enum: [fr, en]
+ *                 default: en
+ *     responses:
+ *       200:
+ *         description: Verification email sent (if user exists and not verified)
+ *       400:
+ *         description: Invalid input or email already verified
+ *       500:
+ *         description: Internal server error
+ */
+authRouter.post("/resend-verification", async (req, res) => {
+  try {
+    const { email, language } = resendVerificationEmailSchema.parse(req.body);
+
+    const user = await prisma.user.findUnique({ where: { email } });
+
+    if (!user) {
+      return res.status(200).json({
+        message: "If the email exists and is not verified, a verification email has been sent",
+      });
+    }
+
+    if (user.emailVerified) {
+      return res
+        .status(400)
+        .json(formatError(ErrorCodes.EMAIL_ALREADY_VERIFIED, "Email already verified"));
+    }
+
+    const verificationToken = generateVerificationToken();
+    const verificationExpires = getVerificationTokenExpiration(24);
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        emailVerificationToken: verificationToken,
+        emailVerificationExpiresAt: verificationExpires,
+      },
+    });
+
+    try {
+      await sendVerificationEmail(email, verificationToken, language || "en");
+    } catch (emailError) {
+      req.log?.error(
+        {
+          emailError,
+          userId: user.id,
+        },
+        "Failed to send verification email"
+      );
+    }
+
+    res.status(200).json({
+      message: "If the email exists and is not verified, a verification email has been sent",
+    });
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      const details = handleZodError(err);
+      return res
+        .status(400)
+        .json(formatError(ErrorCodes.VALIDATION_ERROR, "Invalid input", details));
+    }
+
+    throw err;
   }
 });
 

@@ -15,6 +15,10 @@ const envSchema = z.object({
     .number()
     .positive()
     .default(7 * 24 * 60 * 60),
+  RESEND_API_KEY: z.string().startsWith("re_"),
+  FRONTEND_URL: z.string().url().default("http://localhost:3000"),
+  EMAIL_VERIFICATION_TEMPLATE_ID_EN: z.string().optional(),
+  EMAIL_VERIFICATION_TEMPLATE_ID_FR: z.string().optional(),
 });
 
 export const env = envSchema.parse(process.env);
