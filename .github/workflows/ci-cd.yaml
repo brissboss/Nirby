@@ -130,6 +130,10 @@ jobs:
             -e JWT_SECRET=${{ secrets.JWT_SECRET }} \
             -e ACCESS_TOKEN_TTL=900 \
             -e REFRESH_TOKEN_TTL=604800 \
+            -e RESEND_API_KEY=${{ secrets.RESEND_API_KEY }} \
+            -e FRONTEND_URL=${{ secrets.FRONTEND_URL }} \
+            -e EMAIL_VERIFICATION_TEMPLATE_ID_EN=${{ secrets.EMAIL_VERIFICATION_TEMPLATE_ID_EN }} \
+            -e EMAIL_VERIFICATION_TEMPLATE_ID_FR=${{ secrets.EMAIL_VERIFICATION_TEMPLATE_ID_FR }} \
             nirby-api:ci
           sleep 10
           curl -f http://localhost:4000/health || (docker logs nirby-api-test && exit 1)

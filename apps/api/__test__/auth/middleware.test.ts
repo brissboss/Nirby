@@ -5,6 +5,7 @@ import { requireAuth } from "../../src/auth/middleware";
 import { prisma } from "../../src/db";
 import { signAccessToken } from "../../src/auth/token";
 import { ErrorCodes } from "../../src/utils/error-codes";
+import { requireVerifiedEmail } from "../../src/auth/middleware";
 
 function createTestApp() {
   const app = express();
@@ -16,6 +17,25 @@ function createTestApp() {
       user: req.user,
     });
   });
+
+  return app;
+}
+
+function createVerifiedTestApp() {
+  const app = express();
+  app.use(express.json());
+
+  app.get(
+    "/verified-protected",
+    requireAuth,
+    requireVerifiedEmail,
+    (req: Request, res: Response) => {
+      res.json({
+        success: true,
+        user: req.user,
+      });
+    }
+  );
 
   return app;
 }
@@ -148,6 +168,86 @@ describe("requireAuth middleware", () => {
       expect(res.status).toBe(401);
       expect(res.body.error.code).toBe(ErrorCodes.UNAUTHORIZED);
       expect(res.body.error.message).toContain("User not found");
+    });
+  });
+
+  describe("requireVerifiedEmail middleware", () => {
+    const app = createVerifiedTestApp();
+
+    beforeEach(async () => {
+      await prisma.session.deleteMany();
+      await prisma.user.deleteMany();
+    });
+
+    describe("Valid authentication and verification", () => {
+      it("should allow access with valid token and verified email", async () => {
+        const user = await prisma.user.create({
+          data: {
+            email: "verified@example.com",
+            passwordHash: "dummy-hash",
+            emailVerified: true,
+          },
+        });
+
+        const token = signAccessToken({ userId: user.id, email: user.email });
+
+        const res = await request(app)
+          .get("/verified-protected")
+          .set("Authorization", `Bearer ${token}`);
+
+        expect(res.status).toBe(200);
+        expect(res.body.success).toBe(true);
+        expect(res.body.user.id).toBe(user.id);
+        expect(res.body.user.email).toBe(user.email);
+      });
+    });
+
+    describe("Unverified email", () => {
+      it("should reject request when email is not verified", async () => {
+        const user = await prisma.user.create({
+          data: {
+            email: "unverified@example.com",
+            passwordHash: "dummy-hash",
+            emailVerified: false,
+          },
+        });
+
+        const token = signAccessToken({ userId: user.id, email: user.email });
+
+        const res = await request(app)
+          .get("/verified-protected")
+          .set("Authorization", `Bearer ${token}`);
+
+        expect(res.status).toBe(403);
+        expect(res.body.error.code).toBe(ErrorCodes.EMAIL_NOT_VERIFIED);
+        expect(res.body.error.message).toContain("Email verification required");
+      });
+    });
+
+    describe("User not found after auth", () => {
+      it("should reject request when user does not exist after authentication", async () => {
+        const user = await prisma.user.create({
+          data: {
+            email: "todelete@example.com",
+            passwordHash: "dummy-hash",
+            emailVerified: true,
+          },
+        });
+
+        const token = signAccessToken({ userId: user.id, email: user.email });
+
+        await prisma.user.delete({
+          where: { id: user.id },
+        });
+
+        const res = await request(app)
+          .get("/verified-protected")
+          .set("Authorization", `Bearer ${token}`);
+
+        expect(res.status).toBe(401);
+        expect(res.body.error.code).toBe(ErrorCodes.UNAUTHORIZED);
+        expect(res.body.error.message).toContain("User not found");
+      });
     });
   });
 });
