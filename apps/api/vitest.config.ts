@@ -14,6 +14,10 @@ export default defineConfig({
       JWT_SECRET: "test-secret-min-32-characters-long-for-testing-only",
       ACCESS_TOKEN_TTL: "900",
       REFRESH_TOKEN_TTL: "604800",
+      RESEND_API_KEY: "re_test_key_for_testing",
+      FRONTEND_URL: "http://localhost:3000",
+      EMAIL_VERIFICATION_TEMPLATE_ID_EN: "3b87e129-5741-4c29-b6b9-c673ddf54353",
+      EMAIL_VERIFICATION_TEMPLATE_ID_FR: "f25c7b0f-abd2-4abd-9d2c-72272aba0779",
     },
     coverage: {
       provider: "v8",

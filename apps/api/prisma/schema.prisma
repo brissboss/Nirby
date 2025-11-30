@@ -8,14 +8,17 @@ datasource db {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique @db.Text
-  passwordHash  String
-  name          String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id                          String    @id @default(cuid())
+  email                       String    @unique @db.Text
+  passwordHash                String
+  name                        String?
+  emailVerified               Boolean   @default(false)
+  emailVerificationToken      String?
+  emailVerificationExpiresAt  DateTime?
+  createdAt                   DateTime  @default(now())
+  updatedAt                   DateTime  @updatedAt
 
-  sessions      Session[]
+  sessions                    Session[]
 }
 
 model Session {
