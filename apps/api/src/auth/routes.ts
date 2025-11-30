@@ -15,10 +15,14 @@ import { signAccessToken } from "./token";
 export const authRouter = Router();
 
 const authSchema = z.object({
-  email: z.string({ required_error: ErrorCodes.EMAIL_REQUIRED }).email(ErrorCodes.INVALID_EMAIL),
+  email: z
+    .string({ required_error: ErrorCodes.EMAIL_REQUIRED })
+    .email(ErrorCodes.INVALID_EMAIL)
+    .max(255, ErrorCodes.EMAIL_TOO_LONG),
   password: z
     .string({ required_error: ErrorCodes.PASSWORD_REQUIRED })
-    .min(8, ErrorCodes.PASSWORD_TOO_SHORT),
+    .min(8, ErrorCodes.PASSWORD_TOO_SHORT)
+    .max(255, ErrorCodes.PASSWORD_TOO_LONG),
 });
 
 /**

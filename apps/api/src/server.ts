@@ -73,6 +73,12 @@ export function createServer() {
 
   app.use("/auth", authRouter);
 
+  if (env.NODE_ENV === "test") {
+    app.get("/test-error", (_req: Request, _res: Response, next: NextFunction) => {
+      next(new Error("Test generic error"));
+    });
+  }
+
   /**
    * @openapi
    * /health:
@@ -108,7 +114,7 @@ export function createServer() {
     res.status(404).json(formatError(ErrorCodes.NOT_FOUND, "Not Found"));
   });
 
-  app.use((err: unknown, req: Request, res: Response) => {
+  app.use((err: unknown, req: Request, res: Response, _next: NextFunction) => {
     req.log?.error({ err }, "Unhandled error");
 
     if (err instanceof ApiError) {

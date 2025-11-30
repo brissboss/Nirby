@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import request from "supertest";
 import { createServer } from "../../src/server";
 import { prisma } from "../../src/db";
+import { ErrorCodes } from "../../src/utils/error-codes";
 
 const app = createServer();
 
@@ -227,6 +228,48 @@ describe("Auth routes", () => {
 
       expect(res.status).toBe(401);
       expect(res.body.error.code).toBe("UNAUTHORIZED");
+    });
+  });
+
+  //   Security tests
+  describe("POST /auth/signup - Security", () => {
+    it("should reject extremely long email", async () => {
+      const longEmail = "a".repeat(1000) + "@example.com";
+
+      const res = await request(app).post("/auth/signup").send({
+        email: longEmail,
+        password: "password123",
+      });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe(ErrorCodes.VALIDATION_ERROR);
+    });
+
+    it("should reject SQL injection attempts in email", async () => {
+      const sqlInjectionEmail = "test'; DROP TABLE users; --@example.com";
+
+      const res = await request(app).post("/auth/signup").send({
+        email: sqlInjectionEmail,
+        password: "password123",
+      });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe(ErrorCodes.VALIDATION_ERROR);
+    });
+
+    it("should accept password with special characters", async () => {
+      const strongPassword = "P@ssw0rd!$#%^&*()";
+
+      const res = await request(app).post("/auth/signup").send({
+        email: "strong@example.com",
+        password: strongPassword,
+      });
+
+      expect(res.status).toBe(201);
+      expect(res.body).toHaveProperty("user");
+      expect(res.body).toHaveProperty("accessToken");
+      expect(res.body).toHaveProperty("refreshToken");
+      expect(res.body.user.email).toBe("strong@example.com");
     });
   });
 });
