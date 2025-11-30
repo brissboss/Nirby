@@ -120,5 +120,13 @@ describe("Server routes", () => {
       expect(res.status).toBe(500);
       expect(res.body.error.code).toBe(ErrorCodes.INTERNAL_ERROR);
     });
+
+    it("should handle generic errors from real server with 500", async () => {
+      const res = await request(app).get("/test-error");
+
+      expect(res.status).toBe(500);
+      expect(res.body.error.code).toBe(ErrorCodes.INTERNAL_ERROR);
+      expect(res.body.error.message).toBe("Internal server error");
+    });
   });
 });
