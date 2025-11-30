@@ -170,7 +170,7 @@ describe("requireAuth middleware", () => {
       expect(res.body.error.message).toContain("User not found");
     });
   });
-
+  
   describe("requireVerifiedEmail middleware", () => {
     const app = createVerifiedTestApp();
 
