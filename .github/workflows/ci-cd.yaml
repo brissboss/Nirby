@@ -134,6 +134,8 @@ jobs:
             -e FRONTEND_URL=${{ secrets.FRONTEND_URL }} \
             -e EMAIL_VERIFICATION_TEMPLATE_ID_EN=${{ secrets.EMAIL_VERIFICATION_TEMPLATE_ID_EN }} \
             -e EMAIL_VERIFICATION_TEMPLATE_ID_FR=${{ secrets.EMAIL_VERIFICATION_TEMPLATE_ID_FR }} \
+            -e EMAIL_PASSWORD_RESET_TEMPLATE_ID_EN=${{ secrets.EMAIL_PASSWORD_RESET_TEMPLATE_ID_EN }} \
+            -e EMAIL_PASSWORD_RESET_TEMPLATE_ID_FR=${{ secrets.EMAIL_PASSWORD_RESET_TEMPLATE_ID_FR }} \
             nirby-api:ci
           sleep 10
           curl -f http://localhost:4000/health || (docker logs nirby-api-test && exit 1)
@@ -155,11 +157,25 @@ jobs:
             echo "DEPLOY_ENV=prod" >> $GITHUB_OUTPUT
             echo "DEPLOY_PATH=/opt/nirby/prod" >> $GITHUB_OUTPUT
             echo "JWT_SECRET=${{ secrets.PROD_JWT_SECRET }}" >> $GITHUB_OUTPUT
+            echo "DB_PASSWORD=${{ secrets.PROD_DB_PASSWORD }}" >> $GITHUB_OUTPUT
+            echo "RESEND_API_KEY=${{ secrets.PROD_RESEND_API_KEY }}" >> $GITHUB_OUTPUT
+            echo "FRONTEND_URL=${{ secrets.PROD_FRONTEND_URL }}" >> $GITHUB_OUTPUT
+            echo "EMAIL_VERIFICATION_TEMPLATE_ID_EN=${{ secrets.EMAIL_VERIFICATION_TEMPLATE_ID_EN }}" >> $GITHUB_OUTPUT
+            echo "EMAIL_VERIFICATION_TEMPLATE_ID_FR=${{ secrets.EMAIL_VERIFICATION_TEMPLATE_ID_FR }}" >> $GITHUB_OUTPUT
+            echo "EMAIL_PASSWORD_RESET_TEMPLATE_ID_EN=${{ secrets.EMAIL_PASSWORD_RESET_TEMPLATE_ID_EN }}" >> $GITHUB_OUTPUT
+            echo "EMAIL_PASSWORD_RESET_TEMPLATE_ID_FR=${{ secrets.EMAIL_PASSWORD_RESET_TEMPLATE_ID_FR }}" >> $GITHUB_OUTPUT
             echo "HEALTH_URL=https://api.nirby.theobrissiaud.fr/health" >> $GITHUB_OUTPUT
           else
             echo "DEPLOY_ENV=staging" >> $GITHUB_OUTPUT
             echo "DEPLOY_PATH=/opt/nirby/staging" >> $GITHUB_OUTPUT
             echo "JWT_SECRET=${{ secrets.STAGING_JWT_SECRET }}" >> $GITHUB_OUTPUT
+            echo "DB_PASSWORD=${{ secrets.STAGING_DB_PASSWORD }}" >> $GITHUB_OUTPUT
+            echo "RESEND_API_KEY=${{ secrets.STAGING_RESEND_API_KEY }}" >> $GITHUB_OUTPUT
+            echo "FRONTEND_URL=${{ secrets.STAGING_FRONTEND_URL }}" >> $GITHUB_OUTPUT
+            echo "EMAIL_VERIFICATION_TEMPLATE_ID_EN=${{ secrets.EMAIL_VERIFICATION_TEMPLATE_ID_EN }}" >> $GITHUB_OUTPUT
+            echo "EMAIL_VERIFICATION_TEMPLATE_ID_FR=${{ secrets.EMAIL_VERIFICATION_TEMPLATE_ID_FR }}" >> $GITHUB_OUTPUT
+            echo "EMAIL_PASSWORD_RESET_TEMPLATE_ID_EN=${{ secrets.EMAIL_PASSWORD_RESET_TEMPLATE_ID_EN }}" >> $GITHUB_OUTPUT
+            echo "EMAIL_PASSWORD_RESET_TEMPLATE_ID_FR=${{ secrets.EMAIL_PASSWORD_RESET_TEMPLATE_ID_FR }}" >> $GITHUB_OUTPUT
             echo "HEALTH_URL=https://staging.api.nirby.theobrissiaud.fr/health" >> $GITHUB_OUTPUT
           fi
 
@@ -204,9 +220,16 @@ jobs:
             mkdir -p ${{ steps.env.outputs.DEPLOY_PATH }}
             cp /tmp/infra/${{ steps.env.outputs.DEPLOY_ENV }}/docker-compose.yaml ${{ steps.env.outputs.DEPLOY_PATH }}/
 
-            # Deploy
+            # Deploy with all environment variables
             cd ${{ steps.env.outputs.DEPLOY_PATH }}
             export JWT_SECRET="${{ steps.env.outputs.JWT_SECRET }}"
+            export DB_PASSWORD="${{ steps.env.outputs.DB_PASSWORD }}"
+            export RESEND_API_KEY="${{ steps.env.outputs.RESEND_API_KEY }}"
+            export FRONTEND_URL="${{ steps.env.outputs.FRONTEND_URL }}"
+            export EMAIL_VERIFICATION_TEMPLATE_ID_EN="${{ steps.env.outputs.EMAIL_VERIFICATION_TEMPLATE_ID_EN }}"
+            export EMAIL_VERIFICATION_TEMPLATE_ID_FR="${{ steps.env.outputs.EMAIL_VERIFICATION_TEMPLATE_ID_FR }}"
+            export EMAIL_PASSWORD_RESET_TEMPLATE_ID_EN="${{ steps.env.outputs.EMAIL_PASSWORD_RESET_TEMPLATE_ID_EN }}"
+            export EMAIL_PASSWORD_RESET_TEMPLATE_ID_FR="${{ steps.env.outputs.EMAIL_PASSWORD_RESET_TEMPLATE_ID_FR }}"
             docker-compose up -d --force-recreate
 
             # Cleanup
