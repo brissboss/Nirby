@@ -4,7 +4,7 @@ import { Router } from "express";
 import { z } from "zod";
 
 import { prisma } from "../db";
-import { sendVerificationEmail } from "../email/service";
+import { sendPasswordResetEmail, sendVerificationEmail } from "../email/service";
 import { env } from "../env";
 import { SUPPORTED_LANGUAGES } from "../types";
 import { ErrorCodes } from "../utils/error-codes";
@@ -35,6 +35,22 @@ const resendVerificationEmailSchema = z.object({
     .email(ErrorCodes.INVALID_EMAIL)
     .max(255, ErrorCodes.EMAIL_TOO_LONG),
   language: z.enum(SUPPORTED_LANGUAGES).optional().default("en"),
+});
+
+const forgotPasswordSchema = z.object({
+  email: z
+    .string({ required_error: ErrorCodes.EMAIL_REQUIRED })
+    .email(ErrorCodes.INVALID_EMAIL)
+    .max(255, ErrorCodes.EMAIL_TOO_LONG),
+  language: z.enum(SUPPORTED_LANGUAGES).optional().default("en"),
+});
+
+const resetPasswordSchema = z.object({
+  token: z.string({ required_error: ErrorCodes.TOKEN_REQUIRED }),
+  password: z
+    .string({ required_error: ErrorCodes.PASSWORD_REQUIRED })
+    .min(8, ErrorCodes.PASSWORD_TOO_SHORT)
+    .max(255, ErrorCodes.PASSWORD_TOO_LONG),
 });
 
 /**
@@ -491,6 +507,148 @@ authRouter.post("/logout", async (req, res) => {
     }
     req.log?.error({ err });
 
+    return res.status(500).json(formatError(ErrorCodes.INTERNAL_ERROR, "Internal server error"));
+  }
+});
+
+/**
+ * @openapi
+ * /auth/forgot-password:
+ *   post:
+ *     summary: Request a password reset
+ *     tags:
+ *       - Auth
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               language:
+ *                 type: string
+ *                 enum: [fr, en]
+ *                 default: en
+ *             required:
+ *               - email
+ *     responses:
+ *       200:
+ *         description: If the email exists, a password reset email has been sent
+ *       400:
+ *         description: Invalid input
+ *       500:
+ *         description: Internal server error
+ */
+authRouter.post("/forgot-password", async (req, res) => {
+  try {
+    const { email, language } = forgotPasswordSchema.parse(req.body);
+
+    const user = await prisma.user.findUnique({ where: { email } });
+
+    if (user) {
+      const resetToken = generateVerificationToken();
+      const resetExpires = getVerificationTokenExpiration(1);
+
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          passwordResetToken: resetToken,
+          passwordResetExpiresAt: resetExpires,
+        },
+      });
+
+      await sendPasswordResetEmail(email, resetToken, language);
+    }
+
+    res.json({ message: "If the email exists, a password reset email has been sent" });
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      const details = handleZodError(err);
+      return res
+        .status(400)
+        .json(formatError(ErrorCodes.VALIDATION_ERROR, "Invalid input", details));
+    }
+    req.log?.error({ err });
+    return res.status(500).json(formatError(ErrorCodes.INTERNAL_ERROR, "Internal server error"));
+  }
+});
+
+/**
+ * @openapi
+ * /auth/reset-password:
+ *   post:
+ *     summary: Reset password with token
+ *     tags:
+ *       - Auth
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               token:
+ *                 type: string
+ *                 description: Password reset token received by email
+ *               password:
+ *                 type: string
+ *                 minLength: 8
+ *                 description: New password
+ *             required:
+ *               - token
+ *               - password
+ *     responses:
+ *       200:
+ *         description: Password reset successfully
+ *       400:
+ *         description: Invalid or expired token
+ *       500:
+ *         description: Internal server error
+ */
+authRouter.post("/reset-password", async (req, res) => {
+  try {
+    const { token, password } = resetPasswordSchema.parse(req.body);
+
+    const user = await prisma.user.findFirst({
+      where: {
+        passwordResetToken: token,
+        passwordResetExpiresAt: {
+          gt: new Date(),
+        },
+      },
+    });
+
+    if (!user) {
+      return res
+        .status(400)
+        .json(formatError(ErrorCodes.TOKEN_EXPIRED, "Invalid or expired token"));
+    }
+
+    const passwordHash = await hashPassword(password);
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        passwordHash,
+        passwordResetToken: null,
+        passwordResetExpiresAt: null,
+      },
+    });
+
+    await prisma.session.deleteMany({ where: { userId: user.id } });
+
+    res.json({ message: "Password reset successfully" });
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      const details = handleZodError(err);
+      return res
+        .status(400)
+        .json(formatError(ErrorCodes.VALIDATION_ERROR, "Invalid input", details));
+    }
+    req.log?.error({ err });
     return res.status(500).json(formatError(ErrorCodes.INTERNAL_ERROR, "Internal server error"));
   }
 });
