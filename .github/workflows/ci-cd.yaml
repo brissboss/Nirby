@@ -127,10 +127,10 @@ jobs:
             -e PORT=4000 \
             -e LOG_LEVEL=info \
             -e NODE_ENV=production \
-            -e JWT_SECRET=test-jwt-secret-for-ci \
+            -e JWT_SECRET=test-jwt-secret-for-ci-minimum-32-chars \
             -e ACCESS_TOKEN_TTL=900 \
             -e REFRESH_TOKEN_TTL=604800 \
-            -e RESEND_API_KEY=test-resend-key \
+            -e RESEND_API_KEY=re_test_fake_resend_api_key_for_ci \
             -e FRONTEND_URL=http://localhost:3000 \
             -e EMAIL_VERIFICATION_TEMPLATE_ID_EN=${{ vars.EMAIL_VERIFICATION_TEMPLATE_ID_EN }} \
             -e EMAIL_VERIFICATION_TEMPLATE_ID_FR=${{ vars.EMAIL_VERIFICATION_TEMPLATE_ID_FR }} \
