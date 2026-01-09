@@ -78,7 +78,7 @@ jobs:
         env:
           DATABASE_URL: postgresql://nirby:nirby@localhost:5432/nirby_test
           REDIS_URL: redis://localhost:6379
-          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          JWT_SECRET: test-jwt-secret-for-ci
           ACCESS_TOKEN_TTL: 900
           REFRESH_TOKEN_TTL: 604800
           NODE_ENV: test
@@ -127,57 +127,28 @@ jobs:
             -e PORT=4000 \
             -e LOG_LEVEL=info \
             -e NODE_ENV=production \
-            -e JWT_SECRET=${{ secrets.JWT_SECRET }} \
+            -e JWT_SECRET=test-jwt-secret-for-ci-minimum-32-chars \
             -e ACCESS_TOKEN_TTL=900 \
             -e REFRESH_TOKEN_TTL=604800 \
-            -e RESEND_API_KEY=${{ secrets.RESEND_API_KEY }} \
-            -e FRONTEND_URL=${{ secrets.FRONTEND_URL }} \
-            -e EMAIL_VERIFICATION_TEMPLATE_ID_EN=${{ secrets.EMAIL_VERIFICATION_TEMPLATE_ID_EN }} \
-            -e EMAIL_VERIFICATION_TEMPLATE_ID_FR=${{ secrets.EMAIL_VERIFICATION_TEMPLATE_ID_FR }} \
-            -e EMAIL_PASSWORD_RESET_TEMPLATE_ID_EN=${{ secrets.EMAIL_PASSWORD_RESET_TEMPLATE_ID_EN }} \
-            -e EMAIL_PASSWORD_RESET_TEMPLATE_ID_FR=${{ secrets.EMAIL_PASSWORD_RESET_TEMPLATE_ID_FR }} \
+            -e RESEND_API_KEY=re_test_fake_resend_api_key_for_ci \
+            -e FRONTEND_URL=http://localhost:3000 \
+            -e EMAIL_VERIFICATION_TEMPLATE_ID_EN=${{ vars.EMAIL_VERIFICATION_TEMPLATE_ID_EN }} \
+            -e EMAIL_VERIFICATION_TEMPLATE_ID_FR=${{ vars.EMAIL_VERIFICATION_TEMPLATE_ID_FR }} \
+            -e EMAIL_PASSWORD_RESET_TEMPLATE_ID_EN=${{ vars.EMAIL_PASSWORD_RESET_TEMPLATE_ID_EN }} \
+            -e EMAIL_PASSWORD_RESET_TEMPLATE_ID_FR=${{ vars.EMAIL_PASSWORD_RESET_TEMPLATE_ID_FR }} \
             nirby-api:ci
           sleep 10
           curl -f http://localhost:4000/health || (docker logs nirby-api-test && exit 1)
 
-  deploy:
+  deploy-staging:
     runs-on: ubuntu-latest
     needs: [ci, api-docker]
-    # Ne déploie que sur push (pas sur PR)
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/staging')
+    if: github.event_name == 'push' && github.ref == 'refs/heads/staging'
+    environment: staging
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Set environment variables
-        id: env
-        run: |
-          if [ "${{ github.ref }}" == "refs/heads/main" ]; then
-            echo "DEPLOY_ENV=prod" >> $GITHUB_OUTPUT
-            echo "DEPLOY_PATH=/opt/nirby/prod" >> $GITHUB_OUTPUT
-            echo "JWT_SECRET=${{ secrets.PROD_JWT_SECRET }}" >> $GITHUB_OUTPUT
-            echo "DB_PASSWORD=${{ secrets.PROD_DB_PASSWORD }}" >> $GITHUB_OUTPUT
-            echo "RESEND_API_KEY=${{ secrets.PROD_RESEND_API_KEY }}" >> $GITHUB_OUTPUT
-            echo "FRONTEND_URL=${{ secrets.PROD_FRONTEND_URL }}" >> $GITHUB_OUTPUT
-            echo "EMAIL_VERIFICATION_TEMPLATE_ID_EN=${{ secrets.EMAIL_VERIFICATION_TEMPLATE_ID_EN }}" >> $GITHUB_OUTPUT
-            echo "EMAIL_VERIFICATION_TEMPLATE_ID_FR=${{ secrets.EMAIL_VERIFICATION_TEMPLATE_ID_FR }}" >> $GITHUB_OUTPUT
-            echo "EMAIL_PASSWORD_RESET_TEMPLATE_ID_EN=${{ secrets.EMAIL_PASSWORD_RESET_TEMPLATE_ID_EN }}" >> $GITHUB_OUTPUT
-            echo "EMAIL_PASSWORD_RESET_TEMPLATE_ID_FR=${{ secrets.EMAIL_PASSWORD_RESET_TEMPLATE_ID_FR }}" >> $GITHUB_OUTPUT
-            echo "HEALTH_URL=https://api.nirby.theobrissiaud.fr/health" >> $GITHUB_OUTPUT
-          else
-            echo "DEPLOY_ENV=staging" >> $GITHUB_OUTPUT
-            echo "DEPLOY_PATH=/opt/nirby/staging" >> $GITHUB_OUTPUT
-            echo "JWT_SECRET=${{ secrets.STAGING_JWT_SECRET }}" >> $GITHUB_OUTPUT
-            echo "DB_PASSWORD=${{ secrets.STAGING_DB_PASSWORD }}" >> $GITHUB_OUTPUT
-            echo "RESEND_API_KEY=${{ secrets.STAGING_RESEND_API_KEY }}" >> $GITHUB_OUTPUT
-            echo "FRONTEND_URL=${{ secrets.STAGING_FRONTEND_URL }}" >> $GITHUB_OUTPUT
-            echo "EMAIL_VERIFICATION_TEMPLATE_ID_EN=${{ secrets.EMAIL_VERIFICATION_TEMPLATE_ID_EN }}" >> $GITHUB_OUTPUT
-            echo "EMAIL_VERIFICATION_TEMPLATE_ID_FR=${{ secrets.EMAIL_VERIFICATION_TEMPLATE_ID_FR }}" >> $GITHUB_OUTPUT
-            echo "EMAIL_PASSWORD_RESET_TEMPLATE_ID_EN=${{ secrets.EMAIL_PASSWORD_RESET_TEMPLATE_ID_EN }}" >> $GITHUB_OUTPUT
-            echo "EMAIL_PASSWORD_RESET_TEMPLATE_ID_FR=${{ secrets.EMAIL_PASSWORD_RESET_TEMPLATE_ID_FR }}" >> $GITHUB_OUTPUT
-            echo "HEALTH_URL=https://staging.api.nirby.theobrissiaud.fr/health" >> $GITHUB_OUTPUT
-          fi
 
       - name: Build Docker Image
         run: docker build -t nirby-api:${{ github.sha }} -f apps/api/Dockerfile .
@@ -200,7 +171,7 @@ jobs:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: "infra/${{ steps.env.outputs.DEPLOY_ENV }}/docker-compose.yaml"
+          source: "infra/staging/docker-compose.yaml"
           target: "/tmp/"
 
       - name: Deploy on server
@@ -217,19 +188,19 @@ jobs:
             docker tag nirby-api:${{ github.sha }} nirby-api:latest
 
             # Copy docker-compose to deploy path
-            mkdir -p ${{ steps.env.outputs.DEPLOY_PATH }}
-            cp /tmp/infra/${{ steps.env.outputs.DEPLOY_ENV }}/docker-compose.yaml ${{ steps.env.outputs.DEPLOY_PATH }}/
+            mkdir -p /opt/nirby/staging
+            cp /tmp/infra/staging/docker-compose.yaml /opt/nirby/staging/
 
             # Deploy with all environment variables
-            cd ${{ steps.env.outputs.DEPLOY_PATH }}
-            export JWT_SECRET="${{ steps.env.outputs.JWT_SECRET }}"
-            export DB_PASSWORD="${{ steps.env.outputs.DB_PASSWORD }}"
-            export RESEND_API_KEY="${{ steps.env.outputs.RESEND_API_KEY }}"
-            export FRONTEND_URL="${{ steps.env.outputs.FRONTEND_URL }}"
-            export EMAIL_VERIFICATION_TEMPLATE_ID_EN="${{ steps.env.outputs.EMAIL_VERIFICATION_TEMPLATE_ID_EN }}"
-            export EMAIL_VERIFICATION_TEMPLATE_ID_FR="${{ steps.env.outputs.EMAIL_VERIFICATION_TEMPLATE_ID_FR }}"
-            export EMAIL_PASSWORD_RESET_TEMPLATE_ID_EN="${{ steps.env.outputs.EMAIL_PASSWORD_RESET_TEMPLATE_ID_EN }}"
-            export EMAIL_PASSWORD_RESET_TEMPLATE_ID_FR="${{ steps.env.outputs.EMAIL_PASSWORD_RESET_TEMPLATE_ID_FR }}"
+            cd /opt/nirby/staging
+            export JWT_SECRET="${{ secrets.JWT_SECRET }}"
+            export DB_PASSWORD="${{ secrets.DB_PASSWORD }}"
+            export RESEND_API_KEY="${{ secrets.RESEND_API_KEY }}"
+            export FRONTEND_URL="${{ vars.FRONTEND_URL }}"
+            export EMAIL_VERIFICATION_TEMPLATE_ID_EN="${{ vars.EMAIL_VERIFICATION_TEMPLATE_ID_EN }}"
+            export EMAIL_VERIFICATION_TEMPLATE_ID_FR="${{ vars.EMAIL_VERIFICATION_TEMPLATE_ID_FR }}"
+            export EMAIL_PASSWORD_RESET_TEMPLATE_ID_EN="${{ vars.EMAIL_PASSWORD_RESET_TEMPLATE_ID_EN }}"
+            export EMAIL_PASSWORD_RESET_TEMPLATE_ID_FR="${{ vars.EMAIL_PASSWORD_RESET_TEMPLATE_ID_FR }}"
             docker-compose up -d --force-recreate
 
             # Cleanup
@@ -242,4 +213,79 @@ jobs:
       - name: Health check
         run: |
           sleep 10
-          curl -f ${{ steps.env.outputs.HEALTH_URL }} || echo "Warning: Health check failed"
+          curl -f https://staging.api.nirby.theobrissiaud.fr/health || echo "Warning: Health check failed"
+
+  deploy-production:
+    runs-on: ubuntu-latest
+    needs: [ci, api-docker]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    environment: production
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build Docker Image
+        run: docker build -t nirby-api:${{ github.sha }} -f apps/api/Dockerfile .
+
+      - name: Save Docker Image
+        run: docker save nirby-api:${{ github.sha }} | gzip > nirby-api.tar.gz
+
+      - name: Copy image to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "nirby-api.tar.gz"
+          target: "/tmp/"
+
+      - name: Copy docker-compose to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "infra/prod/docker-compose.yaml"
+          target: "/tmp/"
+
+      - name: Deploy on server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+
+            # Load the new image
+            docker load < /tmp/nirby-api.tar.gz
+            docker tag nirby-api:${{ github.sha }} nirby-api:latest
+
+            # Copy docker-compose to deploy path
+            mkdir -p /opt/nirby/prod
+            cp /tmp/infra/prod/docker-compose.yaml /opt/nirby/prod/
+
+            # Deploy with all environment variables
+            cd /opt/nirby/prod
+            export JWT_SECRET="${{ secrets.JWT_SECRET }}"
+            export DB_PASSWORD="${{ secrets.DB_PASSWORD }}"
+            export RESEND_API_KEY="${{ secrets.RESEND_API_KEY }}"
+            export FRONTEND_URL="${{ vars.FRONTEND_URL }}"
+            export EMAIL_VERIFICATION_TEMPLATE_ID_EN="${{ vars.EMAIL_VERIFICATION_TEMPLATE_ID_EN }}"
+            export EMAIL_VERIFICATION_TEMPLATE_ID_FR="${{ vars.EMAIL_VERIFICATION_TEMPLATE_ID_FR }}"
+            export EMAIL_PASSWORD_RESET_TEMPLATE_ID_EN="${{ vars.EMAIL_PASSWORD_RESET_TEMPLATE_ID_EN }}"
+            export EMAIL_PASSWORD_RESET_TEMPLATE_ID_FR="${{ vars.EMAIL_PASSWORD_RESET_TEMPLATE_ID_FR }}"
+            docker-compose up -d --force-recreate
+
+            # Cleanup
+            rm -f /tmp/nirby-api.tar.gz
+            rm -rf /tmp/infra
+
+            # Show logs
+            docker-compose logs --tail=50 api
+
+      - name: Health check
+        run: |
+          sleep 10
+          curl -f https://api.nirby.theobrissiaud.fr/health || echo "Warning: Health check failed"
