@@ -709,3 +709,90 @@ describe("POST /auth/change-password", () => {
     expect(sessions).toHaveLength(0);
   });
 });
+
+describe("DELETE /auth/account", () => {
+  let accessToken: string;
+  let userId: string;
+
+  beforeEach(async () => {
+    await prisma.session.deleteMany();
+    await prisma.user.deleteMany();
+
+    const passwordHash = await hashPassword("password123");
+    const user = await prisma.user.create({
+      data: {
+        email: "delete-account@example.com",
+        passwordHash,
+        emailVerified: true,
+      },
+    });
+
+    userId = user.id;
+    accessToken = signAccessToken({ userId: user.id, email: user.email });
+  });
+
+  it("should delete account successfully", async () => {
+    const res = await request(app)
+      .delete("/auth/account")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .send({ password: "password123", language: "en" });
+
+    expect(res.status).toBe(200);
+    expect(res.body.message).toBe("Account deleted successfully");
+
+    const deletedUser = await prisma.user.findUnique({ where: { id: userId } });
+    expect(deletedUser).toBeNull();
+  });
+
+  it("should reject invalid password", async () => {
+    const res = await request(app)
+      .delete("/auth/account")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .send({ password: "wrongpassword", language: "en" });
+
+    expect(res.status).toBe(401);
+    expect(res.body.error.code).toBe(ErrorCodes.INVALID_CREDENTIALS);
+
+    const deletedUser = await prisma.user.findUnique({ where: { id: userId } });
+    expect(deletedUser).not.toBeNull();
+  });
+
+  it("should reject request without token", async () => {
+    const res = await request(app)
+      .delete("/auth/account")
+      .send({ password: "password123", language: "en" });
+
+    expect(res.status).toBe(401);
+    expect(res.body.error.code).toBe(ErrorCodes.UNAUTHORIZED);
+  });
+
+  it("should reject missing password", async () => {
+    const res = await request(app)
+      .delete("/auth/account")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .send({ language: "en" });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe(ErrorCodes.VALIDATION_ERROR);
+  });
+
+  it("should delete all sessions when account is deleted", async () => {
+    await prisma.session.create({
+      data: {
+        userId,
+        refreshToken: "test-refresh-token",
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      },
+    });
+
+    const res = await request(app)
+      .delete("/auth/account")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .send({ password: "password123", language: "en" });
+
+    expect(res.status).toBe(200);
+
+    const sessions = await prisma.session.findMany({ where: { userId } });
+    expect(sessions).toHaveLength(0);
+  });
+});

@@ -14,6 +14,10 @@ const TEMPLATE_IDS = {
     en: process.env.EMAIL_PASSWORD_RESET_TEMPLATE_ID_EN || "974a7bb7-6e26-4788-b683-31209ff6510e",
     fr: process.env.EMAIL_PASSWORD_RESET_TEMPLATE_ID_FR || "4940940f-1718-414e-9e59-65ca65fb2442",
   },
+  accountDeleted: {
+    en: process.env.EMAIL_ACCOUNT_DELETED_TEMPLATE_ID_EN || "bbf86a20-a269-4941-b4cb-3ddf50e3bca0",
+    fr: process.env.EMAIL_ACCOUNT_DELETED_TEMPLATE_ID_FR || "ff918753-74cc-4e90-8505-52ce3588ae18",
+  },
 } as const;
 
 export async function sendVerificationEmail(
@@ -51,6 +55,27 @@ export async function sendPasswordResetEmail(
       id: templateId,
       variables: {
         RESET_URL: resetUrl,
+      },
+    },
+  });
+}
+
+export async function sendAccountDeletedEmail(
+  email: string,
+  language: Language = "en"
+): Promise<void> {
+  const templateId = TEMPLATE_IDS.accountDeleted[language] || TEMPLATE_IDS.accountDeleted.en;
+
+  await resend.emails.send({
+    to: email,
+    template: {
+      id: templateId,
+      variables: {
+        DELETION_DATE: new Date().toLocaleDateString(language, {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        }),
       },
     },
   });
