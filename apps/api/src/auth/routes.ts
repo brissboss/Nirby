@@ -53,6 +53,14 @@ const resetPasswordSchema = z.object({
     .max(255, ErrorCodes.PASSWORD_TOO_LONG),
 });
 
+const changePasswordSchema = z.object({
+  oldPassword: z.string({ required_error: ErrorCodes.PASSWORD_REQUIRED }),
+  newPassword: z
+    .string({ required_error: ErrorCodes.PASSWORD_REQUIRED })
+    .min(8, ErrorCodes.PASSWORD_TOO_SHORT)
+    .max(255, ErrorCodes.PASSWORD_TOO_LONG),
+});
+
 /**
  * @openapi
  * /auth/signup:
@@ -641,6 +649,92 @@ authRouter.post("/reset-password", async (req, res) => {
     await prisma.session.deleteMany({ where: { userId: user.id } });
 
     res.json({ message: "Password reset successfully" });
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      const details = handleZodError(err);
+      return res
+        .status(400)
+        .json(formatError(ErrorCodes.VALIDATION_ERROR, "Invalid input", details));
+    }
+    req.log?.error({ err });
+    return res.status(500).json(formatError(ErrorCodes.INTERNAL_ERROR, "Internal server error"));
+  }
+});
+
+/**
+ * @openapi
+ * /auth/change-password:
+ *   post:
+ *     summary: Change user password
+ *     description: Allows an authenticated user to change their password. All existing sessions will be invalidated after the password is changed.
+ *     tags:
+ *       - Auth
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               oldPassword:
+ *                 type: string
+ *                 minLength: 8
+ *                 description: Current password
+ *               newPassword:
+ *                 type: string
+ *                 minLength: 8
+ *                 description: New password (must be different from old password)
+ *             required:
+ *               - oldPassword
+ *               - newPassword
+ *     responses:
+ *       200:
+ *         description: Password changed successfully
+ *       400:
+ *         description: Invalid input or new password same as old
+ *       401:
+ *         description: Unauthorized or invalid old password
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Internal server error
+ */
+authRouter.post("/change-password", requireAuth, async (req, res) => {
+  try {
+    const { oldPassword, newPassword } = changePasswordSchema.parse(req.body);
+
+    if (oldPassword === newPassword) {
+      return res
+        .status(400)
+        .json(
+          formatError(
+            ErrorCodes.PASSWORD_SAME,
+            "New password cannot be the same as the old password"
+          )
+        );
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: req.user?.id } });
+
+    if (!user) {
+      return res.status(404).json(formatError(ErrorCodes.NOT_FOUND, "User not found"));
+    }
+
+    const valid = await verifyPassword(oldPassword, user.passwordHash);
+    if (!valid) {
+      return res
+        .status(401)
+        .json(formatError(ErrorCodes.INVALID_CREDENTIALS, "Invalid old password"));
+    }
+
+    const newPasswordHash = await hashPassword(newPassword);
+    await prisma.user.update({ where: { id: user.id }, data: { passwordHash: newPasswordHash } });
+
+    await prisma.session.deleteMany({ where: { userId: user.id } });
+
+    res.json({ message: "Password changed successfully" });
   } catch (err) {
     if (err instanceof z.ZodError) {
       const details = handleZodError(err);

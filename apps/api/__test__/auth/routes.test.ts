@@ -596,3 +596,116 @@ describe("Auth routes", () => {
     });
   });
 });
+
+describe("POST /auth/change-password", () => {
+  let accessToken: string;
+  let userId: string;
+
+  beforeEach(async () => {
+    await prisma.session.deleteMany();
+    await prisma.user.deleteMany();
+
+    const passwordHash = await hashPassword("oldpassword123");
+    const user = await prisma.user.create({
+      data: {
+        email: "change-password@example.com",
+        passwordHash,
+        emailVerified: true,
+      },
+    });
+
+    userId = user.id;
+    accessToken = signAccessToken({ userId: user.id, email: user.email });
+  });
+
+  it("should change password successfully", async () => {
+    const res = await request(app)
+      .post("/auth/change-password")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .send({
+        oldPassword: "oldpassword123",
+        newPassword: "newpassword123",
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.message).toBe("Password changed successfully");
+
+    const loginRes = await request(app).post("/auth/login").send({
+      email: "change-password@example.com",
+      password: "newpassword123",
+    });
+    expect(loginRes.status).toBe(200);
+  });
+
+  it("should reject invalid old password", async () => {
+    const res = await request(app)
+      .post("/auth/change-password")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .send({
+        oldPassword: "wrong-password",
+        newPassword: "newpassword123",
+      });
+
+    expect(res.status).toBe(401);
+    expect(res.body.error.code).toBe(ErrorCodes.INVALID_CREDENTIALS);
+  });
+
+  it("should reject same password", async () => {
+    const res = await request(app)
+      .post("/auth/change-password")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .send({
+        oldPassword: "oldpassword123",
+        newPassword: "oldpassword123",
+      });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe(ErrorCodes.PASSWORD_SAME);
+  });
+
+  it("should reject request without token", async () => {
+    const res = await request(app).post("/auth/change-password").send({
+      oldPassword: "oldpassword123",
+      newPassword: "newpassword123",
+    });
+
+    expect(res.status).toBe(401);
+    expect(res.body.error.code).toBe(ErrorCodes.UNAUTHORIZED);
+  });
+
+  it("should reject short password", async () => {
+    const res = await request(app)
+      .post("/auth/change-password")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .send({
+        oldPassword: "oldpassword123",
+        newPassword: "short",
+      });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe(ErrorCodes.VALIDATION_ERROR);
+  });
+
+  it("should invalidate all sessions after password change", async () => {
+    await prisma.session.create({
+      data: {
+        userId,
+        refreshToken: "test-refresh-token",
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      },
+    });
+
+    const res = await request(app)
+      .post("/auth/change-password")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .send({
+        oldPassword: "oldpassword123",
+        newPassword: "newpassword123",
+      });
+
+    expect(res.status).toBe(200);
+
+    const sessions = await prisma.session.findMany({ where: { userId } });
+    expect(sessions).toHaveLength(0);
+  });
+});
