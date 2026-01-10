@@ -4,7 +4,11 @@ import { Router } from "express";
 import { z } from "zod";
 
 import { prisma } from "../db";
-import { sendPasswordResetEmail, sendVerificationEmail } from "../email/service";
+import {
+  sendAccountDeletedEmail,
+  sendPasswordResetEmail,
+  sendVerificationEmail,
+} from "../email/service";
 import { env } from "../env";
 import { SUPPORTED_LANGUAGES } from "../types";
 import { ErrorCodes } from "../utils/error-codes";
@@ -51,6 +55,19 @@ const resetPasswordSchema = z.object({
     .string({ required_error: ErrorCodes.PASSWORD_REQUIRED })
     .min(8, ErrorCodes.PASSWORD_TOO_SHORT)
     .max(255, ErrorCodes.PASSWORD_TOO_LONG),
+});
+
+const changePasswordSchema = z.object({
+  oldPassword: z.string({ required_error: ErrorCodes.PASSWORD_REQUIRED }),
+  newPassword: z
+    .string({ required_error: ErrorCodes.PASSWORD_REQUIRED })
+    .min(8, ErrorCodes.PASSWORD_TOO_SHORT)
+    .max(255, ErrorCodes.PASSWORD_TOO_LONG),
+});
+
+const deleteAccountSchema = z.object({
+  password: z.string({ required_error: ErrorCodes.PASSWORD_REQUIRED }),
+  language: z.enum(SUPPORTED_LANGUAGES).optional().default("en"),
 });
 
 /**
@@ -641,6 +658,165 @@ authRouter.post("/reset-password", async (req, res) => {
     await prisma.session.deleteMany({ where: { userId: user.id } });
 
     res.json({ message: "Password reset successfully" });
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      const details = handleZodError(err);
+      return res
+        .status(400)
+        .json(formatError(ErrorCodes.VALIDATION_ERROR, "Invalid input", details));
+    }
+    req.log?.error({ err });
+    return res.status(500).json(formatError(ErrorCodes.INTERNAL_ERROR, "Internal server error"));
+  }
+});
+
+/**
+ * @openapi
+ * /auth/change-password:
+ *   post:
+ *     summary: Change user password
+ *     description: Allows an authenticated user to change their password. All existing sessions will be invalidated after the password is changed.
+ *     tags:
+ *       - Auth
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               oldPassword:
+ *                 type: string
+ *                 minLength: 8
+ *                 description: Current password
+ *               newPassword:
+ *                 type: string
+ *                 minLength: 8
+ *                 description: New password (must be different from old password)
+ *             required:
+ *               - oldPassword
+ *               - newPassword
+ *     responses:
+ *       200:
+ *         description: Password changed successfully
+ *       400:
+ *         description: Invalid input or new password same as old
+ *       401:
+ *         description: Unauthorized or invalid old password
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Internal server error
+ */
+authRouter.post("/change-password", requireAuth, async (req, res) => {
+  try {
+    const { oldPassword, newPassword } = changePasswordSchema.parse(req.body);
+
+    if (oldPassword === newPassword) {
+      return res
+        .status(400)
+        .json(
+          formatError(
+            ErrorCodes.PASSWORD_SAME,
+            "New password cannot be the same as the old password"
+          )
+        );
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: req.user?.id } });
+
+    if (!user) {
+      return res.status(404).json(formatError(ErrorCodes.NOT_FOUND, "User not found"));
+    }
+
+    const valid = await verifyPassword(oldPassword, user.passwordHash);
+    if (!valid) {
+      return res
+        .status(401)
+        .json(formatError(ErrorCodes.INVALID_CREDENTIALS, "Invalid old password"));
+    }
+
+    const newPasswordHash = await hashPassword(newPassword);
+    await prisma.user.update({ where: { id: user.id }, data: { passwordHash: newPasswordHash } });
+
+    await prisma.session.deleteMany({ where: { userId: user.id } });
+
+    res.json({ message: "Password changed successfully" });
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      const details = handleZodError(err);
+      return res
+        .status(400)
+        .json(formatError(ErrorCodes.VALIDATION_ERROR, "Invalid input", details));
+    }
+    req.log?.error({ err });
+    return res.status(500).json(formatError(ErrorCodes.INTERNAL_ERROR, "Internal server error"));
+  }
+});
+
+/**
+ * @openapi
+ * /auth/account:
+ *   delete:
+ *     summary: Delete user account
+ *     description: Permanently deletes the authenticated user's account and all associated data. A confirmation email will be sent.
+ *     tags:
+ *       - Auth
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               password:
+ *                 type: string
+ *                 description: Current password for confirmation
+ *               language:
+ *                 type: string
+ *                 enum: [fr, en]
+ *                 default: en
+ *                 description: Language for the confirmation email
+ *             required:
+ *               - password
+ *     responses:
+ *       200:
+ *         description: Account deleted successfully
+ *       400:
+ *         description: Invalid input
+ *       401:
+ *         description: Unauthorized or invalid password
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Internal server error
+ */
+authRouter.delete("/account", requireAuth, async (req, res) => {
+  try {
+    const { password, language } = deleteAccountSchema.parse(req.body);
+
+    const user = await prisma.user.findUnique({ where: { id: req.user?.id } });
+    if (!user) {
+      return res.status(404).json(formatError(ErrorCodes.NOT_FOUND, "User not found"));
+    }
+
+    const valid = await verifyPassword(password, user.passwordHash);
+    if (!valid) {
+      return res.status(401).json(formatError(ErrorCodes.INVALID_CREDENTIALS, "Invalid password"));
+    }
+
+    const email = user.email;
+
+    await prisma.session.deleteMany({ where: { userId: user.id } });
+    await prisma.user.delete({ where: { id: user.id } });
+
+    await sendAccountDeletedEmail(email, language || "en");
+
+    res.json({ message: "Account deleted successfully" });
   } catch (err) {
     if (err instanceof z.ZodError) {
       const details = handleZodError(err);
