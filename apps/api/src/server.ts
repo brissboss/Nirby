@@ -8,6 +8,7 @@ import pinoHttp from "pino-http";
 import { authRouter } from "./auth/routes";
 import { prisma } from "./db";
 import { env } from "./env";
+import { poiRouter } from "./poi/routes";
 import { SwaggerSpec } from "./swagger";
 import { ErrorCode, ErrorCodes } from "./utils/error-codes";
 import { ApiError, formatError } from "./utils/errors";
@@ -72,6 +73,7 @@ export function createServer() {
   app.get("/docs.json", (_req, res) => res.json(SwaggerSpec));
 
   app.use("/auth", authRouter);
+  app.use("/poi", poiRouter);
 
   if (env.NODE_ENV === "test") {
     app.get("/test-error", (_req: Request, _res: Response, next: NextFunction) => {

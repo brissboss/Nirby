@@ -1,10 +1,12 @@
 generator client {
   provider = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  extensions = [postgis]
 }
 
 model User {
@@ -21,6 +23,7 @@ model User {
   updatedAt                   DateTime  @updatedAt
 
   sessions                    Session[]
+  pois                        Poi[]
 }
 
 model Session {
@@ -36,8 +39,23 @@ model Session {
 model Poi {
   id          String    @id @default(cuid())
   name        String
+  description String?
+  address     String?
   latitude    Float
   longitude   Float
+  location    Unsupported("geometry(Point, 4326)")?
+
+  createdBy   String
+  visibility  PoiVisibility @default(PRIVATE)
+
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+
+  user        User      @relation(fields: [createdBy], references: [id])
+}
+
+enum PoiVisibility {
+  PRIVATE
+  SHARED
+  PUBLIC
 }
