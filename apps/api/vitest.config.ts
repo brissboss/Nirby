@@ -5,6 +5,7 @@ export default defineConfig({
     globals: true,
     environment: "node",
     include: ["__test__/**/*.test.ts"],
+    fileParallelism: false,
     env: {
       DATABASE_URL: "postgresql://nirby:nirby@localhost:5432/nirby_test",
       REDIS_URL: "redis://localhost:6379",
