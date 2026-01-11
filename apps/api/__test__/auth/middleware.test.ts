@@ -44,11 +44,17 @@ describe("requireAuth middleware", () => {
   const app = createTestApp();
 
   beforeAll(async () => {
+    await prisma.savedPoi.deleteMany();
+    await prisma.poiList.deleteMany();
+    await prisma.poi.deleteMany();
     await prisma.session.deleteMany();
     await prisma.user.deleteMany();
   });
 
   afterAll(async () => {
+    await prisma.savedPoi.deleteMany();
+    await prisma.poiList.deleteMany();
+    await prisma.poi.deleteMany();
     await prisma.session.deleteMany();
     await prisma.user.deleteMany();
     await prisma.$disconnect();
@@ -170,7 +176,7 @@ describe("requireAuth middleware", () => {
       expect(res.body.error.message).toContain("User not found");
     });
   });
-  
+
   describe("requireVerifiedEmail middleware", () => {
     const app = createVerifiedTestApp();
 
