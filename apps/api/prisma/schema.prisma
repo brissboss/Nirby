@@ -61,6 +61,7 @@ model Poi {
   updatedAt       DateTime  @updatedAt
 
   user            User      @relation(fields: [createdBy], references: [id])
+  savedIn         SavedPoi[]
 }
 
 enum PoiVisibility {
@@ -81,4 +82,20 @@ model PoiList {
   updatedAt       DateTime  @updatedAt
 
   user            User      @relation(fields: [createdBy], references: [id])
+  savedPois       SavedPoi[]
+}
+
+model SavedPoi {
+  id              String    @id @default(cuid())
+  listId          String
+  poiId           String?
+  googlePlaceId   String?
+
+  createdAt       DateTime  @default(now())
+
+  list            PoiList   @relation(fields: [listId], references: [id])
+  poi             Poi?      @relation(fields: [poiId], references: [id])
+
+  @@unique([listId, poiId])
+  @@unique([listId, googlePlaceId])
 }

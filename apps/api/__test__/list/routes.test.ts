@@ -13,6 +13,7 @@ describe("List Routes", () => {
   let accessToken: string;
 
   beforeAll(async () => {
+    await prisma.savedPoi.deleteMany();
     await prisma.poiList.deleteMany();
     await prisma.poi.deleteMany();
     await prisma.session.deleteMany();
@@ -31,6 +32,7 @@ describe("List Routes", () => {
   });
 
   afterAll(async () => {
+    await prisma.savedPoi.deleteMany();
     await prisma.poiList.deleteMany();
     await prisma.poi.deleteMany();
     await prisma.session.deleteMany();
@@ -38,7 +40,9 @@ describe("List Routes", () => {
   });
 
   beforeEach(async () => {
+    await prisma.savedPoi.deleteMany();
     await prisma.poiList.deleteMany();
+    await prisma.poi.deleteMany();
   });
 
   describe("POST /list", () => {
@@ -175,6 +179,153 @@ describe("List Routes", () => {
     it("should return 404 for non-existent list", async () => {
       const res = await request(app)
         .delete(`/list/non-existent-id`)
+        .set("Authorization", `Bearer ${accessToken}`);
+
+      expect(res.status).toBe(404);
+    });
+  });
+
+  describe("POST /list/:listId/poi", () => {
+    it("should add a POI to a list", async () => {
+      const list = await prisma.poiList.create({
+        data: {
+          name: "Test List",
+          createdBy: userId,
+        },
+      });
+
+      const poi = await prisma.poi.create({
+        data: {
+          name: "Test POI",
+          latitude: 0,
+          longitude: 0,
+          createdBy: userId,
+        },
+      });
+
+      const res = await request(app)
+        .post(`/list/${list.id}/poi`)
+        .set("Authorization", `Bearer ${accessToken}`)
+        .send({
+          poiId: poi.id,
+        });
+
+      expect(res.status).toBe(201);
+      expect(res.body.savedPoi.poiId).toBe(poi.id);
+    });
+
+    it("should fail if POI already in list", async () => {
+      const list = await prisma.poiList.create({
+        data: {
+          name: "Test List",
+          createdBy: userId,
+        },
+      });
+
+      const poi = await prisma.poi.create({
+        data: {
+          name: "Test POI",
+          latitude: 0,
+          longitude: 0,
+          createdBy: userId,
+        },
+      });
+
+      await prisma.savedPoi.create({
+        data: {
+          listId: list.id,
+          poiId: poi.id,
+        },
+      });
+
+      const res = await request(app)
+        .post(`/list/${list.id}/poi`)
+        .set("Authorization", `Bearer ${accessToken}`)
+        .send({
+          poiId: poi.id,
+        });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.message).toBe("POI already in list");
+    });
+
+    it("should return 404 for non-existent list", async () => {
+      const res = await request(app)
+        .post(`/list/non-existent-id/poi`)
+        .set("Authorization", `Bearer ${accessToken}`)
+        .send({
+          poiId: "non-existent-id",
+        });
+
+      expect(res.status).toBe(404);
+    });
+  });
+
+  describe("GET /list/:listid/pois", () => {
+    it("should return POIs in a list", async () => {
+      const list = await prisma.poiList.create({
+        data: { name: "Test List", createdBy: userId },
+      });
+
+      const poi = await prisma.poi.create({
+        data: { name: "Test POI", latitude: 0, longitude: 0, createdBy: userId },
+      });
+
+      await prisma.savedPoi.create({
+        data: { listId: list.id, poiId: poi.id },
+      });
+
+      const res = await request(app)
+        .get(`/list/${list.id}/pois`)
+        .set("Authorization", `Bearer ${accessToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.savedPois).toHaveLength(1);
+      expect(res.body.savedPois[0].poi.name).toBe("Test POI");
+    });
+
+    it("should return 404 for non-existent list", async () => {
+      const res = await request(app)
+        .get("/list/non-existent-id/pois")
+        .set("Authorization", `Bearer ${accessToken}`);
+
+      expect(res.status).toBe(404);
+    });
+  });
+
+  describe("DELETE /list/:listId/poi/:savedPoiId", () => {
+    it("should remove a POI from a list", async () => {
+      const list = await prisma.poiList.create({
+        data: { name: "My List", createdBy: userId },
+      });
+
+      const poi = await prisma.poi.create({
+        data: {
+          name: "Test POI",
+          latitude: 48.8566,
+          longitude: 2.3522,
+          createdBy: userId,
+        },
+      });
+
+      const savedPoi = await prisma.savedPoi.create({
+        data: { listId: list.id, poiId: poi.id },
+      });
+
+      const res = await request(app)
+        .delete(`/list/${list.id}/poi/${savedPoi.id}`)
+        .set("Authorization", `Bearer ${accessToken}`);
+
+      expect(res.status).toBe(200);
+    });
+
+    it("should return 404 for non-existent saved POI", async () => {
+      const list = await prisma.poiList.create({
+        data: { name: "My List", createdBy: userId },
+      });
+
+      const res = await request(app)
+        .delete(`/list/${list.id}/poi/non-existent-id`)
         .set("Authorization", `Bearer ${accessToken}`);
 
       expect(res.status).toBe(404);
