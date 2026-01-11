@@ -164,19 +164,31 @@ const updatePoiSchema = z.object({
  *                       properties:
  *                         day:
  *                           type: integer
+ *                           minimum: 0
+ *                           maximum: 6
  *                         hour:
  *                           type: integer
+ *                           minimum: 0
+ *                           maximum: 23
  *                         minute:
  *                           type: integer
+ *                           minimum: 0
+ *                           maximum: 59
  *                     close:
  *                       type: object
  *                       properties:
  *                         day:
  *                           type: integer
+ *                           minimum: 0
+ *                           maximum: 6
  *                         hour:
  *                           type: integer
+ *                           minimum: 0
+ *                           maximum: 23
  *                         minute:
  *                           type: integer
+ *                           minimum: 0
+ *                           maximum: 59
  *               photoUrls:
  *                 type: array
  *                 items:
@@ -415,6 +427,37 @@ poiRouter.get("/:id", requireAuth, async (req, res) => {
  *                 type: array
  *                 items:
  *                   type: object
+ *                   properties:
+ *                     open:
+ *                       type: object
+ *                       properties:
+ *                         day:
+ *                           type: integer
+ *                           minimum: 0
+ *                           maximum: 6
+ *                         hour:
+ *                           type: integer
+ *                           minimum: 0
+ *                           maximum: 23
+ *                         minute:
+ *                           type: integer
+ *                           minimum: 0
+ *                           maximum: 59
+ *                     close:
+ *                       type: object
+ *                       properties:
+ *                         day:
+ *                           type: integer
+ *                           minimum: 0
+ *                           maximum: 6
+ *                         hour:
+ *                           type: integer
+ *                           minimum: 0
+ *                           maximum: 23
+ *                         minute:
+ *                           type: integer
+ *                           minimum: 0
+ *                           maximum: 59
  *               photoUrls:
  *                 type: array
  *                 items:
