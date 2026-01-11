@@ -3,10 +3,24 @@ import { z } from "zod";
 
 import { requireAuth } from "../auth/middleware";
 import { prisma } from "../db";
+import { POI_CATEGORIES, SUPPORTED_LANGUAGES } from "../types";
 import { ErrorCodes } from "../utils/error-codes";
 import { formatError, handleZodError } from "../utils/errors";
 
 export const poiRouter = Router();
+
+const openingHoursPeriodSchema = z.object({
+  open: z.object({
+    day: z.number().min(0).max(6),
+    hour: z.number().min(0).max(23),
+    minute: z.number().min(0).max(59),
+  }),
+  close: z.object({
+    day: z.number().min(0).max(6),
+    hour: z.number().min(0).max(23),
+    minute: z.number().min(0).max(59),
+  }),
+});
 
 const createPoiSchema = z.object({
   name: z
@@ -14,6 +28,7 @@ const createPoiSchema = z.object({
     .min(1, ErrorCodes.POI_NAME_REQUIRED)
     .max(255, ErrorCodes.POI_NAME_TOO_LONG),
   description: z.string().max(1000, ErrorCodes.POI_DESCRIPTION_TOO_LONG).optional(),
+  descriptionLang: z.enum(SUPPORTED_LANGUAGES).optional().default("fr"),
   address: z.string().max(500, ErrorCodes.POI_ADDRESS_TOO_LONG).optional(),
   latitude: z
     .number({ required_error: ErrorCodes.POI_LATITUDE_INVALID })
@@ -24,6 +39,24 @@ const createPoiSchema = z.object({
     .min(-180, ErrorCodes.POI_LONGITUDE_INVALID)
     .max(180, ErrorCodes.POI_LONGITUDE_INVALID),
   visibility: z.enum(["PRIVATE", "SHARED", "PUBLIC"]).optional().default("PRIVATE"),
+  category: z.enum(POI_CATEGORIES).optional(),
+  website: z
+    .string()
+    .optional()
+    .transform((val) => (val === "" ? undefined : val))
+    .refine((val) => !val || /^https?:\/\/.+/.test(val), { message: "Invalid url" }),
+  phone: z
+    .string()
+    .max(50)
+    .optional()
+    .transform((val) => (val === "" ? undefined : val)),
+  priceLevel: z.number().min(0).max(4).optional(),
+  openingHours: z.array(openingHoursPeriodSchema).optional(),
+  photoUrls: z
+    .array(z.string())
+    .optional()
+    .transform((arr) => arr?.filter((url) => url !== "") ?? [])
+    .refine((arr) => arr.every((url) => /^https?:\/\/.+/.test(url)), { message: "Invalid url" }),
 });
 
 const updatePoiSchema = z.object({
@@ -33,6 +66,7 @@ const updatePoiSchema = z.object({
     .max(255, ErrorCodes.POI_NAME_TOO_LONG)
     .optional(),
   description: z.string().max(1000, ErrorCodes.POI_DESCRIPTION_TOO_LONG).optional(),
+  descriptionLang: z.enum(SUPPORTED_LANGUAGES).optional(),
   address: z.string().max(500, ErrorCodes.POI_ADDRESS_TOO_LONG).optional(),
   latitude: z
     .number()
@@ -45,6 +79,24 @@ const updatePoiSchema = z.object({
     .max(180, ErrorCodes.POI_LONGITUDE_INVALID)
     .optional(),
   visibility: z.enum(["PRIVATE", "SHARED", "PUBLIC"]).optional(),
+  category: z.enum(POI_CATEGORIES).optional(),
+  website: z
+    .string()
+    .optional()
+    .transform((val) => (val === "" ? undefined : val))
+    .refine((val) => !val || /^https?:\/\/.+/.test(val), { message: "Invalid url" }),
+  phone: z
+    .string()
+    .max(50)
+    .optional()
+    .transform((val) => (val === "" ? undefined : val)),
+  priceLevel: z.number().min(0).max(4).optional(),
+  openingHours: z.array(openingHoursPeriodSchema).optional(),
+  photoUrls: z
+    .array(z.string())
+    .optional()
+    .transform((arr) => arr?.filter((url) => url !== "") ?? [])
+    .refine((arr) => arr.every((url) => /^https?:\/\/.+/.test(url)), { message: "Invalid url" }),
 });
 
 /**
@@ -70,6 +122,10 @@ const updatePoiSchema = z.object({
  *               description:
  *                 type: string
  *                 maxLength: 1000
+ *               descriptionLang:
+ *                 type: string
+ *                 enum: [fr, en]
+ *                 default: fr
  *               address:
  *                 type: string
  *                 maxLength: 500
@@ -85,6 +141,47 @@ const updatePoiSchema = z.object({
  *                 type: string
  *                 enum: [PRIVATE, SHARED, PUBLIC]
  *                 default: PRIVATE
+ *               category:
+ *                 type: string
+ *                 description: POI category (e.g., restaurant, museum)
+ *               website:
+ *                 type: string
+ *                 format: uri
+ *               phone:
+ *                 type: string
+ *                 maxLength: 50
+ *               priceLevel:
+ *                 type: integer
+ *                 minimum: 0
+ *                 maximum: 4
+ *               openingHours:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     open:
+ *                       type: object
+ *                       properties:
+ *                         day:
+ *                           type: integer
+ *                         hour:
+ *                           type: integer
+ *                         minute:
+ *                           type: integer
+ *                     close:
+ *                       type: object
+ *                       properties:
+ *                         day:
+ *                           type: integer
+ *                         hour:
+ *                           type: integer
+ *                         minute:
+ *                           type: integer
+ *               photoUrls:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: uri
  *             required:
  *               - name
  *               - latitude
@@ -107,10 +204,17 @@ poiRouter.post("/", requireAuth, async (req, res) => {
       data: {
         name: data.name,
         description: data.description,
+        descriptionLang: data.descriptionLang as string | undefined,
         address: data.address,
         latitude: data.latitude,
         longitude: data.longitude,
         visibility: data.visibility,
+        category: data.category as string | undefined,
+        website: data.website,
+        phone: data.phone,
+        priceLevel: data.priceLevel,
+        openingHours: data.openingHours,
+        photoUrls: data.photoUrls ?? [],
         createdBy: req.user!.id,
       },
     });
@@ -284,6 +388,9 @@ poiRouter.get("/:id", requireAuth, async (req, res) => {
  *                 type: string
  *               description:
  *                 type: string
+ *               descriptionLang:
+ *                 type: string
+ *                 enum: [fr, en]
  *               address:
  *                 type: string
  *               latitude:
@@ -293,6 +400,26 @@ poiRouter.get("/:id", requireAuth, async (req, res) => {
  *               visibility:
  *                 type: string
  *                 enum: [PRIVATE, SHARED, PUBLIC]
+ *               category:
+ *                 type: string
+ *               website:
+ *                 type: string
+ *                 format: uri
+ *               phone:
+ *                 type: string
+ *               priceLevel:
+ *                 type: integer
+ *                 minimum: 0
+ *                 maximum: 4
+ *               openingHours:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *               photoUrls:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: uri
  *     responses:
  *       200:
  *         description: POI updated successfully
@@ -327,7 +454,11 @@ poiRouter.put("/:id", requireAuth, async (req, res) => {
 
     const updatedPoi = await prisma.poi.update({
       where: { id: req.params.id },
-      data,
+      data: {
+        ...data,
+        descriptionLang: data.descriptionLang as string | undefined,
+        category: data.category as string | undefined,
+      },
     });
 
     res.json({ message: "POI updated successfully", poi: updatedPoi });

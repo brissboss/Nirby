@@ -37,21 +37,29 @@ model Session {
 }
 
 model Poi {
-  id          String    @id @default(cuid())
-  name        String
-  description String?
-  address     String?
-  latitude    Float
-  longitude   Float
-  location    Unsupported("geometry(Point, 4326)")?
+  id              String    @id @default(cuid())
+  name            String
+  description     String?
+  descriptionLang String?
+  address         String?
+  latitude        Float
+  longitude       Float
+  location        Unsupported("geometry(Point, 4326)")?
 
-  createdBy   String
-  visibility  PoiVisibility @default(PRIVATE)
+  category        String?
+  website         String?
+  phone           String?
+  priceLevel      Int?
+  openingHours    Json?
+  photoUrls       String[]
 
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdBy       String
+  visibility      PoiVisibility @default(PRIVATE)
 
-  user        User      @relation(fields: [createdBy], references: [id])
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  user            User      @relation(fields: [createdBy], references: [id])
 }
 
 enum PoiVisibility {
