@@ -24,6 +24,7 @@ model User {
 
   sessions                    Session[]
   pois                        Poi[]
+  poiLists                    PoiList[]
 }
 
 model Session {
@@ -66,4 +67,18 @@ enum PoiVisibility {
   PRIVATE
   SHARED
   PUBLIC
+}
+
+model PoiList {
+  id              String    @id @default(cuid())
+  name            String
+  description     String?
+  imageUrl        String?
+  createdBy       String
+  visibility      PoiVisibility @default(PRIVATE)
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  user            User      @relation(fields: [createdBy], references: [id])
 }
