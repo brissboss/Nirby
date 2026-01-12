@@ -1,11 +1,9 @@
 import { Router } from "express";
-import { z } from "zod";
 
 import { requireAuth } from "../auth/middleware";
 import { prisma } from "../db";
-import { POI_CATEGORIES, SUPPORTED_LANGUAGES } from "../types";
 import { ErrorCodes } from "../utils/error-codes";
-import { formatError, handleZodError } from "../utils/errors";
+import { formatError } from "../utils/errors";
 
 export const googlePlaceRouter = Router();
 
