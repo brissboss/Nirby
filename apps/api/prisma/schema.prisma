@@ -64,6 +64,41 @@ model Poi {
   savedIn         SavedPoi[]
 }
 
+model GooglePlaceCache {
+  id                      String    @id @default(cuid())
+  placeId                 String    @unique
+
+  name                    String
+  nameLang                String?
+  description             String?
+  descriptionLang         String?
+  address                 String?
+  latitude                Float
+  longitude               Float
+  location                Unsupported("geometry(Point, 4326)")?
+
+  category                String?
+  categoryDisplayName     String?
+  categoryDisplayNameLang String?
+
+  website                 String?
+  phone                   String?
+  priceLevel              Int?
+
+  openingHours            Json?
+
+  rating                  Float?
+  userRatingCount         Int?
+
+  photoReferences         String[]
+  googleMapsUri           String?
+
+  cachedAt                DateTime  @default(now())
+  expiresAt               DateTime? // cachedAt + 30 days
+
+  savedIn                 SavedPoi[]
+}
+
 enum PoiVisibility {
   PRIVATE
   SHARED
@@ -86,15 +121,16 @@ model PoiList {
 }
 
 model SavedPoi {
-  id              String    @id @default(cuid())
-  listId          String
-  poiId           String?
-  googlePlaceId   String?
+  id                    String    @id @default(cuid())
+  listId                String
+  poiId                 String?
+  googlePlaceId         String?
 
-  createdAt       DateTime  @default(now())
+  createdAt             DateTime  @default(now())
 
-  list            PoiList   @relation(fields: [listId], references: [id])
-  poi             Poi?      @relation(fields: [poiId], references: [id])
+  list                  PoiList            @relation(fields: [listId], references: [id], onDelete: Cascade)
+  poi                   Poi?               @relation(fields: [poiId], references: [id], onDelete: Cascade)
+  googlePlaceCache      GooglePlaceCache?  @relation(fields: [googlePlaceId], references: [placeId])
 
   @@unique([listId, poiId])
   @@unique([listId, googlePlaceId])
