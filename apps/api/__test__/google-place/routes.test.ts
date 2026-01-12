@@ -1,4 +1,4 @@
-import { beforeAll, afterAll, beforeEach, describe, expect, it } from "vitest";
+import { beforeAll, afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import request from "supertest";
 
 import { createServer } from "../../src/server";
@@ -7,6 +7,10 @@ import { hashPassword } from "../../src/auth/hash";
 import { signAccessToken } from "../../src/auth/token";
 
 const app = createServer();
+
+// Mock fetch globally for Google API calls
+const mockFetch = vi.fn();
+global.fetch = mockFetch;
 
 describe("Google Place Routes", () => {
   let accessToken: string;
@@ -50,10 +54,12 @@ describe("Google Place Routes", () => {
       where: { user: { email: "test-google-place@example.com" } },
     });
     await prisma.user.deleteMany({ where: { email: "test-google-place@example.com" } });
+    vi.restoreAllMocks();
   });
 
   beforeEach(async () => {
     await prisma.googlePlaceCache.deleteMany();
+    mockFetch.mockReset();
   });
 
   describe("GET /google-place/:placeId", () => {
@@ -70,15 +76,7 @@ describe("Google Place Routes", () => {
       expect(response.body.error.code).toBe("GOOGLE_PLACE_INVALID_ID");
     });
 
-    it("should return 404 when place not in cache", async () => {
-      const response = await request(app)
-        .get("/google-place/non-existent-place-id")
-        .set("Authorization", `Bearer ${accessToken}`);
-      expect(response.status).toBe(404);
-      expect(response.body.error.code).toBe("GOOGLE_PLACE_NOT_FOUND");
-    });
-
-    it("should return cached place", async () => {
+    it("should return cached place when valid", async () => {
       const cachedPlace = await prisma.googlePlaceCache.create({
         data: {
           placeId: "test-place-123",
@@ -96,25 +94,424 @@ describe("Google Place Routes", () => {
       expect(response.status).toBe(200);
       expect(response.body.placeId).toBe("test-place-123");
       expect(response.body.name).toBe("Test Restaurant");
+      // Should not call Google API when cache is valid
+      expect(mockFetch).not.toHaveBeenCalled();
     });
 
-    it("should return 404 for expired cache", async () => {
-      await prisma.googlePlaceCache.create({
-        data: {
-          placeId: "expired-place-123",
-          name: "Expired Restaurant",
-          latitude: 48.8566,
-          longitude: 2.3522,
-          expiresAt: new Date(Date.now() - 1000),
-        },
+    it("should fetch from Google API and cache when not in cache", async () => {
+      const mockGoogleResponse = {
+        id: "new-place-456",
+        displayName: { text: "New Restaurant", languageCode: "en" },
+        formattedAddress: "123 Test St",
+        location: { latitude: 48.8566, longitude: 2.3522 },
+        rating: 4.5,
+        userRatingCount: 100,
+      };
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockGoogleResponse,
       });
 
       const response = await request(app)
-        .get("/google-place/expired-place-123")
+        .get("/google-place/new-place-456")
+        .set("Authorization", `Bearer ${accessToken}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.placeId).toBe("new-place-456");
+      expect(response.body.name).toBe("New Restaurant");
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+
+      // Verify it was cached
+      const cached = await prisma.googlePlaceCache.findUnique({
+        where: { placeId: "new-place-456" },
+      });
+      expect(cached).not.toBeNull();
+      expect(cached?.name).toBe("New Restaurant");
+    });
+
+    it("should refresh cache when expired", async () => {
+      // Create expired cache entry
+      await prisma.googlePlaceCache.create({
+        data: {
+          placeId: "expired-place-789",
+          name: "Old Name",
+          latitude: 48.8566,
+          longitude: 2.3522,
+          expiresAt: new Date(Date.now() - 1000), // Expired
+        },
+      });
+
+      const mockGoogleResponse = {
+        id: "expired-place-789",
+        displayName: { text: "Updated Name", languageCode: "en" },
+        location: { latitude: 48.8566, longitude: 2.3522 },
+      };
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockGoogleResponse,
+      });
+
+      const response = await request(app)
+        .get("/google-place/expired-place-789")
+        .set("Authorization", `Bearer ${accessToken}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.name).toBe("Updated Name");
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+    });
+
+    it("should return 404 when Google API returns not found", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 404,
+        json: async () => ({ error: { message: "Place not found" } }),
+      });
+
+      const response = await request(app)
+        .get("/google-place/non-existent-place")
         .set("Authorization", `Bearer ${accessToken}`);
 
       expect(response.status).toBe(404);
       expect(response.body.error.code).toBe("GOOGLE_PLACE_NOT_FOUND");
+    });
+
+    it("should return 401 when Google API returns unauthorized", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        json: async () => ({ error: { message: "API key invalid" } }),
+      });
+
+      const response = await request(app)
+        .get("/google-place/test-place-401")
+        .set("Authorization", `Bearer ${accessToken}`);
+
+      expect(response.status).toBe(401);
+      expect(response.body.error.code).toBe("GOOGLE_PLACE_API_KEY_REQUIRED");
+    });
+
+    it("should return 403 when Google API returns forbidden", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 403,
+        json: async () => ({ error: { message: "Quota exceeded" } }),
+      });
+
+      const response = await request(app)
+        .get("/google-place/test-place-403")
+        .set("Authorization", `Bearer ${accessToken}`);
+
+      expect(response.status).toBe(403);
+      expect(response.body.error.code).toBe("GOOGLE_PLACE_FETCH_ERROR");
+    });
+
+    it("should handle 500+ errors from Google API", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 502,
+        json: async () => ({}),
+      });
+
+      const response = await request(app)
+        .get("/google-place/test-place-502")
+        .set("Authorization", `Bearer ${accessToken}`);
+
+      expect(response.status).toBe(500);
+      expect(response.body.error.code).toBe("GOOGLE_PLACE_FETCH_ERROR");
+    });
+
+    it("should return place with photoReferences mapped", async () => {
+      const mockGoogleResponse = {
+        id: "place-with-photos",
+        displayName: { text: "Place with Photos", languageCode: "en" },
+        location: { latitude: 48.8566, longitude: 2.3522 },
+        photos: [
+          { name: "places/x/photos/photo1", widthPx: 800, heightPx: 600 },
+          { name: "places/x/photos/photo2", widthPx: 800, heightPx: 600 },
+        ],
+      };
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockGoogleResponse,
+      });
+
+      const response = await request(app)
+        .get("/google-place/place-with-photos")
+        .set("Authorization", `Bearer ${accessToken}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.photoReferences).toEqual([
+        "places/x/photos/photo1",
+        "places/x/photos/photo2",
+      ]);
+    });
+
+    it("should map priceLevel correctly", async () => {
+      const mockGoogleResponse = {
+        id: "place-with-price",
+        displayName: { text: "Expensive Place", languageCode: "en" },
+        location: { latitude: 48.8566, longitude: 2.3522 },
+        priceLevel: "PRICE_LEVEL_EXPENSIVE",
+      };
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockGoogleResponse,
+      });
+
+      const response = await request(app)
+        .get("/google-place/place-with-price")
+        .set("Authorization", `Bearer ${accessToken}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.priceLevel).toBe(3);
+    });
+
+    it("should handle network errors", async () => {
+      mockFetch.mockRejectedValueOnce(new TypeError("fetch failed"));
+
+      const response = await request(app)
+        .get("/google-place/test-network-error")
+        .set("Authorization", `Bearer ${accessToken}`);
+
+      expect(response.status).toBe(500);
+      expect(response.body.error.code).toBe("GOOGLE_PLACE_FETCH_ERROR");
+    });
+  });
+
+  describe("POST /google-place/search", () => {
+    it("should return 401 without auth", async () => {
+      const response = await request(app)
+        .post("/google-place/search")
+        .send({ searchQuery: "restaurant" });
+      expect(response.status).toBe(401);
+    });
+
+    it("should return 400 for missing searchQuery", async () => {
+      const response = await request(app)
+        .post("/google-place/search")
+        .set("Authorization", `Bearer ${accessToken}`)
+        .send({});
+      expect(response.status).toBe(400);
+      expect(response.body.error.code).toBe("VALIDATION_ERROR");
+    });
+
+    it("should return 400 for empty searchQuery", async () => {
+      const response = await request(app)
+        .post("/google-place/search")
+        .set("Authorization", `Bearer ${accessToken}`)
+        .send({ searchQuery: "" });
+      expect(response.status).toBe(400);
+      expect(response.body.error.code).toBe("VALIDATION_ERROR");
+    });
+
+    it("should search and return transformed places", async () => {
+      const mockGoogleResponse = {
+        places: [
+          {
+            id: "place-1",
+            displayName: { text: "Restaurant A", languageCode: "en" },
+            formattedAddress: "123 Main St",
+            location: { latitude: 48.8566, longitude: 2.3522 },
+            rating: 4.2,
+          },
+          {
+            id: "place-2",
+            displayName: { text: "Restaurant B", languageCode: "en" },
+            formattedAddress: "456 Oak Ave",
+            location: { latitude: 48.8567, longitude: 2.3523 },
+            rating: 4.8,
+          },
+        ],
+      };
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockGoogleResponse,
+      });
+
+      const response = await request(app)
+        .post("/google-place/search")
+        .set("Authorization", `Bearer ${accessToken}`)
+        .send({ searchQuery: "restaurant paris" });
+
+      expect(response.status).toBe(200);
+      expect(response.body.places).toHaveLength(2);
+      expect(response.body.places[0].placeId).toBe("place-1");
+      expect(response.body.places[0].name).toBe("Restaurant A");
+      expect(response.body.places[1].placeId).toBe("place-2");
+      // Should NOT have cachedAt/expiresAt (these are stripped)
+      expect(response.body.places[0].cachedAt).toBeUndefined();
+      expect(response.body.places[0].expiresAt).toBeUndefined();
+    });
+
+    it("should pass language parameter to Google API", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ places: [] }),
+      });
+
+      await request(app)
+        .post("/google-place/search")
+        .set("Authorization", `Bearer ${accessToken}`)
+        .send({ searchQuery: "restaurant", language: "fr" });
+
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      const fetchCall = mockFetch.mock.calls[0];
+      const body = JSON.parse(fetchCall[1].body);
+      expect(body.languageCode).toBe("fr");
+    });
+
+    it("should pass location bias when lat/lng provided", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ places: [] }),
+      });
+
+      await request(app)
+        .post("/google-place/search")
+        .set("Authorization", `Bearer ${accessToken}`)
+        .send({ searchQuery: "restaurant", lat: 48.8566, lng: 2.3522 });
+
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      const fetchCall = mockFetch.mock.calls[0];
+      const body = JSON.parse(fetchCall[1].body);
+      expect(body.locationBias).toBeDefined();
+      expect(body.locationBias.circle.center.latitude).toBe(48.8566);
+      expect(body.locationBias.circle.center.longitude).toBe(2.3522);
+    });
+
+    it("should not include location bias when lat/lng not provided", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ places: [] }),
+      });
+
+      await request(app)
+        .post("/google-place/search")
+        .set("Authorization", `Bearer ${accessToken}`)
+        .send({ searchQuery: "restaurant" });
+
+      const fetchCall = mockFetch.mock.calls[0];
+      const body = JSON.parse(fetchCall[1].body);
+      expect(body.locationBias).toBeUndefined();
+    });
+
+    it("should handle network errors in search", async () => {
+      mockFetch.mockRejectedValueOnce(new TypeError("fetch failed"));
+
+      const response = await request(app)
+        .post("/google-place/search")
+        .set("Authorization", `Bearer ${accessToken}`)
+        .send({ searchQuery: "restaurant" });
+
+      expect(response.status).toBe(500);
+      expect(response.body.error.code).toBe("GOOGLE_PLACE_SEARCH_ERROR");
+    });
+
+    it("should return 403 when Google search API returns forbidden", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 403,
+        json: async () => ({ error: { message: "Quota exceeded" } }),
+      });
+
+      const response = await request(app)
+        .post("/google-place/search")
+        .set("Authorization", `Bearer ${accessToken}`)
+        .send({ searchQuery: "restaurant" });
+
+      expect(response.status).toBe(403);
+      expect(response.body.error.code).toBe("GOOGLE_PLACE_FETCH_ERROR");
+    });
+  });
+
+  describe("GET /google-place/photo", () => {
+    it("should return 401 without auth", async () => {
+      const response = await request(app).get("/google-place/photo?ref=test-ref");
+      expect(response.status).toBe(401);
+    });
+
+    it("should return 400 when ref is missing", async () => {
+      const response = await request(app)
+        .get("/google-place/photo")
+        .set("Authorization", `Bearer ${accessToken}`);
+      expect(response.status).toBe(400);
+      expect(response.body.error.code).toBe("VALIDATION_ERROR");
+    });
+
+    it("should return photo buffer with correct headers", async () => {
+      const mockPhotoBuffer = Buffer.from("fake-image-data");
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        arrayBuffer: async () => mockPhotoBuffer,
+      });
+
+      const response = await request(app)
+        .get("/google-place/photo?ref=places/test/photos/abc123")
+        .set("Authorization", `Bearer ${accessToken}`);
+
+      expect(response.status).toBe(200);
+      expect(response.headers["content-type"]).toBe("image/jpeg");
+      expect(response.headers["cache-control"]).toBe("public, max-age=86400");
+    });
+
+    it("should pass maxWidth to Google API", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        arrayBuffer: async () => Buffer.from("fake-image"),
+      });
+
+      await request(app)
+        .get("/google-place/photo?ref=places/test/photos/abc123&maxWidth=800")
+        .set("Authorization", `Bearer ${accessToken}`);
+
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      const url = mockFetch.mock.calls[0][0];
+      expect(url).toContain("maxWidthPx=800");
+    });
+
+    it("should use default maxWidth of 400", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        arrayBuffer: async () => Buffer.from("fake-image"),
+      });
+
+      await request(app)
+        .get("/google-place/photo?ref=places/test/photos/abc123")
+        .set("Authorization", `Bearer ${accessToken}`);
+
+      const url = mockFetch.mock.calls[0][0];
+      expect(url).toContain("maxWidthPx=400");
+    });
+
+    it("should return error when Google API fails", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 404,
+      });
+
+      const response = await request(app)
+        .get("/google-place/photo?ref=invalid-ref")
+        .set("Authorization", `Bearer ${accessToken}`);
+
+      expect(response.status).toBe(404);
+      expect(response.body.error.code).toBe("GOOGLE_PLACE_PHOTO_ERROR");
+    });
+
+    it("should handle network errors in photo fetch", async () => {
+      mockFetch.mockRejectedValueOnce(new TypeError("fetch failed"));
+
+      const response = await request(app)
+        .get("/google-place/photo?ref=places/test/photos/abc123")
+        .set("Authorization", `Bearer ${accessToken}`);
+
+      expect(response.status).toBe(500);
+      expect(response.body.error.code).toBe("GOOGLE_PLACE_PHOTO_ERROR");
     });
   });
 });

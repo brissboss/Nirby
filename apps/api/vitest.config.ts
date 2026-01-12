@@ -19,6 +19,7 @@ export default defineConfig({
       FRONTEND_URL: "http://localhost:3000",
       EMAIL_VERIFICATION_TEMPLATE_ID_EN: "3b87e129-5741-4c29-b6b9-c673ddf54353",
       EMAIL_VERIFICATION_TEMPLATE_ID_FR: "f25c7b0f-abd2-4abd-9d2c-72272aba0779",
+      GOOGLE_PLACES_API_KEY: "AIzaFakeTestApiKey123",
     },
     coverage: {
       provider: "v8",

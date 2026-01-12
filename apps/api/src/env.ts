@@ -16,6 +16,10 @@ const envSchema = z.object({
     .positive()
     .default(7 * 24 * 60 * 60),
   RESEND_API_KEY: z.string().startsWith("re_"),
+  GOOGLE_PLACES_API_KEY: z.preprocess(
+    (val) => (val === "" ? undefined : val),
+    z.string().startsWith("AIza").optional()
+  ),
   FRONTEND_URL: z.string().url().default("http://localhost:3000"),
   EMAIL_VERIFICATION_TEMPLATE_ID_EN: z.string().optional(),
   EMAIL_VERIFICATION_TEMPLATE_ID_FR: z.string().optional(),
