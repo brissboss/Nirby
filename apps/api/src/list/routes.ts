@@ -418,6 +418,17 @@ listRouter.post("/:listId/poi", requireAuth, async (req, res) => {
       }
     }
 
+    if (data.googlePlaceId) {
+      const cachedPlace = await prisma.googlePlaceCache.findUnique({
+        where: { placeId: data.googlePlaceId },
+      });
+      if (!cachedPlace) {
+        return res
+          .status(404)
+          .json(formatError(ErrorCodes.GOOGLE_PLACE_NOT_FOUND, "Google Place not found in cache"));
+      }
+    }
+
     const existing = await prisma.savedPoi.findFirst({
       where: {
         listId: list.id,
@@ -492,7 +503,7 @@ listRouter.get("/:listId/pois", requireAuth, async (req, res) => {
 
     const savedPois = await prisma.savedPoi.findMany({
       where: { listId: req.params.listId },
-      include: { poi: true },
+      include: { poi: true, googlePlaceCache: true },
       orderBy: { createdAt: "desc" },
     });
 
