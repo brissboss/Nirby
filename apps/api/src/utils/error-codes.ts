@@ -15,6 +15,8 @@ export const ErrorCodes = {
   TOKEN_EXPIRED: "TOKEN_EXPIRED",
   EMAIL_ALREADY_VERIFIED: "EMAIL_ALREADY_VERIFIED",
   EMAIL_NOT_VERIFIED: "EMAIL_NOT_VERIFIED",
+  BIO_TOO_LONG: "BIO_TOO_LONG",
+  NAME_TOO_LONG: "NAME_TOO_LONG",
 
   // POI
   POI_NOT_FOUND: "POI_NOT_FOUND",
@@ -52,6 +54,7 @@ export const ErrorCodes = {
   NOT_FOUND: "NOT_FOUND",
   UNAUTHORIZED: "UNAUTHORIZED",
   RATE_LIMIT_EXCEEDED: "RATE_LIMIT_EXCEEDED",
+  INVALID_URL: "INVALID_URL",
 } as const;
 
 export type ErrorCode = (typeof ErrorCodes)[keyof typeof ErrorCodes];
