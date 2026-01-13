@@ -1,6 +1,6 @@
 import crypto from "crypto";
 
-import { PoiVisibility } from "@prisma/client";
+import { CollaboratorRole, PoiList, PoiVisibility } from "@prisma/client";
 import { Router } from "express";
 import { z } from "zod";
 
@@ -11,6 +11,34 @@ import { ErrorCodes } from "../utils/error-codes";
 import { formatError, handleZodError } from "../utils/errors";
 
 export const listRouter = Router();
+
+/**
+ * Check user access to a list and return their role
+ * @returns "OWNER" | "EDITOR" | "VIEWER" | "ADMIN" | null
+ */
+async function checkListAccess(
+  list: PoiList,
+  userId: string
+): Promise<"OWNER" | "EDITOR" | "VIEWER" | "ADMIN" | null> {
+  // Owner always has access
+  if (list.createdBy === userId) {
+    return "OWNER";
+  }
+
+  const collaborator = await prisma.listCollaborator.findUnique({
+    where: { listId_userId: { listId: list.id, userId } },
+  });
+
+  if (collaborator) {
+    return collaborator.role;
+  }
+
+  if (list.visibility === "PUBLIC") {
+    return "VIEWER";
+  }
+
+  return null;
+}
 
 const createListSchema = z.object({
   name: z
@@ -145,6 +173,15 @@ listRouter.post("/", requireAuth, async (req, res) => {
  *         schema:
  *           type: integer
  *           default: 20
+ *       - in: query
+ *         name: roles
+ *         description: Filter lists by collaborator role
+ *         schema:
+ *           type: array
+ *           default: [OWNER, EDITOR, VIEWER, ADMIN]
+ *           items:
+ *             type: string
+ *           enum: [OWNER, EDITOR, VIEWER, ADMIN]
  *     responses:
  *       200:
  *         description: Lists retrieved successfully
@@ -155,22 +192,68 @@ listRouter.post("/", requireAuth, async (req, res) => {
  */
 listRouter.get("/", requireAuth, async (req, res) => {
   try {
+    const userId = req.user!.id;
     const page = Math.max(1, parseInt(req.query.page as string) || 1);
     const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 20));
     const skip = (page - 1) * limit;
+    const roleFilter = req.query.roles;
+    const roles = roleFilter
+      ? Array.isArray(roleFilter)
+        ? roleFilter.map((r) => r.toString().trim())
+        : roleFilter
+            .toString()
+            .split(",")
+            .map((r) => r.trim())
+      : ["OWNER", "EDITOR", "VIEWER", "ADMIN"];
+
+    const conditions = [];
+
+    if (roles.includes("OWNER")) {
+      conditions.push({ createdBy: userId });
+    }
+
+    const collabRoles = roles.filter(
+      (r) => typeof r === "string" && ["EDITOR", "VIEWER", "ADMIN"].includes(r)
+    );
+    if (collabRoles.length > 0) {
+      conditions.push({
+        collaborators: { some: { userId, role: { in: collabRoles as CollaboratorRole[] } } },
+      });
+    }
 
     const [lists, total] = await Promise.all([
       prisma.poiList.findMany({
-        where: { createdBy: req.user!.id },
+        where: {
+          OR: conditions.length > 0 ? conditions : [{ id: "impossible" }],
+        },
+        include: {
+          collaborators: {
+            where: { userId },
+            select: { role: true },
+          },
+        },
         orderBy: { createdAt: "desc" },
         skip,
         take: limit,
       }),
-      prisma.poiList.count({ where: { createdBy: req.user!.id } }),
+      prisma.poiList.count({
+        where: {
+          OR: conditions.length > 0 ? conditions : [{ id: "impossible" }],
+        },
+      }),
     ]);
 
+    const listsWithRole = lists.map((list) => {
+      const { collaborators, ...rest } = list;
+
+      return {
+        ...rest,
+        role: list.createdBy === userId ? "OWNER" : collaborators[0]?.role,
+      };
+    });
+
     res.json({
-      lists,
+      lists: listsWithRole,
       pagination: {
         page,
         limit,
@@ -186,7 +269,7 @@ listRouter.get("/", requireAuth, async (req, res) => {
 
 /**
  * @openapi
- * /list/{id}:
+ * /list/{listId}:
  *   get:
  *     summary: Get a list by ID
  *     description: Returns a specific list
@@ -196,7 +279,7 @@ listRouter.get("/", requireAuth, async (req, res) => {
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: id
+ *         name: listId
  *         required: true
  *         schema:
  *           type: string
@@ -212,16 +295,17 @@ listRouter.get("/", requireAuth, async (req, res) => {
  *       500:
  *         description: Internal server error
  */
-listRouter.get("/:id", requireAuth, async (req, res) => {
+listRouter.get("/:listId", requireAuth, async (req, res) => {
   try {
-    const list = await prisma.poiList.findUnique({ where: { id: req.params.id } });
-
+    const list = await prisma.poiList.findUnique({ where: { id: req.params.listId } });
     if (!list) {
       return res.status(404).json(formatError(ErrorCodes.LIST_NOT_FOUND, "List not found"));
     }
 
-    if (list.createdBy !== req.user!.id && list.visibility === "PRIVATE") {
-      return res.status(403).json(formatError(ErrorCodes.LIST_ACCESS_DENIED, "Access denied"));
+    const role = await checkListAccess(list, req.user!.id);
+
+    if (!role) {
+      return res.status(404).json(formatError(ErrorCodes.LIST_NOT_FOUND, "List not found"));
     }
 
     res.json({ list });
@@ -233,7 +317,7 @@ listRouter.get("/:id", requireAuth, async (req, res) => {
 
 /**
  * @openapi
- * /list/{id}:
+ * /list/{listId}:
  *   put:
  *     summary: Update a list
  *     description: Updates a list owned by the authenticated user
@@ -243,7 +327,7 @@ listRouter.get("/:id", requireAuth, async (req, res) => {
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: id
+ *         name: listId
  *         required: true
  *         schema:
  *           type: string
@@ -278,22 +362,27 @@ listRouter.get("/:id", requireAuth, async (req, res) => {
  *       500:
  *         description: Internal server error
  */
-listRouter.put("/:id", requireAuth, async (req, res) => {
+listRouter.put("/:listId", requireAuth, async (req, res) => {
   try {
-    const list = await prisma.poiList.findUnique({ where: { id: req.params.id } });
-
+    const list = await prisma.poiList.findUnique({ where: { id: req.params.listId } });
     if (!list) {
       return res.status(404).json(formatError(ErrorCodes.LIST_NOT_FOUND, "List not found"));
     }
 
-    if (list.createdBy !== req.user!.id) {
+    const role = await checkListAccess(list, req.user!.id);
+
+    if (!role) {
+      return res.status(404).json(formatError(ErrorCodes.LIST_NOT_FOUND, "List not found"));
+    }
+
+    if (!["EDITOR", "ADMIN", "OWNER"].includes(role)) {
       return res.status(403).json(formatError(ErrorCodes.LIST_ACCESS_DENIED, "Access denied"));
     }
 
     const data = updateListSchema.parse(req.body);
 
     const updatedList = await prisma.poiList.update({
-      where: { id: req.params.id },
+      where: { id: list.id },
       data,
     });
 
@@ -312,7 +401,7 @@ listRouter.put("/:id", requireAuth, async (req, res) => {
 
 /**
  * @openapi
- * /list/{id}:
+ * /list/{listId}:
  *   delete:
  *     summary: Delete a list
  *     description: Deletes a list owned by the authenticated user
@@ -322,7 +411,7 @@ listRouter.put("/:id", requireAuth, async (req, res) => {
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: id
+ *         name: listId
  *         required: true
  *         schema:
  *           type: string
@@ -338,19 +427,24 @@ listRouter.put("/:id", requireAuth, async (req, res) => {
  *       500:
  *         description: Internal server error
  */
-listRouter.delete("/:id", requireAuth, async (req, res) => {
+listRouter.delete("/:listId", requireAuth, async (req, res) => {
   try {
-    const list = await prisma.poiList.findUnique({ where: { id: req.params.id } });
-
+    const list = await prisma.poiList.findUnique({ where: { id: req.params.listId } });
     if (!list) {
       return res.status(404).json(formatError(ErrorCodes.LIST_NOT_FOUND, "List not found"));
     }
 
-    if (list.createdBy !== req.user!.id) {
+    const role = await checkListAccess(list, req.user!.id);
+
+    if (!role) {
+      return res.status(404).json(formatError(ErrorCodes.LIST_NOT_FOUND, "List not found"));
+    }
+
+    if (!["ADMIN", "OWNER"].includes(role)) {
       return res.status(403).json(formatError(ErrorCodes.LIST_ACCESS_DENIED, "Access denied"));
     }
 
-    await prisma.poiList.delete({ where: { id: req.params.id } });
+    await prisma.poiList.delete({ where: { id: list.id } });
 
     res.json({ message: "List deleted successfully" });
   } catch (err) {
@@ -403,12 +497,17 @@ listRouter.delete("/:id", requireAuth, async (req, res) => {
 listRouter.post("/:listId/poi", requireAuth, async (req, res) => {
   try {
     const list = await prisma.poiList.findUnique({ where: { id: req.params.listId } });
-
     if (!list) {
       return res.status(404).json(formatError(ErrorCodes.LIST_NOT_FOUND, "List not found"));
     }
 
-    if (list.createdBy !== req.user!.id) {
+    const role = await checkListAccess(list, req.user!.id);
+
+    if (!role) {
+      return res.status(404).json(formatError(ErrorCodes.LIST_NOT_FOUND, "List not found"));
+    }
+
+    if (!["EDITOR", "ADMIN", "OWNER"].includes(role)) {
       return res.status(403).json(formatError(ErrorCodes.LIST_ACCESS_DENIED, "Access denied"));
     }
 
@@ -445,7 +544,7 @@ listRouter.post("/:listId/poi", requireAuth, async (req, res) => {
 
     const savedPoi = await prisma.savedPoi.create({
       data: {
-        listId: req.params.listId,
+        listId: list.id,
         poiId: data.poiId,
         googlePlaceId: data.googlePlaceId,
       },
@@ -495,17 +594,18 @@ listRouter.post("/:listId/poi", requireAuth, async (req, res) => {
 listRouter.get("/:listId/pois", requireAuth, async (req, res) => {
   try {
     const list = await prisma.poiList.findUnique({ where: { id: req.params.listId } });
-
     if (!list) {
       return res.status(404).json(formatError(ErrorCodes.LIST_NOT_FOUND, "List not found"));
     }
 
-    if (list.createdBy !== req.user!.id && list.visibility === "PRIVATE") {
-      return res.status(403).json(formatError(ErrorCodes.LIST_ACCESS_DENIED, "Access denied"));
+    const role = await checkListAccess(list, req.user!.id);
+
+    if (!role) {
+      return res.status(404).json(formatError(ErrorCodes.LIST_NOT_FOUND, "List not found"));
     }
 
     const savedPois = await prisma.savedPoi.findMany({
-      where: { listId: req.params.listId },
+      where: { listId: list.id },
       include: { poi: true, googlePlaceCache: true },
       orderBy: { createdAt: "desc" },
     });
@@ -553,12 +653,17 @@ listRouter.get("/:listId/pois", requireAuth, async (req, res) => {
 listRouter.delete("/:listId/poi/:savedPoiId", requireAuth, async (req, res) => {
   try {
     const list = await prisma.poiList.findUnique({ where: { id: req.params.listId } });
-
     if (!list) {
       return res.status(404).json(formatError(ErrorCodes.LIST_NOT_FOUND, "List not found"));
     }
 
-    if (list.createdBy !== req.user!.id) {
+    const role = await checkListAccess(list, req.user!.id);
+
+    if (!role) {
+      return res.status(404).json(formatError(ErrorCodes.LIST_NOT_FOUND, "List not found"));
+    }
+
+    if (!["EDITOR", "ADMIN", "OWNER"].includes(role)) {
       return res.status(403).json(formatError(ErrorCodes.LIST_ACCESS_DENIED, "Access denied"));
     }
 
@@ -612,12 +717,17 @@ listRouter.delete("/:listId/poi/:savedPoiId", requireAuth, async (req, res) => {
 listRouter.post("/:listId/share", requireAuth, async (req, res) => {
   try {
     const list = await prisma.poiList.findUnique({ where: { id: req.params.listId } });
-
     if (!list) {
       return res.status(404).json(formatError(ErrorCodes.LIST_NOT_FOUND, "List not found"));
     }
 
-    if (list.createdBy !== req.user!.id) {
+    const role = await checkListAccess(list, req.user!.id);
+
+    if (!role) {
+      return res.status(404).json(formatError(ErrorCodes.LIST_NOT_FOUND, "List not found"));
+    }
+
+    if (!["ADMIN", "OWNER"].includes(role)) {
       return res.status(403).json(formatError(ErrorCodes.LIST_ACCESS_DENIED, "Access denied"));
     }
 
@@ -671,12 +781,17 @@ listRouter.post("/:listId/share", requireAuth, async (req, res) => {
 listRouter.delete("/:listId/share", requireAuth, async (req, res) => {
   try {
     const list = await prisma.poiList.findUnique({ where: { id: req.params.listId } });
-
     if (!list) {
       return res.status(404).json(formatError(ErrorCodes.LIST_NOT_FOUND, "List not found"));
     }
 
-    if (list.createdBy !== req.user!.id) {
+    const role = await checkListAccess(list, req.user!.id);
+
+    if (!role) {
+      return res.status(404).json(formatError(ErrorCodes.LIST_NOT_FOUND, "List not found"));
+    }
+
+    if (!["ADMIN", "OWNER"].includes(role)) {
       return res.status(403).json(formatError(ErrorCodes.LIST_ACCESS_DENIED, "Access denied"));
     }
 
@@ -688,6 +803,378 @@ listRouter.delete("/:listId/share", requireAuth, async (req, res) => {
     res.json({ message: "List unshared successfully" });
   } catch (err) {
     req.log?.error({ err }, "Failed to unshare list");
+    return res.status(500).json(formatError(ErrorCodes.INTERNAL_ERROR, "Internal server error"));
+  }
+});
+
+/**
+ * @openapi
+ * /list/{listId}/edit-link:
+ *   post:
+ *     summary: Generate an edit link for a list
+ *     description: Generates an edit link for a list
+ *     tags:
+ *       - 📝 List
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: listId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Edit link generated successfully
+ *       400:
+ *         description: Invalid input
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Access denied
+ *       404:
+ *         description: List not found
+ */
+listRouter.post("/:listId/edit-link", requireAuth, async (req, res) => {
+  try {
+    const list = await prisma.poiList.findUnique({ where: { id: req.params.listId } });
+    if (!list) {
+      return res.status(404).json(formatError(ErrorCodes.LIST_NOT_FOUND, "List not found"));
+    }
+
+    const role = await checkListAccess(list, req.user!.id);
+
+    if (!role) {
+      return res.status(404).json(formatError(ErrorCodes.LIST_NOT_FOUND, "List not found"));
+    }
+
+    if (!["ADMIN", "OWNER"].includes(role)) {
+      return res.status(403).json(formatError(ErrorCodes.LIST_ACCESS_DENIED, "Access denied"));
+    }
+
+    const editToken = crypto.randomBytes(32).toString("hex");
+
+    await prisma.poiList.update({
+      where: { id: req.params.listId },
+      data: { editToken: editToken, editTokenExpiresAt: null },
+    });
+
+    const editLink = `${env.FRONTEND_URL}/list/${list.id}/join?editToken=${editToken}`;
+
+    res.json({ editLink });
+  } catch (err) {
+    req.log?.error({ err }, "Failed to generate edit link");
+    return res.status(500).json(formatError(ErrorCodes.INTERNAL_ERROR, "Internal server error"));
+  }
+});
+
+/**
+ * @openapi
+ * /list/{listId}/edit-link:
+ *   delete:
+ *     summary: Revoke an edit link for a list
+ *     description: Revokes an edit link for a list
+ *     tags:
+ *       - 📝 List
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: listId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Edit link revoked successfully
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Access denied
+ *       404:
+ *         description: List not found
+ *       500:
+ *         description: Internal server error
+ */
+listRouter.delete("/:listId/edit-link", requireAuth, async (req, res) => {
+  try {
+    const list = await prisma.poiList.findUnique({ where: { id: req.params.listId } });
+    if (!list) {
+      return res.status(404).json(formatError(ErrorCodes.LIST_NOT_FOUND, "List not found"));
+    }
+
+    const role = await checkListAccess(list, req.user!.id);
+
+    if (!role) {
+      return res.status(404).json(formatError(ErrorCodes.LIST_NOT_FOUND, "List not found"));
+    }
+
+    if (!["ADMIN", "OWNER"].includes(role)) {
+      return res.status(403).json(formatError(ErrorCodes.LIST_ACCESS_DENIED, "Access denied"));
+    }
+
+    await prisma.poiList.update({
+      where: { id: list.id },
+      data: { editToken: null, editTokenExpiresAt: null },
+    });
+
+    res.json({ message: "Edit link revoked successfully" });
+  } catch (err) {
+    req.log?.error({ err }, "Failed to revoke edit link");
+    return res.status(500).json(formatError(ErrorCodes.INTERNAL_ERROR, "Internal server error"));
+  }
+});
+
+/**
+ * @openapi
+ * /list/join:
+ *   post:
+ *     summary: Join a list using an edit link
+ *     description: Joins a list using an edit link
+ *     tags:
+ *       - 📝 List
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: editToken
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: List joined successfully
+ *       400:
+ *         description: Invalid input
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Access denied
+ *       404:
+ *         description: List not found
+ *       500:
+ *         description: Internal server error
+ */
+listRouter.post("/join", requireAuth, async (req, res) => {
+  try {
+    const editToken = req.query.editToken as string;
+
+    if (!editToken) {
+      return res.status(400).json(formatError(ErrorCodes.TOKEN_REQUIRED, "Edit token is required"));
+    }
+
+    const list = await prisma.poiList.findUnique({ where: { editToken } });
+
+    if (!list) {
+      return res.status(404).json(formatError(ErrorCodes.LIST_NOT_FOUND, "List not found"));
+    }
+
+    if (list.editTokenExpiresAt && list.editTokenExpiresAt < new Date()) {
+      return res
+        .status(400)
+        .json(formatError(ErrorCodes.LIST_EDIT_TOKEN_EXPIRED, "Edit token expired"));
+    }
+
+    if (list.createdBy === req.user!.id) {
+      return res.json({
+        message: "You are the owner of this list.",
+        list,
+      });
+    }
+
+    const collaborator = await prisma.listCollaborator.findUnique({
+      where: { listId_userId: { listId: list.id, userId: req.user!.id } },
+    });
+    if (collaborator) {
+      return res.json({
+        message: "You are already a collaborator of this list.",
+        list,
+      });
+    }
+
+    await prisma.listCollaborator.create({
+      data: { listId: list.id, userId: req.user!.id, role: "EDITOR" },
+    });
+
+    res.json({
+      message: "You are now a collaborator of this list. You can now edit the list.",
+      list,
+    });
+  } catch (err) {
+    req.log?.error({ err }, "Failed to join list");
+    return res.status(500).json(formatError(ErrorCodes.INTERNAL_ERROR, "Internal server error"));
+  }
+});
+
+/**
+ * @openapi
+ * /list/{listId}/collaborators:
+ *   get:
+ *     summary: Get the collaborators of a list
+ *     description: Gets the collaborators of a list
+ *     tags:
+ *       - 📝 List
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: listId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Collaborators retrieved successfully
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Access denied
+ *       404:
+ *         description: List not found
+ *       500:
+ *         description: Internal server error
+ */
+listRouter.get("/:listId/collaborators", requireAuth, async (req, res) => {
+  try {
+    const list = await prisma.poiList.findUnique({ where: { id: req.params.listId } });
+    if (!list) {
+      return res.status(404).json(formatError(ErrorCodes.LIST_NOT_FOUND, "List not found"));
+    }
+
+    const role = await checkListAccess(list, req.user!.id);
+    if (!role) {
+      return res.status(404).json(formatError(ErrorCodes.LIST_NOT_FOUND, "List not found"));
+    }
+
+    const collaborators = await prisma.listCollaborator.findMany({
+      where: { listId: list.id },
+      select: {
+        role: true,
+        joinedAt: true,
+        user: { select: { id: true, email: true, name: true, avatarUrl: true } },
+      },
+    });
+
+    res.json({ collaborators });
+  } catch (err) {
+    req.log?.error({ err }, "Failed to get collaborators");
+    return res.status(500).json(formatError(ErrorCodes.INTERNAL_ERROR, "Internal server error"));
+  }
+});
+
+/**
+ * @openapi
+ * /list/{listId}/collaborators/me:
+ *   delete:
+ *     summary: Leave a list
+ *     description: Leaves a list
+ *     tags:
+ *       - 📝 List
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: listId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: List left successfully
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Access denied
+ *       404:
+ *         description: List not found
+ *       500:
+ *         description: Internal server error
+ */
+listRouter.delete("/:listId/collaborators/me", requireAuth, async (req, res) => {
+  try {
+    const list = await prisma.poiList.findUnique({ where: { id: req.params.listId } });
+    if (!list) {
+      return res.status(404).json(formatError(ErrorCodes.LIST_NOT_FOUND, "List not found"));
+    }
+
+    const role = await checkListAccess(list, req.user!.id);
+    if (!role) {
+      return res.status(404).json(formatError(ErrorCodes.LIST_NOT_FOUND, "List not found"));
+    }
+
+    if (role === "OWNER") {
+      return res
+        .status(400)
+        .json(formatError(ErrorCodes.LIST_OWNER_CANNOT_LEAVE, "Owner cannot leave the list"));
+    }
+
+    await prisma.listCollaborator.delete({
+      where: { listId_userId: { listId: list.id, userId: req.user!.id } },
+    });
+
+    res.json({ message: "You have left the list" });
+  } catch (err) {
+    req.log?.error({ err }, "Failed to leave list");
+    return res.status(500).json(formatError(ErrorCodes.INTERNAL_ERROR, "Internal server error"));
+  }
+});
+
+/**
+ * @openapi
+ * /list/{listId}/collaborators/{collaboratorId}:
+ *   delete:
+ *     summary: Remove a collaborator from a list
+ *     description: Removes a collaborator from a list
+ *     tags:
+ *       - 📝 List
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: listId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: path
+ *         name: collaboratorId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Collaborator removed successfully
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Access denied
+ *       404:
+ *         description: List not found
+ *       500:
+ *         description: Internal server error
+ */
+listRouter.delete("/:listId/collaborators/:collaboratorId", requireAuth, async (req, res) => {
+  try {
+    const list = await prisma.poiList.findUnique({ where: { id: req.params.listId } });
+    if (!list) {
+      return res.status(404).json(formatError(ErrorCodes.LIST_NOT_FOUND, "List not found"));
+    }
+
+    const role = await checkListAccess(list, req.user!.id);
+    if (!role) {
+      return res.status(404).json(formatError(ErrorCodes.LIST_NOT_FOUND, "List not found"));
+    }
+
+    if (!["ADMIN", "OWNER"].includes(role)) {
+      return res.status(403).json(formatError(ErrorCodes.LIST_ACCESS_DENIED, "Access denied"));
+    }
+
+    await prisma.listCollaborator.delete({
+      where: { listId_userId: { listId: list.id, userId: req.params.collaboratorId } },
+    });
+
+    res.json({ message: "Collaborator removed successfully" });
+  } catch (err) {
+    req.log?.error({ err }, "Failed to remove collaborator");
     return res.status(500).json(formatError(ErrorCodes.INTERNAL_ERROR, "Internal server error"));
   }
 });

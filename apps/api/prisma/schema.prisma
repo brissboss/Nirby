@@ -27,6 +27,7 @@ model User {
   sessions                    Session[]
   pois                        Poi[]
   poiLists                    PoiList[]
+  collaborations              ListCollaborator[]
 }
 
 model Session {
@@ -118,12 +119,15 @@ model PoiList {
   visibility          PoiVisibility @default(PRIVATE)
   shareToken          String? @unique
   shareTokenExpiresAt DateTime?
+  editToken           String? @unique
+  editTokenExpiresAt  DateTime?
 
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
 
   user                User      @relation(fields: [createdBy], references: [id])
   savedPois           SavedPoi[]
+  collaborators       ListCollaborator[]
 }
 
 model SavedPoi {
@@ -140,4 +144,25 @@ model SavedPoi {
 
   @@unique([listId, poiId])
   @@unique([listId, googlePlaceId])
+}
+
+model ListCollaborator {
+  id                    String    @id @default(cuid())
+  listId                String
+  userId                String
+  role                  CollaboratorRole @default(EDITOR)
+  invitedBy             String?
+  joinedAt              DateTime? @default(now())
+
+  list                  PoiList            @relation(fields: [listId], references: [id], onDelete: Cascade)
+  user                  User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([listId, userId])
+}
+
+enum CollaboratorRole {
+  VIEWER
+  EDITOR
+  ADMIN
+  OWNER
 }
