@@ -43,7 +43,7 @@ const getPlaceQuerySchema = z.object({
  *     summary: Search for Google Places
  *     description: Searches for Google Places using the Google Places API
  *     tags:
- *       - Google Places
+ *       - 🌍 Google Places
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -115,7 +115,7 @@ googlePlaceRouter.post("/search", requireAuth, searchRateLimiter, async (req, re
  *     summary: Get a Google Place photo
  *     description: Gets a Google Place photo from the Google Places API
  *     tags:
- *       - Google Places
+ *       - 🌍 Google Places
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -182,7 +182,7 @@ googlePlaceRouter.get("/photo", requireAuth, photoRateLimiter, async (req, res) 
  *     summary: Get a Google Place
  *     description: Returns cached Google Place data or fetches from Google API if not cached/expired
  *     tags:
- *       - Google Places
+ *       - 🌍 Google Places
  *     security:
  *       - bearerAuth: []
  *     parameters:

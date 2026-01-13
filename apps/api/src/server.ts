@@ -11,6 +11,7 @@ import { env } from "./env";
 import { googlePlaceRouter } from "./google-place/routes";
 import { listRouter } from "./list/routes";
 import { poiRouter } from "./poi/routes";
+import { sharedRouter } from "./shared/routes";
 import { SwaggerSpec } from "./swagger";
 import { ErrorCode, ErrorCodes } from "./utils/error-codes";
 import { ApiError, formatError } from "./utils/errors";
@@ -78,6 +79,7 @@ export function createServer() {
   app.use("/poi", poiRouter);
   app.use("/list", listRouter);
   app.use("/google-place", googlePlaceRouter);
+  app.use("/shared", sharedRouter);
 
   if (env.NODE_ENV === "test") {
     app.get("/test-error", (_req: Request, _res: Response, next: NextFunction) => {
@@ -91,7 +93,7 @@ export function createServer() {
    *   get:
    *     summary: Health check
    *     tags:
-   *       - Health
+   *       - ❤️ Health
    *     responses:
    *       200:
    *         description: API is alive
@@ -106,7 +108,7 @@ export function createServer() {
    *   get:
    *     summary: Database health check
    *     tags:
-   *       - Health
+   *       - ❤️ Health
    *     responses:
    *       200:
    *         description: Database is alive
