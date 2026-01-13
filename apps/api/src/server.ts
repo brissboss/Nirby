@@ -57,7 +57,7 @@ export function createServer() {
       slug: "api-1",
       title: "Nirby API",
       layout: "modern",
-      defaultOpenAllTags: true,
+      defaultOpenAllTags: false,
       documentDownloadType: "none",
       // favicon: ''
       hideClientButton: true,
