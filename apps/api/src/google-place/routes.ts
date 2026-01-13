@@ -2,6 +2,7 @@ import { Router } from "express";
 import z from "zod";
 
 import { requireAuth } from "../auth/middleware";
+import { searchRateLimiter, getPlaceRateLimiter, photoRateLimiter } from "../middleware/rate-limit";
 import { SUPPORTED_LANGUAGES } from "../types";
 import { ErrorCode, ErrorCodes } from "../utils/error-codes";
 import { ApiError, formatError, handleZodError } from "../utils/errors";
@@ -77,10 +78,12 @@ const getPlaceQuerySchema = z.object({
  *         description: Unauthorized
  *       400:
  *         description: Invalid input
+ *       429:
+ *         description: Rate limit exceeded
  *       500:
  *         description: Internal server error
  */
-googlePlaceRouter.post("/search", requireAuth, async (req, res) => {
+googlePlaceRouter.post("/search", requireAuth, searchRateLimiter, async (req, res) => {
   try {
     const { searchQuery, language, lat, lng } = searchPlacesSchema.parse(req.body);
 
@@ -141,10 +144,12 @@ googlePlaceRouter.post("/search", requireAuth, async (req, res) => {
  *         description: Unauthorized
  *       400:
  *         description: Invalid input
+ *       429:
+ *         description: Rate limit exceeded
  *       500:
  *         description: Internal server error
  */
-googlePlaceRouter.get("/photo", requireAuth, async (req, res) => {
+googlePlaceRouter.get("/photo", requireAuth, photoRateLimiter, async (req, res) => {
   try {
     const { ref, maxWidth } = getPhotoSchema.parse(req.query);
 
@@ -201,10 +206,12 @@ googlePlaceRouter.get("/photo", requireAuth, async (req, res) => {
  *         description: Unauthorized
  *       404:
  *         description: Google Place not found
+ *       429:
+ *         description: Rate limit exceeded
  *       500:
  *         description: Internal server error
  */
-googlePlaceRouter.get("/:placeId", requireAuth, async (req, res, next) => {
+googlePlaceRouter.get("/:placeId", requireAuth, getPlaceRateLimiter, async (req, res, next) => {
   try {
     const { placeId } = getPlaceParamsSchema.parse(req.params);
     const { language } = getPlaceQuerySchema.parse(req.query);
