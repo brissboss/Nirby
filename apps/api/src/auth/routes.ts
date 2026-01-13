@@ -70,6 +70,27 @@ const deleteAccountSchema = z.object({
   language: z.enum(SUPPORTED_LANGUAGES).optional().default("en"),
 });
 
+const updateProfileSchema = z.object({
+  name: z
+    .string()
+    .max(255, ErrorCodes.NAME_TOO_LONG)
+    .nullable()
+    .optional()
+    .transform((val) => (val === "" ? undefined : val)),
+  avatarUrl: z
+    .string()
+    .url(ErrorCodes.INVALID_URL)
+    .nullable()
+    .optional()
+    .or(z.literal("").transform(() => undefined)),
+  bio: z
+    .string()
+    .max(255, ErrorCodes.BIO_TOO_LONG)
+    .nullable()
+    .optional()
+    .transform((val) => (val === "" ? undefined : val)),
+});
+
 /**
  * @openapi
  * /auth/signup:
@@ -845,5 +866,97 @@ authRouter.delete("/account", requireAuth, async (req, res) => {
  *         description: Unauthorized
  */
 authRouter.get("/me", requireAuth, async (req, res) => {
-  res.json({ user: req.user });
+  const user = await prisma.user.findUnique({ where: { id: req.user?.id } });
+  if (!user) {
+    return res.status(404).json(formatError(ErrorCodes.NOT_FOUND, "User not found"));
+  }
+
+  res.json({
+    user: {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      avatarUrl: user.avatarUrl,
+      bio: user.bio,
+      emailVerified: user.emailVerified,
+    },
+  });
+});
+
+/**
+ * @openapi
+ * /auth/me:
+ *   put:
+ *     summary: Update current user profile
+ *     tags:
+ *       - Auth
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 description: New name
+ *               avatarUrl:
+ *                 type: string
+ *                 description: New avatar URL
+ *               bio:
+ *                 type: string
+ *                 description: New bio
+ *     responses:
+ *       200:
+ *         description: User profile updated successfully
+ *       400:
+ *         description: Invalid input
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Internal server error
+ */
+authRouter.put("/me", requireAuth, async (req, res) => {
+  try {
+    const { name, avatarUrl, bio } = updateProfileSchema.parse(req.body);
+
+    const user = await prisma.user.findUnique({ where: { id: req.user?.id } });
+    if (!user) {
+      return res.status(404).json(formatError(ErrorCodes.NOT_FOUND, "User not found"));
+    }
+
+    const updateData: { name?: string | null; avatarUrl?: string | null; bio?: string | null } = {};
+    if (name !== undefined) updateData.name = name;
+    if (avatarUrl !== undefined) updateData.avatarUrl = avatarUrl;
+    if (bio !== undefined) updateData.bio = bio;
+
+    const updatedUser = await prisma.user.update({
+      where: { id: user.id },
+      data: updateData,
+    });
+
+    return res.status(200).json({
+      user: {
+        id: updatedUser.id,
+        email: updatedUser.email,
+        name: updatedUser.name,
+        avatarUrl: updatedUser.avatarUrl,
+        bio: updatedUser.bio,
+        emailVerified: updatedUser.emailVerified,
+      },
+    });
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      const details = handleZodError(err);
+      return res
+        .status(400)
+        .json(formatError(ErrorCodes.VALIDATION_ERROR, "Invalid input", details));
+    }
+    req.log?.error({ err });
+    return res.status(500).json(formatError(ErrorCodes.INTERNAL_ERROR, "Internal server error"));
+  }
 });

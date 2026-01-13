@@ -240,31 +240,298 @@ describe("Auth routes", () => {
           email: "me@example.com",
           passwordHash,
           emailVerified: true,
+          name: "Test User",
+          avatarUrl: "https://example.com/avatar.jpg",
+          bio: "This is a test bio",
         },
       });
 
       accessToken = signAccessToken({ userId: user.id, email: user.email });
     });
 
-    it("should return user profile with valid token", async () => {
+    it("should return complete user profile with all fields", async () => {
       const res = await request(app).get("/auth/me").set("Authorization", `Bearer ${accessToken}`);
 
       expect(res.status).toBe(200);
-      expect(res.body.user.email).toBe("me@example.com");
+      expect(res.body.user).toHaveProperty("id");
+      expect(res.body.user).toHaveProperty("email", "me@example.com");
+      expect(res.body.user).toHaveProperty("name", "Test User");
+      expect(res.body.user).toHaveProperty("avatarUrl", "https://example.com/avatar.jpg");
+      expect(res.body.user).toHaveProperty("bio", "This is a test bio");
+      expect(res.body.user).toHaveProperty("emailVerified", true);
+
+      expect(res.body.user).not.toHaveProperty("passwordHash");
+      expect(res.body.user).not.toHaveProperty("emailVerificationToken");
+      expect(res.body.user).not.toHaveProperty("passwordResetToken");
+    });
+
+    it("should return user profile with null optional fields when not set", async () => {
+      const passwordHash = await hashPassword("password123");
+      const user = await prisma.user.create({
+        data: {
+          email: "minimal@example.com",
+          passwordHash,
+          emailVerified: false,
+        },
+      });
+
+      const token = signAccessToken({ userId: user.id, email: user.email });
+      const res = await request(app).get("/auth/me").set("Authorization", `Bearer ${token}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.user.email).toBe("minimal@example.com");
+      expect(res.body.user.name).toBeNull();
+      expect(res.body.user.avatarUrl).toBeNull();
+      expect(res.body.user.bio).toBeNull();
+      expect(res.body.user.emailVerified).toBe(false);
     });
 
     it("should reject request without token", async () => {
       const res = await request(app).get("/auth/me");
 
       expect(res.status).toBe(401);
-      expect(res.body.error.code).toBe("UNAUTHORIZED");
+      expect(res.body.error.code).toBe(ErrorCodes.UNAUTHORIZED);
     });
 
     it("should reject request with invalid token", async () => {
       const res = await request(app).get("/auth/me").set("Authorization", "Bearer invalid-token");
 
       expect(res.status).toBe(401);
-      expect(res.body.error.code).toBe("UNAUTHORIZED");
+      expect(res.body.error.code).toBe(ErrorCodes.UNAUTHORIZED);
+    });
+  });
+
+  describe("PUT /auth/me", () => {
+    let accessToken: string;
+    let userId: string;
+
+    beforeEach(async () => {
+      const passwordHash = await hashPassword("password123");
+      const user = await prisma.user.create({
+        data: {
+          email: "update@example.com",
+          passwordHash,
+          emailVerified: true,
+          name: "Original Name",
+        },
+      });
+
+      userId = user.id;
+      accessToken = signAccessToken({ userId: user.id, email: user.email });
+    });
+
+    it("should update user profile with all fields", async () => {
+      const res = await request(app)
+        .put("/auth/me")
+        .set("Authorization", `Bearer ${accessToken}`)
+        .send({
+          name: "Updated Name",
+          avatarUrl: "https://example.com/new-avatar.jpg",
+          bio: "This is my updated bio",
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.user.name).toBe("Updated Name");
+      expect(res.body.user.avatarUrl).toBe("https://example.com/new-avatar.jpg");
+      expect(res.body.user.bio).toBe("This is my updated bio");
+      expect(res.body.user.email).toBe("update@example.com");
+
+      // Vérifier en base de données
+      const updatedUser = await prisma.user.findUnique({ where: { id: userId } });
+      expect(updatedUser?.name).toBe("Updated Name");
+      expect(updatedUser?.avatarUrl).toBe("https://example.com/new-avatar.jpg");
+      expect(updatedUser?.bio).toBe("This is my updated bio");
+    });
+
+    it("should update only provided fields (partial update)", async () => {
+      const res = await request(app)
+        .put("/auth/me")
+        .set("Authorization", `Bearer ${accessToken}`)
+        .send({
+          name: "Only Name Updated",
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.user.name).toBe("Only Name Updated");
+      expect(res.body.user.avatarUrl).toBeNull();
+      expect(res.body.user.bio).toBeNull();
+
+      // Vérifier que les autres champs n'ont pas changé
+      const updatedUser = await prisma.user.findUnique({ where: { id: userId } });
+      expect(updatedUser?.name).toBe("Only Name Updated");
+      expect(updatedUser?.email).toBe("update@example.com");
+    });
+
+    it("should allow setting fields to null", async () => {
+      // D'abord créer un utilisateur avec des valeurs
+      const passwordHash = await hashPassword("password123");
+      const user = await prisma.user.create({
+        data: {
+          email: "null-test@example.com",
+          passwordHash,
+          emailVerified: true,
+          name: "To Remove",
+          bio: "To Remove Bio",
+        },
+      });
+
+      const token = signAccessToken({ userId: user.id, email: user.email });
+      const res = await request(app).put("/auth/me").set("Authorization", `Bearer ${token}`).send({
+        name: null,
+        bio: null,
+      });
+
+      expect(res.status).toBe(200);
+      expect(res.body.user.name).toBeNull();
+      expect(res.body.user.bio).toBeNull();
+    });
+
+    it("should validate bio max length (500 characters)", async () => {
+      const longBio = "a".repeat(501);
+      const res = await request(app)
+        .put("/auth/me")
+        .set("Authorization", `Bearer ${accessToken}`)
+        .send({
+          bio: longBio,
+        });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe(ErrorCodes.VALIDATION_ERROR);
+    });
+
+    it("should accept bio with exactly 255 characters", async () => {
+      const validBio = "a".repeat(255);
+      const res = await request(app)
+        .put("/auth/me")
+        .set("Authorization", `Bearer ${accessToken}`)
+        .send({
+          bio: validBio,
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.user.bio).toBe(validBio);
+    });
+
+    it("should validate name max length (255 characters)", async () => {
+      const longName = "a".repeat(256);
+      const res = await request(app)
+        .put("/auth/me")
+        .set("Authorization", `Bearer ${accessToken}`)
+        .send({
+          name: longName,
+        });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe(ErrorCodes.VALIDATION_ERROR);
+    });
+
+    it("should validate avatarUrl format (URL)", async () => {
+      const res = await request(app)
+        .put("/auth/me")
+        .set("Authorization", `Bearer ${accessToken}`)
+        .send({
+          avatarUrl: "not-a-valid-url",
+        });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe(ErrorCodes.VALIDATION_ERROR);
+    });
+
+    it("should accept valid URL for avatarUrl", async () => {
+      const validUrl = "https://example.com/avatar.jpg";
+      const res = await request(app)
+        .put("/auth/me")
+        .set("Authorization", `Bearer ${accessToken}`)
+        .send({
+          avatarUrl: validUrl,
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.user.avatarUrl).toBe(validUrl);
+    });
+
+    it("should accept http and https URLs for avatarUrl", async () => {
+      const httpUrl = "http://example.com/avatar.jpg";
+      const res = await request(app)
+        .put("/auth/me")
+        .set("Authorization", `Bearer ${accessToken}`)
+        .send({
+          avatarUrl: httpUrl,
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.user.avatarUrl).toBe(httpUrl);
+    });
+
+    it("should reject request without token", async () => {
+      const res = await request(app).put("/auth/me").send({
+        name: "Test",
+      });
+
+      expect(res.status).toBe(401);
+      expect(res.body.error.code).toBe(ErrorCodes.UNAUTHORIZED);
+    });
+
+    it("should reject request with invalid token", async () => {
+      const res = await request(app)
+        .put("/auth/me")
+        .set("Authorization", "Bearer invalid-token")
+        .send({
+          name: "Test",
+        });
+
+      expect(res.status).toBe(401);
+      expect(res.body.error.code).toBe(ErrorCodes.UNAUTHORIZED);
+    });
+
+    it("should accept empty body (no changes)", async () => {
+      const res = await request(app)
+        .put("/auth/me")
+        .set("Authorization", `Bearer ${accessToken}`)
+        .send({});
+
+      expect(res.status).toBe(200);
+      expect(res.body.user.name).toBe("Original Name");
+    });
+
+    it("should not allow updating email (email should remain unchanged)", async () => {
+      const res = await request(app)
+        .put("/auth/me")
+        .set("Authorization", `Bearer ${accessToken}`)
+        .send({
+          email: "hacked@example.com",
+          name: "Updated Name",
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.user.email).toBe("update@example.com");
+      expect(res.body.user.name).toBe("Updated Name");
+
+      const user = await prisma.user.findUnique({ where: { id: userId } });
+      expect(user?.email).toBe("update@example.com");
+    });
+
+    it("should not allow updating emailVerified (should remain unchanged)", async () => {
+      const passwordHash = await hashPassword("password123");
+      const user = await prisma.user.create({
+        data: {
+          email: "unverified@example.com",
+          passwordHash,
+          emailVerified: false,
+        },
+      });
+
+      const token = signAccessToken({ userId: user.id, email: user.email });
+      const res = await request(app).put("/auth/me").set("Authorization", `Bearer ${token}`).send({
+        emailVerified: true,
+        name: "Test",
+      });
+
+      expect(res.status).toBe(200);
+      expect(res.body.user.emailVerified).toBe(false);
+
+      const updatedUser = await prisma.user.findUnique({ where: { id: user.id } });
+      expect(updatedUser?.emailVerified).toBe(false);
     });
   });
 
