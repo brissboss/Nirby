@@ -5,6 +5,7 @@ import { createServer } from "../../src/server";
 import { prisma } from "../../src/db";
 import { hashPassword } from "../../src/auth/hash";
 import { signAccessToken } from "../../src/auth/token";
+import { ErrorCodes } from "../../src/utils/error-codes";
 
 const app = createServer();
 
@@ -329,6 +330,197 @@ describe("List Routes", () => {
         .set("Authorization", `Bearer ${accessToken}`);
 
       expect(res.status).toBe(404);
+    });
+  });
+
+  describe("POST /list/:listId/share", () => {
+    it("should generate a share token for list owner", async () => {
+      const list = await prisma.poiList.create({
+        data: {
+          name: "Shareable List",
+          createdBy: userId,
+        },
+      });
+
+      const res = await request(app)
+        .post(`/list/${list.id}/share`)
+        .set("Authorization", `Bearer ${accessToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveProperty("shareLink");
+      expect(res.body.shareLink).toContain("/shared/");
+
+      const updatedList = await prisma.poiList.findUnique({
+        where: { id: list.id },
+      });
+      expect(updatedList?.shareToken).toBeTruthy();
+      expect(updatedList?.shareTokenExpiresAt).toBeNull();
+    });
+
+    it("should reject request from non-owner", async () => {
+      const otherUser = await prisma.user.create({
+        data: {
+          email: "other@example.com",
+          passwordHash: await hashPassword("password123"),
+          emailVerified: true,
+        },
+      });
+
+      const otherToken = signAccessToken({
+        userId: otherUser.id,
+        email: otherUser.email,
+      });
+
+      const list = await prisma.poiList.create({
+        data: {
+          name: "Owner's List",
+          createdBy: userId,
+        },
+      });
+
+      const res = await request(app)
+        .post(`/list/${list.id}/share`)
+        .set("Authorization", `Bearer ${otherToken}`);
+
+      expect(res.status).toBe(403);
+      expect(res.body.error.code).toBe(ErrorCodes.LIST_ACCESS_DENIED);
+    });
+
+    it("should reject request without authentication", async () => {
+      const list = await prisma.poiList.create({
+        data: {
+          name: "Test List",
+          createdBy: userId,
+        },
+      });
+
+      const res = await request(app).post(`/list/${list.id}/share`);
+
+      expect(res.status).toBe(401);
+    });
+
+    it("should return 404 for non-existent list", async () => {
+      const res = await request(app)
+        .post("/list/non-existent-id/share")
+        .set("Authorization", `Bearer ${accessToken}`);
+
+      expect(res.status).toBe(404);
+    });
+
+    it("should update shareToken if already shared", async () => {
+      const list = await prisma.poiList.create({
+        data: {
+          name: "Already Shared",
+          createdBy: userId,
+          shareToken: "old-token",
+        },
+      });
+
+      const res = await request(app)
+        .post(`/list/${list.id}/share`)
+        .set("Authorization", `Bearer ${accessToken}`);
+
+      expect(res.status).toBe(200);
+
+      const updatedList = await prisma.poiList.findUnique({
+        where: { id: list.id },
+      });
+      expect(updatedList?.shareToken).not.toBe("old-token");
+      expect(updatedList?.shareToken).toBeTruthy();
+    });
+  });
+
+  describe("DELETE /list/:listId/share", () => {
+    it("should revoke share token for list owner", async () => {
+      const list = await prisma.poiList.create({
+        data: {
+          name: "Shared List",
+          createdBy: userId,
+          shareToken: "test-token",
+          shareTokenExpiresAt: null,
+        },
+      });
+
+      const res = await request(app)
+        .delete(`/list/${list.id}/share`)
+        .set("Authorization", `Bearer ${accessToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.message).toBe("List unshared successfully");
+
+      const updatedList = await prisma.poiList.findUnique({
+        where: { id: list.id },
+      });
+      expect(updatedList?.shareToken).toBeNull();
+      expect(updatedList?.shareTokenExpiresAt).toBeNull();
+    });
+
+    it("should reject request from non-owner", async () => {
+      const otherUser = await prisma.user.create({
+        data: {
+          email: "other2@example.com",
+          passwordHash: await hashPassword("password123"),
+          emailVerified: true,
+        },
+      });
+
+      const otherToken = signAccessToken({
+        userId: otherUser.id,
+        email: otherUser.email,
+      });
+
+      const list = await prisma.poiList.create({
+        data: {
+          name: "Owner's List",
+          createdBy: userId,
+          shareToken: "test-token",
+        },
+      });
+
+      const res = await request(app)
+        .delete(`/list/${list.id}/share`)
+        .set("Authorization", `Bearer ${otherToken}`);
+
+      expect(res.status).toBe(403);
+      expect(res.body.error.code).toBe(ErrorCodes.LIST_ACCESS_DENIED);
+    });
+
+    it("should reject request without authentication", async () => {
+      const list = await prisma.poiList.create({
+        data: {
+          name: "Test List",
+          createdBy: userId,
+          shareToken: "test-token",
+        },
+      });
+
+      const res = await request(app).delete(`/list/${list.id}/share`);
+
+      expect(res.status).toBe(401);
+    });
+
+    it("should return 404 for non-existent list", async () => {
+      const res = await request(app)
+        .delete("/list/non-existent-id/share")
+        .set("Authorization", `Bearer ${accessToken}`);
+
+      expect(res.status).toBe(404);
+    });
+
+    it("should succeed even if list is not shared", async () => {
+      const list = await prisma.poiList.create({
+        data: {
+          name: "Not Shared",
+          createdBy: userId,
+          shareToken: null,
+        },
+      });
+
+      const res = await request(app)
+        .delete(`/list/${list.id}/share`)
+        .set("Authorization", `Bearer ${accessToken}`);
+
+      expect(res.status).toBe(200);
     });
   });
 });

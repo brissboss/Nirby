@@ -1,9 +1,12 @@
+import crypto from "crypto";
+
 import { PoiVisibility } from "@prisma/client";
 import { Router } from "express";
 import { z } from "zod";
 
 import { requireAuth } from "../auth/middleware";
 import { prisma } from "../db";
+import { env } from "../env";
 import { ErrorCodes } from "../utils/error-codes";
 import { formatError, handleZodError } from "../utils/errors";
 
@@ -62,7 +65,7 @@ const addPoiToListSchema = z
  *     summary: Create a new list
  *     description: Creates a POI list for the authenticated user
  *     tags:
- *       - List
+ *       - 📝 List
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -128,7 +131,7 @@ listRouter.post("/", requireAuth, async (req, res) => {
  *     summary: Get user's lists
  *     description: Returns paginated lists for the authenticated user
  *     tags:
- *       - List
+ *       - 📝 List
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -188,7 +191,7 @@ listRouter.get("/", requireAuth, async (req, res) => {
  *     summary: Get a list by ID
  *     description: Returns a specific list
  *     tags:
- *       - List
+ *       - 📝 List
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -217,7 +220,7 @@ listRouter.get("/:id", requireAuth, async (req, res) => {
       return res.status(404).json(formatError(ErrorCodes.LIST_NOT_FOUND, "List not found"));
     }
 
-    if (list.createdBy !== req.user!.id && list.visibility !== "PRIVATE") {
+    if (list.createdBy !== req.user!.id && list.visibility === "PRIVATE") {
       return res.status(403).json(formatError(ErrorCodes.LIST_ACCESS_DENIED, "Access denied"));
     }
 
@@ -235,7 +238,7 @@ listRouter.get("/:id", requireAuth, async (req, res) => {
  *     summary: Update a list
  *     description: Updates a list owned by the authenticated user
  *     tags:
- *       - List
+ *       - 📝 List
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -314,7 +317,7 @@ listRouter.put("/:id", requireAuth, async (req, res) => {
  *     summary: Delete a list
  *     description: Deletes a list owned by the authenticated user
  *     tags:
- *       - List
+ *       - 📝 List
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -363,7 +366,7 @@ listRouter.delete("/:id", requireAuth, async (req, res) => {
  *     summary: Add a POI to a list
  *     description: Adds a custom POI or Google Place to a list
  *     tags:
- *       - List
+ *       - 📝 List
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -468,7 +471,7 @@ listRouter.post("/:listId/poi", requireAuth, async (req, res) => {
  *     summary: Get POIs in a list
  *     description: Returns all POIs saved in a list
  *     tags:
- *       - List
+ *       - 📝 List
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -497,7 +500,7 @@ listRouter.get("/:listId/pois", requireAuth, async (req, res) => {
       return res.status(404).json(formatError(ErrorCodes.LIST_NOT_FOUND, "List not found"));
     }
 
-    if (list.createdBy !== req.user!.id && list.visibility !== "PRIVATE") {
+    if (list.createdBy !== req.user!.id && list.visibility === "PRIVATE") {
       return res.status(403).json(formatError(ErrorCodes.LIST_ACCESS_DENIED, "Access denied"));
     }
 
@@ -521,7 +524,7 @@ listRouter.get("/:listId/pois", requireAuth, async (req, res) => {
  *     summary: Remove a POI from a list
  *     description: Removes a saved POI from a list
  *     tags:
- *       - List
+ *       - 📝 List
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -572,6 +575,119 @@ listRouter.delete("/:listId/poi/:savedPoiId", requireAuth, async (req, res) => {
     res.json({ message: "POI removed from list successfully" });
   } catch (err) {
     req.log?.error({ err }, "Failed to remove POI from list");
+    return res.status(500).json(formatError(ErrorCodes.INTERNAL_ERROR, "Internal server error"));
+  }
+});
+
+/**
+ * @openapi
+ * /list/{listId}/share:
+ *   post:
+ *     summary: Share a list
+ *     description: Shares a list with a user by generating a share link
+ *     tags:
+ *       - 📝 List
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: listId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: List shared successfully
+ *       400:
+ *         description: Invalid input
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Access denied
+ *       404:
+ *         description: List not found
+ *       500:
+ *         description: Internal server error
+ */
+listRouter.post("/:listId/share", requireAuth, async (req, res) => {
+  try {
+    const list = await prisma.poiList.findUnique({ where: { id: req.params.listId } });
+
+    if (!list) {
+      return res.status(404).json(formatError(ErrorCodes.LIST_NOT_FOUND, "List not found"));
+    }
+
+    if (list.createdBy !== req.user!.id) {
+      return res.status(403).json(formatError(ErrorCodes.LIST_ACCESS_DENIED, "Access denied"));
+    }
+
+    const shareToken = crypto.randomBytes(32).toString("hex");
+
+    await prisma.poiList.update({
+      where: { id: req.params.listId },
+      data: {
+        shareToken: shareToken,
+        shareTokenExpiresAt: null, // No expiration
+      },
+    });
+
+    const shareLink = `${env.FRONTEND_URL}/shared/${shareToken}`;
+
+    res.json({ shareLink });
+  } catch (err) {
+    req.log?.error({ err }, "Failed to share list");
+    return res.status(500).json(formatError(ErrorCodes.INTERNAL_ERROR, "Internal server error"));
+  }
+});
+
+/**
+ * @openapi
+ * /list/{listId}/share:
+ *   delete:
+ *     summary: Unshare a list
+ *     description: Unshares a list
+ *     tags:
+ *       - 📝 List
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: listId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: List unshared successfully
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Access denied
+ *       404:
+ *         description: List not found
+ *       500:
+ *         description: Internal server error
+ */
+listRouter.delete("/:listId/share", requireAuth, async (req, res) => {
+  try {
+    const list = await prisma.poiList.findUnique({ where: { id: req.params.listId } });
+
+    if (!list) {
+      return res.status(404).json(formatError(ErrorCodes.LIST_NOT_FOUND, "List not found"));
+    }
+
+    if (list.createdBy !== req.user!.id) {
+      return res.status(403).json(formatError(ErrorCodes.LIST_ACCESS_DENIED, "Access denied"));
+    }
+
+    await prisma.poiList.update({
+      where: { id: req.params.listId },
+      data: { shareToken: null, shareTokenExpiresAt: null },
+    });
+
+    res.json({ message: "List unshared successfully" });
+  } catch (err) {
+    req.log?.error({ err }, "Failed to unshare list");
     return res.status(500).json(formatError(ErrorCodes.INTERNAL_ERROR, "Internal server error"));
   }
 });
