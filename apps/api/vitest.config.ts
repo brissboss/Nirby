@@ -5,6 +5,7 @@ export default defineConfig({
     globals: true,
     environment: "node",
     include: ["__test__/**/*.test.ts"],
+    fileParallelism: false,
     env: {
       DATABASE_URL: "postgresql://nirby:nirby@localhost:5432/nirby_test",
       REDIS_URL: "redis://localhost:6379",
@@ -18,6 +19,7 @@ export default defineConfig({
       FRONTEND_URL: "http://localhost:3000",
       EMAIL_VERIFICATION_TEMPLATE_ID_EN: "3b87e129-5741-4c29-b6b9-c673ddf54353",
       EMAIL_VERIFICATION_TEMPLATE_ID_FR: "f25c7b0f-abd2-4abd-9d2c-72272aba0779",
+      GOOGLE_PLACES_API_KEY: "AIzaFakeTestApiKey123",
     },
     coverage: {
       provider: "v8",

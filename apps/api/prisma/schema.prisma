@@ -1,10 +1,12 @@
 generator client {
   provider = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  extensions = [postgis]
 }
 
 model User {
@@ -21,6 +23,8 @@ model User {
   updatedAt                   DateTime  @updatedAt
 
   sessions                    Session[]
+  pois                        Poi[]
+  poiLists                    PoiList[]
 }
 
 model Session {
@@ -34,10 +38,100 @@ model Session {
 }
 
 model Poi {
-  id          String    @id @default(cuid())
-  name        String
-  latitude    Float
-  longitude   Float
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id              String    @id @default(cuid())
+  name            String
+  description     String?
+  descriptionLang String?
+  address         String?
+  latitude        Float
+  longitude       Float
+  location        Unsupported("geometry(Point, 4326)")?
+
+  category        String?
+  website         String?
+  phone           String?
+  priceLevel      Int?
+  openingHours    Json?
+  photoUrls       String[]
+
+  createdBy       String
+  visibility      PoiVisibility @default(PRIVATE)
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  user            User      @relation(fields: [createdBy], references: [id])
+  savedIn         SavedPoi[]
+}
+
+model GooglePlaceCache {
+  id                      String    @id @default(cuid())
+  placeId                 String    @unique
+
+  name                    String
+  nameLang                String?
+  description             String?
+  descriptionLang         String?
+  address                 String?
+  latitude                Float
+  longitude               Float
+  location                Unsupported("geometry(Point, 4326)")?
+
+  category                String?
+  categoryDisplayName     String?
+  categoryDisplayNameLang String?
+
+  website                 String?
+  phone                   String?
+  priceLevel              Int?
+
+  openingHours            Json?
+
+  rating                  Float?
+  userRatingCount         Int?
+
+  photoReferences         String[]
+  googleMapsUri           String?
+
+  cachedAt                DateTime  @default(now())
+  expiresAt               DateTime? // cachedAt + 30 days
+
+  savedIn                 SavedPoi[]
+}
+
+enum PoiVisibility {
+  PRIVATE
+  SHARED
+  PUBLIC
+}
+
+model PoiList {
+  id              String    @id @default(cuid())
+  name            String
+  description     String?
+  imageUrl        String?
+  createdBy       String
+  visibility      PoiVisibility @default(PRIVATE)
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  user            User      @relation(fields: [createdBy], references: [id])
+  savedPois       SavedPoi[]
+}
+
+model SavedPoi {
+  id                    String    @id @default(cuid())
+  listId                String
+  poiId                 String?
+  googlePlaceId         String?
+
+  createdAt             DateTime  @default(now())
+
+  list                  PoiList            @relation(fields: [listId], references: [id], onDelete: Cascade)
+  poi                   Poi?               @relation(fields: [poiId], references: [id], onDelete: Cascade)
+  googlePlaceCache      GooglePlaceCache?  @relation(fields: [googlePlaceId], references: [placeId])
+
+  @@unique([listId, poiId])
+  @@unique([listId, googlePlaceId])
 }
