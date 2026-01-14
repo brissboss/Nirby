@@ -18,6 +18,14 @@ const TEMPLATE_IDS = {
     en: process.env.EMAIL_ACCOUNT_DELETED_TEMPLATE_ID_EN || "bbf86a20-a269-4941-b4cb-3ddf50e3bca0",
     fr: process.env.EMAIL_ACCOUNT_DELETED_TEMPLATE_ID_FR || "ff918753-74cc-4e90-8505-52ce3588ae18",
   },
+  collaboratorInvite: {
+    en:
+      process.env.EMAIL_COLLABORATOR_INVITE_TEMPLATE_ID_EN ||
+      "6311540f-295f-4b76-9668-cef804a4cc84",
+    fr:
+      process.env.EMAIL_COLLABORATOR_INVITE_TEMPLATE_ID_FR ||
+      "c305daaf-58f9-4a7f-b545-6b264b8b5e25",
+  },
 } as const;
 
 export async function sendVerificationEmail(
@@ -76,6 +84,29 @@ export async function sendAccountDeletedEmail(
           month: "long",
           day: "numeric",
         }),
+      },
+    },
+  });
+}
+
+export async function sendCollaboratorInviteEmail(
+  email: string,
+  listName: string,
+  invitedBy: string,
+  inviteLink: string,
+  language: Language = "en"
+): Promise<void> {
+  const templateId =
+    TEMPLATE_IDS.collaboratorInvite[language] || TEMPLATE_IDS.collaboratorInvite.en;
+
+  await resend.emails.send({
+    to: email,
+    template: {
+      id: templateId,
+      variables: {
+        INVITE_LINK: inviteLink,
+        LIST_NAME: listName,
+        INVITER_NAME: invitedBy,
       },
     },
   });

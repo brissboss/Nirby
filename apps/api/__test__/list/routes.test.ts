@@ -1215,4 +1215,583 @@ describe("List Routes", () => {
       expect(res.body.list.name).toBe("Public List");
     });
   });
+
+  describe("POST /list/:listId/collaborators/invite", () => {
+    it("should generate an invitation link for owner", async () => {
+      const list = await prisma.poiList.create({
+        data: { name: "My List", createdBy: userId },
+      });
+
+      const res = await request(app)
+        .post(`/list/${list.id}/collaborators/invite`)
+        .set("Authorization", `Bearer ${accessToken}`)
+        .send({
+          email: "invited@example.com",
+          role: "EDITOR",
+          sendEmail: false,
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveProperty("inviteLink");
+      expect(res.body.inviteLink).toContain("/collaborators/accept?token=");
+      expect(res.body.emailSent).toBe(false);
+    });
+
+    it("should default to VIEWER role if not specified", async () => {
+      const list = await prisma.poiList.create({
+        data: { name: "My List", createdBy: userId },
+      });
+
+      const res = await request(app)
+        .post(`/list/${list.id}/collaborators/invite`)
+        .set("Authorization", `Bearer ${accessToken}`)
+        .send({
+          email: "viewer@example.com",
+          sendEmail: false,
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveProperty("inviteLink");
+    });
+
+    it("should reject invitation to self", async () => {
+      const list = await prisma.poiList.create({
+        data: { name: "My List", createdBy: userId },
+      });
+
+      const user = await prisma.user.findUnique({ where: { id: userId } });
+
+      const res = await request(app)
+        .post(`/list/${list.id}/collaborators/invite`)
+        .set("Authorization", `Bearer ${accessToken}`)
+        .send({
+          email: user!.email,
+          role: "EDITOR",
+          sendEmail: false,
+        });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe(ErrorCodes.COLLABORATOR_CANNOT_INVITE_YOURSELF);
+    });
+
+    it("should reject if user is already a collaborator", async () => {
+      const list = await prisma.poiList.create({
+        data: { name: "My List", createdBy: userId },
+      });
+
+      const collaborator = await prisma.user.create({
+        data: {
+          email: "existing@example.com",
+          passwordHash: await hashPassword("password123"),
+          emailVerified: true,
+        },
+      });
+
+      await prisma.listCollaborator.create({
+        data: { listId: list.id, userId: collaborator.id, role: "EDITOR" },
+      });
+
+      const res = await request(app)
+        .post(`/list/${list.id}/collaborators/invite`)
+        .set("Authorization", `Bearer ${accessToken}`)
+        .send({
+          email: "existing@example.com",
+          role: "EDITOR",
+          sendEmail: false,
+        });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe(ErrorCodes.COLLABORATOR_ALREADY_EXISTS);
+    });
+
+    it("should allow inviting a user without an account", async () => {
+      const list = await prisma.poiList.create({
+        data: { name: "My List", createdBy: userId },
+      });
+
+      const res = await request(app)
+        .post(`/list/${list.id}/collaborators/invite`)
+        .set("Authorization", `Bearer ${accessToken}`)
+        .send({
+          email: "new-user@example.com",
+          role: "EDITOR",
+          sendEmail: false,
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveProperty("inviteLink");
+      expect(res.body.emailSent).toBe(false);
+    });
+
+    it("should reject non-owner/non-admin from inviting", async () => {
+      const owner = await prisma.user.create({
+        data: {
+          email: "owner-invite@example.com",
+          passwordHash: await hashPassword("password123"),
+          emailVerified: true,
+        },
+      });
+
+      const list = await prisma.poiList.create({
+        data: { name: "Owner's List", createdBy: owner.id },
+      });
+
+      await prisma.listCollaborator.create({
+        data: { listId: list.id, userId, role: "EDITOR" },
+      });
+
+      const res = await request(app)
+        .post(`/list/${list.id}/collaborators/invite`)
+        .set("Authorization", `Bearer ${accessToken}`)
+        .send({
+          email: "newuser@example.com",
+          role: "EDITOR",
+          sendEmail: false,
+        });
+
+      expect(res.status).toBe(403);
+    });
+
+    it("should return 404 for non-existent list", async () => {
+      const res = await request(app)
+        .post("/list/non-existent-id/collaborators/invite")
+        .set("Authorization", `Bearer ${accessToken}`)
+        .send({
+          email: "someone@example.com",
+          role: "EDITOR",
+        });
+
+      expect(res.status).toBe(404);
+    });
+
+    it("should reject invalid email format", async () => {
+      const list = await prisma.poiList.create({
+        data: { name: "My List", createdBy: userId },
+      });
+
+      const res = await request(app)
+        .post(`/list/${list.id}/collaborators/invite`)
+        .set("Authorization", `Bearer ${accessToken}`)
+        .send({
+          email: "invalid-email",
+          role: "EDITOR",
+        });
+
+      expect(res.status).toBe(400);
+    });
+  });
+
+  describe("POST /list/:listId/collaborators/join", () => {
+    it("should join a list with valid invitation token", async () => {
+      const owner = await prisma.user.create({
+        data: {
+          email: "owner-join-invite@example.com",
+          passwordHash: await hashPassword("password123"),
+          emailVerified: true,
+        },
+      });
+
+      const invitee = await prisma.user.create({
+        data: {
+          email: "invitee@example.com",
+          passwordHash: await hashPassword("password123"),
+          emailVerified: true,
+        },
+      });
+
+      const inviteeToken = signAccessToken({ userId: invitee.id, email: invitee.email });
+
+      const list = await prisma.poiList.create({
+        data: { name: "Invitation List", createdBy: owner.id },
+      });
+
+      // Simulate invitation token
+      const jwt = await import("jsonwebtoken");
+      const invitationToken = jwt.sign(
+        {
+          listId: list.id,
+          email: invitee.email,
+          role: "EDITOR",
+          invitedBy: owner.id,
+          type: "collaborator_invite",
+        },
+        process.env.JWT_SECRET!,
+        { expiresIn: "7d" }
+      );
+
+      const res = await request(app)
+        .post(`/list/${list.id}/collaborators/join?token=${invitationToken}`)
+        .set("Authorization", `Bearer ${inviteeToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.message).toBe("Collaborator joined successfully");
+
+      const collaborator = await prisma.listCollaborator.findUnique({
+        where: { listId_userId: { listId: list.id, userId: invitee.id } },
+      });
+      expect(collaborator).toBeDefined();
+      expect(collaborator?.role).toBe("EDITOR");
+    });
+
+    it("should reject invalid token", async () => {
+      const owner = await prisma.user.create({
+        data: {
+          email: "owner-invalid@example.com",
+          passwordHash: await hashPassword("password123"),
+          emailVerified: true,
+        },
+      });
+
+      const list = await prisma.poiList.create({
+        data: { name: "List", createdBy: owner.id },
+      });
+
+      const res = await request(app)
+        .post(`/list/${list.id}/collaborators/join?token=invalid-token`)
+        .set("Authorization", `Bearer ${accessToken}`);
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe(ErrorCodes.SHARE_TOKEN_INVALID);
+    });
+
+    it("should reject expired token", async () => {
+      const owner = await prisma.user.create({
+        data: {
+          email: "owner-expired-invite@example.com",
+          passwordHash: await hashPassword("password123"),
+          emailVerified: true,
+        },
+      });
+
+      const invitee = await prisma.user.create({
+        data: {
+          email: "invitee-expired@example.com",
+          passwordHash: await hashPassword("password123"),
+          emailVerified: true,
+        },
+      });
+
+      const inviteeToken = signAccessToken({ userId: invitee.id, email: invitee.email });
+
+      const list = await prisma.poiList.create({
+        data: { name: "Expired Invitation", createdBy: owner.id },
+      });
+
+      const jwt = await import("jsonwebtoken");
+      const expiredToken = jwt.sign(
+        {
+          listId: list.id,
+          email: invitee.email,
+          role: "EDITOR",
+          invitedBy: owner.id,
+          type: "collaborator_invite",
+        },
+        process.env.JWT_SECRET!,
+        { expiresIn: "-1s" } // Already expired
+      );
+
+      const res = await request(app)
+        .post(`/list/${list.id}/collaborators/join?token=${expiredToken}`)
+        .set("Authorization", `Bearer ${inviteeToken}`);
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe(ErrorCodes.SHARE_TOKEN_INVALID);
+    });
+
+    it("should reject if email doesn't match logged in user", async () => {
+      const owner = await prisma.user.create({
+        data: {
+          email: "owner-mismatch@example.com",
+          passwordHash: await hashPassword("password123"),
+          emailVerified: true,
+        },
+      });
+
+      const list = await prisma.poiList.create({
+        data: { name: "List", createdBy: owner.id },
+      });
+
+      const jwt = await import("jsonwebtoken");
+      const invitationToken = jwt.sign(
+        {
+          listId: list.id,
+          email: "other@example.com", // Different email
+          role: "EDITOR",
+          invitedBy: owner.id,
+          type: "collaborator_invite",
+        },
+        process.env.JWT_SECRET!,
+        { expiresIn: "7d" }
+      );
+
+      const res = await request(app)
+        .post(`/list/${list.id}/collaborators/join?token=${invitationToken}`)
+        .set("Authorization", `Bearer ${accessToken}`);
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe(ErrorCodes.SHARE_TOKEN_INVALID);
+    });
+
+    it("should reject if listId doesn't match", async () => {
+      const owner = await prisma.user.create({
+        data: {
+          email: "owner-listmismatch@example.com",
+          passwordHash: await hashPassword("password123"),
+          emailVerified: true,
+        },
+      });
+
+      const list1 = await prisma.poiList.create({
+        data: { name: "List 1", createdBy: owner.id },
+      });
+
+      const list2 = await prisma.poiList.create({
+        data: { name: "List 2", createdBy: owner.id },
+      });
+
+      const invitee = await prisma.user.create({
+        data: {
+          email: "invitee-mismatch@example.com",
+          passwordHash: await hashPassword("password123"),
+          emailVerified: true,
+        },
+      });
+
+      const inviteeToken = signAccessToken({ userId: invitee.id, email: invitee.email });
+
+      const jwt = await import("jsonwebtoken");
+      const invitationToken = jwt.sign(
+        {
+          listId: list1.id, // Token for list1
+          email: invitee.email,
+          role: "EDITOR",
+          invitedBy: owner.id,
+          type: "collaborator_invite",
+        },
+        process.env.JWT_SECRET!,
+        { expiresIn: "7d" }
+      );
+
+      // Try to join list2 with list1's token
+      const res = await request(app)
+        .post(`/list/${list2.id}/collaborators/join?token=${invitationToken}`)
+        .set("Authorization", `Bearer ${inviteeToken}`);
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe(ErrorCodes.SHARE_TOKEN_INVALID);
+    });
+
+    it("should reject if token type is not collaborator_invite", async () => {
+      const owner = await prisma.user.create({
+        data: {
+          email: "owner-wrongtype@example.com",
+          passwordHash: await hashPassword("password123"),
+          emailVerified: true,
+        },
+      });
+
+      const invitee = await prisma.user.create({
+        data: {
+          email: "invitee-wrongtype@example.com",
+          passwordHash: await hashPassword("password123"),
+          emailVerified: true,
+        },
+      });
+
+      const inviteeToken = signAccessToken({ userId: invitee.id, email: invitee.email });
+
+      const list = await prisma.poiList.create({
+        data: { name: "List", createdBy: owner.id },
+      });
+
+      const jwt = await import("jsonwebtoken");
+      const wrongToken = jwt.sign(
+        {
+          listId: list.id,
+          email: invitee.email,
+          role: "EDITOR",
+          invitedBy: owner.id,
+          type: "wrong_type", // Wrong type
+        },
+        process.env.JWT_SECRET!,
+        { expiresIn: "7d" }
+      );
+
+      const res = await request(app)
+        .post(`/list/${list.id}/collaborators/join?token=${wrongToken}`)
+        .set("Authorization", `Bearer ${inviteeToken}`);
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe(ErrorCodes.SHARE_TOKEN_INVALID);
+    });
+
+    it("should reject if owner tries to join their own list", async () => {
+      const list = await prisma.poiList.create({
+        data: { name: "My List", createdBy: userId },
+      });
+
+      const user = await prisma.user.findUnique({ where: { id: userId } });
+
+      const jwt = await import("jsonwebtoken");
+      const invitationToken = jwt.sign(
+        {
+          listId: list.id,
+          email: user!.email,
+          role: "EDITOR",
+          invitedBy: "someone-else",
+          type: "collaborator_invite",
+        },
+        process.env.JWT_SECRET!,
+        { expiresIn: "7d" }
+      );
+
+      const res = await request(app)
+        .post(`/list/${list.id}/collaborators/join?token=${invitationToken}`)
+        .set("Authorization", `Bearer ${accessToken}`);
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe(ErrorCodes.COLLABORATOR_OWNER_CANNOT_JOIN);
+    });
+
+    it("should reject if already a collaborator", async () => {
+      const owner = await prisma.user.create({
+        data: {
+          email: "owner-already-collab@example.com",
+          passwordHash: await hashPassword("password123"),
+          emailVerified: true,
+        },
+      });
+
+      const invitee = await prisma.user.create({
+        data: {
+          email: "invitee-already-collab@example.com",
+          passwordHash: await hashPassword("password123"),
+          emailVerified: true,
+        },
+      });
+
+      const inviteeToken = signAccessToken({ userId: invitee.id, email: invitee.email });
+
+      const list = await prisma.poiList.create({
+        data: { name: "List", createdBy: owner.id },
+      });
+
+      // Already a collaborator
+      await prisma.listCollaborator.create({
+        data: { listId: list.id, userId: invitee.id, role: "VIEWER" },
+      });
+
+      const jwt = await import("jsonwebtoken");
+      const invitationToken = jwt.sign(
+        {
+          listId: list.id,
+          email: invitee.email,
+          role: "EDITOR",
+          invitedBy: owner.id,
+          type: "collaborator_invite",
+        },
+        process.env.JWT_SECRET!,
+        { expiresIn: "7d" }
+      );
+
+      const res = await request(app)
+        .post(`/list/${list.id}/collaborators/join?token=${invitationToken}`)
+        .set("Authorization", `Bearer ${inviteeToken}`);
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe(ErrorCodes.COLLABORATOR_ALREADY_EXISTS);
+    });
+
+    it("should return 400 if token is missing", async () => {
+      const list = await prisma.poiList.create({
+        data: { name: "My List", createdBy: userId },
+      });
+
+      const res = await request(app)
+        .post(`/list/${list.id}/collaborators/join`)
+        .set("Authorization", `Bearer ${accessToken}`);
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe(ErrorCodes.TOKEN_REQUIRED);
+    });
+
+    it("should return 404 for non-existent list", async () => {
+      const invitee = await prisma.user.create({
+        data: {
+          email: "invitee-404@example.com",
+          passwordHash: await hashPassword("password123"),
+          emailVerified: true,
+        },
+      });
+
+      const inviteeToken = signAccessToken({ userId: invitee.id, email: invitee.email });
+
+      const jwt = await import("jsonwebtoken");
+      const invitationToken = jwt.sign(
+        {
+          listId: "non-existent-id",
+          email: invitee.email,
+          role: "EDITOR",
+          invitedBy: userId,
+          type: "collaborator_invite",
+        },
+        process.env.JWT_SECRET!,
+        { expiresIn: "7d" }
+      );
+
+      const res = await request(app)
+        .post("/list/non-existent-id/collaborators/join?token=" + invitationToken)
+        .set("Authorization", `Bearer ${inviteeToken}`);
+
+      expect(res.status).toBe(404);
+    });
+
+    it("should assign correct role from token", async () => {
+      const owner = await prisma.user.create({
+        data: {
+          email: "owner-role@example.com",
+          passwordHash: await hashPassword("password123"),
+          emailVerified: true,
+        },
+      });
+
+      const invitee = await prisma.user.create({
+        data: {
+          email: "invitee-role@example.com",
+          passwordHash: await hashPassword("password123"),
+          emailVerified: true,
+        },
+      });
+
+      const inviteeToken = signAccessToken({ userId: invitee.id, email: invitee.email });
+
+      const list = await prisma.poiList.create({
+        data: { name: "Role Test List", createdBy: owner.id },
+      });
+
+      const jwt = await import("jsonwebtoken");
+      const invitationToken = jwt.sign(
+        {
+          listId: list.id,
+          email: invitee.email,
+          role: "ADMIN",
+          invitedBy: owner.id,
+          type: "collaborator_invite",
+        },
+        process.env.JWT_SECRET!,
+        { expiresIn: "7d" }
+      );
+
+      const res = await request(app)
+        .post(`/list/${list.id}/collaborators/join?token=${invitationToken}`)
+        .set("Authorization", `Bearer ${inviteeToken}`);
+
+      expect(res.status).toBe(200);
+
+      const collaborator = await prisma.listCollaborator.findUnique({
+        where: { listId_userId: { listId: list.id, userId: invitee.id } },
+      });
+      expect(collaborator?.role).toBe("ADMIN");
+    });
+  });
 });
