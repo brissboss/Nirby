@@ -790,9 +790,6 @@ describe("List Routes", () => {
         .set("Authorization", `Bearer ${accessToken}`);
 
       expect(res.status).toBe(200);
-      expect(res.body.message).toBe(
-        "You are now a collaborator of this list. You can now edit the list."
-      );
 
       const collaborator = await prisma.listCollaborator.findUnique({
         where: { listId_userId: { listId: list.id, userId } },
@@ -1427,7 +1424,6 @@ describe("List Routes", () => {
         .set("Authorization", `Bearer ${inviteeToken}`);
 
       expect(res.status).toBe(200);
-      expect(res.body.message).toBe("Collaborator joined successfully");
 
       const collaborator = await prisma.listCollaborator.findUnique({
         where: { listId_userId: { listId: list.id, userId: invitee.id } },

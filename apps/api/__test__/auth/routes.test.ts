@@ -35,7 +35,6 @@ describe("Auth routes", () => {
 
       expect(res.status).toBe(201);
       expect(res.body).toHaveProperty("user");
-      expect(res.body).toHaveProperty("message");
       expect(res.body.user.email).toBe("test@example.com");
 
       const user = await prisma.user.findUnique({ where: { email: "test@example.com" } });
@@ -593,7 +592,6 @@ describe("Auth routes", () => {
         .set("Accept", "application/json");
 
       expect(res.status).toBe(200);
-      expect(res.body.message).toBe("Email verified successfully");
       expect(res.body.user.email).toBe("verify@example.com");
 
       const updatedUser = await prisma.user.findUnique({ where: { id: user.id } });

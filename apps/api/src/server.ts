@@ -12,7 +12,7 @@ import { googlePlaceRouter } from "./google-place/routes";
 import { listRouter } from "./list";
 import { poiRouter } from "./poi/routes";
 import { sharedRouter } from "./shared/routes";
-import { SwaggerSpec } from "./swagger";
+import { SwaggerSpec } from "./swagger/swagger";
 import { uploadRouter } from "./upload/routes";
 import { ErrorCode, ErrorCodes } from "./utils/error-codes";
 import { ApiError, formatError } from "./utils/errors";
@@ -93,12 +93,17 @@ export function createServer() {
    * @openapi
    * /health:
    *   get:
+   *     operationId: healthCheck
    *     summary: Health check
    *     tags:
    *       - ❤️ Health
    *     responses:
    *       200:
    *         description: API is alive
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/HealthCheckResponse'
    */
   app.get("/health", (req: Request, res: Response) => {
     res.json({ ok: true, service: "api", time: new Date().toISOString() });
@@ -108,12 +113,17 @@ export function createServer() {
    * @openapi
    * /db/health:
    *   get:
+   *     operationId: dbHealthCheck
    *     summary: Database health check
    *     tags:
    *       - ❤️ Health
    *     responses:
    *       200:
    *         description: Database is alive
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/HealthDatabaseResponse'
    */
   app.get("/db/health", async (_req, res) => {
     const now = await prisma.$queryRaw`select now() as now`;

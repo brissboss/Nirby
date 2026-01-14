@@ -10,6 +10,7 @@ export const sharedRouter = Router();
  * @openapi
  * /shared/{shareToken}:
  *   get:
+ *     operationId: getSharedList
  *     summary: Get a shared list
  *     description: Returns a shared list
  *     tags:
@@ -25,12 +26,22 @@ export const sharedRouter = Router();
  *     responses:
  *       200:
  *         description: List retrieved successfully
- *       401:
- *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/SharedListResponse'
  *       404:
  *         description: List not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       500:
  *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 sharedRouter.get("/:shareToken", async (req, res) => {
   try {
@@ -71,6 +82,7 @@ sharedRouter.get("/:shareToken", async (req, res) => {
  * @openapi
  * /shared/{shareToken}/pois:
  *   get:
+ *     operationId: getSharedListPois
  *     summary: Get shared POIs in a list
  *     description: Returns shared POIs in a list
  *     tags:
@@ -86,12 +98,22 @@ sharedRouter.get("/:shareToken", async (req, res) => {
  *     responses:
  *       200:
  *         description: Shared POIs retrieved successfully
- *       401:
- *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/SharedPoisResponse'
  *       404:
  *         description: Shared POIs not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       500:
  *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 sharedRouter.get("/:shareToken/pois", async (req, res) => {
   try {

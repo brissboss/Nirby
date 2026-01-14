@@ -29,6 +29,7 @@ const inviteCollaboratorSchema = z.object({
  * @openapi
  * /list/{listId}/collaborators:
  *   get:
+ *     operationId: getCollaborators
  *     summary: Get the collaborators of a list
  *     description: Gets the collaborators of a list
  *     tags:
@@ -44,14 +45,34 @@ const inviteCollaboratorSchema = z.object({
  *     responses:
  *       200:
  *         description: Collaborators retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/GetCollaboratorsResponse'
  *       401:
  *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       403:
  *         description: Access denied
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       404:
  *         description: List not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       500:
  *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 listCollaboratorsRouter.get("/:listId/collaborators", requireAuth, async (req, res) => {
   try {
@@ -85,6 +106,7 @@ listCollaboratorsRouter.get("/:listId/collaborators", requireAuth, async (req, r
  * @openapi
  * /list/{listId}/collaborators/me:
  *   delete:
+ *     operationId: leaveList
  *     summary: Leave a list
  *     description: Leaves a list
  *     tags:
@@ -100,14 +122,34 @@ listCollaboratorsRouter.get("/:listId/collaborators", requireAuth, async (req, r
  *     responses:
  *       200:
  *         description: List left successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/SingleMessageResponse'
  *       401:
  *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       403:
  *         description: Access denied
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       404:
  *         description: List not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       500:
  *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 listCollaboratorsRouter.delete("/:listId/collaborators/me", requireAuth, async (req, res) => {
   try {
@@ -142,6 +184,7 @@ listCollaboratorsRouter.delete("/:listId/collaborators/me", requireAuth, async (
  * @openapi
  * /list/{listId}/collaborators/{collaboratorId}:
  *   delete:
+ *     operationId: removeCollaborator
  *     summary: Remove a collaborator from a list
  *     description: Removes a collaborator from a list
  *     tags:
@@ -162,14 +205,34 @@ listCollaboratorsRouter.delete("/:listId/collaborators/me", requireAuth, async (
  *     responses:
  *       200:
  *         description: Collaborator removed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/SingleMessageResponse'
  *       401:
  *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       403:
  *         description: Access denied
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       404:
  *         description: List not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       500:
  *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 listCollaboratorsRouter.delete(
   "/:listId/collaborators/:collaboratorId",
@@ -206,6 +269,7 @@ listCollaboratorsRouter.delete(
  * @openapi
  * /list/{listId}/collaborators/invite:
  *   post:
+ *     operationId: inviteCollaborator
  *     summary: Invite a collaborator to a list
  *     description: Invites a collaborator to a list by email. Returns an invitation link that can be sent via email or shared directly.
  *     tags:
@@ -251,25 +315,37 @@ listCollaboratorsRouter.delete(
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 inviteLink:
- *                   type: string
- *                   format: uri
- *                   description: Invitation link to share
- *                 emailSent:
- *                   type: boolean
- *                   description: Whether the email was sent
+ *               $ref: '#/components/schemas/InviteCollaboratorResponse'
  *       400:
  *         description: Invalid input or collaborator already exists
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       401:
  *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       403:
  *         description: Access denied
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       404:
  *         description: List not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       500:
  *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 listCollaboratorsRouter.post("/:listId/collaborators/invite", requireAuth, async (req, res) => {
   try {
@@ -359,6 +435,7 @@ listCollaboratorsRouter.post("/:listId/collaborators/invite", requireAuth, async
  * @openapi
  * /list/{listId}/collaborators/join:
  *   post:
+ *     operationId: joinListByInvite
  *     summary: Join a list as a collaborator
  *     description: Joins a list as a collaborator by token
  *     tags:
@@ -379,12 +456,28 @@ listCollaboratorsRouter.post("/:listId/collaborators/invite", requireAuth, async
  *     responses:
  *       200:
  *         description: Collaborator joined successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/JoinListResponse'
  *       400:
  *         description: Invalid token or expired token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       404:
  *         description: List not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       500:
  *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 listCollaboratorsRouter.post("/:listId/collaborators/join", requireAuth, async (req, res) => {
   try {
@@ -451,7 +544,7 @@ listCollaboratorsRouter.post("/:listId/collaborators/join", requireAuth, async (
       },
     });
 
-    res.json({ message: "Collaborator joined successfully", list: list });
+    res.json({ list: list });
   } catch (err) {
     req.log?.error({ err }, "Failed to join list");
     return res.status(500).json(formatError(ErrorCodes.INTERNAL_ERROR, "Internal server error"));

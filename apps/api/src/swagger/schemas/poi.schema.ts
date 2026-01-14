@@ -1,0 +1,317 @@
+/**
+ * POI-related OpenAPI schemas
+ * These schemas define the structure of POI-related API responses
+ */
+
+export const poiSchemas = {
+  POI: {
+    type: "object",
+    properties: {
+      id: { type: "string" },
+      name: { type: "string" },
+      description: { type: "string", nullable: true },
+      descriptionLang: { type: "string", nullable: true },
+      address: { type: "string", nullable: true },
+      latitude: { type: "number" },
+      longitude: { type: "number" },
+      visibility: { type: "string", enum: ["PRIVATE", "SHARED", "PUBLIC"] },
+      category: { type: "string", nullable: true },
+      website: { type: "string", nullable: true },
+      phone: { type: "string", nullable: true },
+      priceLevel: { type: "number", nullable: true },
+      openingHours: { type: "object", nullable: true },
+      photoUrls: { type: "array", items: { type: "string" } },
+      createdBy: { type: "string" },
+    },
+    example: {
+      id: "1234567890",
+      name: "Example POI",
+      description: "This is an example POI",
+      descriptionLang: "en",
+      address: "123 Example St, Anytown, USA",
+      latitude: 48.8566,
+      longitude: 2.3522,
+      visibility: "PRIVATE",
+      category: "restaurant",
+      website: "https://example.com",
+      phone: "123-456-7890",
+      priceLevel: 3,
+      openingHours: [
+        {
+          open: {
+            day: 0,
+            hour: 0,
+            minute: 0,
+          },
+          close: {
+            day: 0,
+            hour: 0,
+            minute: 0,
+          },
+        },
+      ],
+      photoUrls: ["https://example.com/photo1.jpg", "https://example.com/photo2.jpg"],
+      createdBy: "1234567890",
+    },
+  },
+  NearbyPOIsResponse: {
+    type: "object",
+    properties: {
+      pois: { type: "array", items: { $ref: "#/components/schemas/POI" } },
+    },
+    required: ["pois"],
+  },
+  GetPoisResponse: {
+    type: "object",
+    properties: {
+      pois: { type: "array", items: { $ref: "#/components/schemas/POI" } },
+      pagination: { $ref: "#/components/schemas/PaginationResponse" },
+    },
+    required: ["pois", "pagination"],
+  },
+  GooglePlace: {
+    type: "object",
+    properties: {
+      placeId: { type: "string" },
+      name: { type: "string", nullable: true },
+      nameLang: { type: "string", nullable: true },
+      description: { type: "string", nullable: true },
+      descriptionLang: { type: "string", nullable: true },
+      address: { type: "string", nullable: true },
+      latitude: { type: "number" },
+      longitude: { type: "number" },
+      category: { type: "string", nullable: true },
+      categoryDisplayName: { type: "string", nullable: true },
+      categoryDisplayNameLang: { type: "string", nullable: true },
+      website: { type: "string", nullable: true },
+      phone: { type: "string", nullable: true },
+      priceLevel: { type: "number", nullable: true },
+      openingHours: { type: "object", nullable: true },
+      rating: { type: "number", nullable: true },
+      userRatingCount: { type: "number", nullable: true },
+      photoReferences: { type: "array", items: { type: "string" } },
+      googleMapsUri: { type: "string", format: "uri" },
+    },
+    example: {
+      placeId: "1234567890",
+      name: "Example POI",
+      nameLang: "en",
+      description: "This is an example POI",
+      descriptionLang: "en",
+      address: "123 Example St, Anytown, USA",
+      latitude: 48.8566,
+      longitude: 2.3522,
+      category: "restaurant",
+      categoryDisplayName: "Restaurant",
+      categoryDisplayNameLang: "en",
+      website: "https://example.com",
+      phone: "123-456-7890",
+      priceLevel: 3,
+      openingHours: [
+        {
+          open: {
+            day: 0,
+            hour: 0,
+            minute: 0,
+          },
+          close: {
+            day: 0,
+            hour: 0,
+            minute: 0,
+          },
+        },
+      ],
+      rating: 4.5,
+      userRatingCount: 100,
+      photoReferences: ["https://example.com/photo1.jpg", "https://example.com/photo2.jpg"],
+      googleMapsUri: "https://example.com/maps",
+    },
+  },
+  GooglePlaceSearchResponse: {
+    type: "object",
+    properties: {
+      places: { type: "array", items: { $ref: "#/components/schemas/GooglePlace" } },
+    },
+    required: ["places"],
+  },
+  SavedPoiBasic: {
+    type: "object",
+    properties: {
+      id: { type: "string" },
+      createdAt: { type: "string", format: "date-time" },
+      listId: { type: "string" },
+      poiId: { type: "string", nullable: true },
+      googlePlaceId: { type: "string", nullable: true },
+    },
+    required: ["id", "createdAt", "listId", "poiId", "googlePlaceId"],
+    example: {
+      id: "1234567890",
+      createdAt: "2021-01-01T00:00:00.000Z",
+      listId: "1234567890",
+      poiId: "1234567890",
+      googlePlaceId: "1234567890",
+    },
+  },
+  SavedPoi: {
+    type: "object",
+    properties: {
+      name: { type: "string" },
+      id: { type: "string" },
+      expiresAt: { type: "string", format: "date-time", nullable: true },
+      description: { type: "string", nullable: true },
+      descriptionLang: { type: "string", nullable: true },
+      address: { type: "string", nullable: true },
+      latitude: { type: "number" },
+      longitude: { type: "number" },
+      category: { type: "string", nullable: true },
+      website: { type: "string", nullable: true },
+      phone: { type: "string", nullable: true },
+      priceLevel: { type: "number", nullable: true },
+      openingHours: { type: "object", nullable: true },
+      placeId: { type: "string" },
+      nameLang: { type: "string", nullable: true },
+      categoryDisplayName: { type: "string", nullable: true },
+      categoryDisplayNameLang: { type: "string", nullable: true },
+      rating: { type: "number", nullable: true },
+      userRatingCount: { type: "number", nullable: true },
+      photoReferences: { type: "array", items: { type: "string" } },
+      googleMapsUri: { type: "string", format: "uri", nullable: true },
+      cachedAt: { type: "string", format: "date-time" },
+    },
+    example: {
+      name: "Example POI",
+      id: "1234567890",
+      expiresAt: "2021-01-01T00:00:00.000Z",
+      description: "This is an example POI",
+      descriptionLang: "en",
+      address: "123 Example St, Anytown, USA",
+      latitude: 48.8566,
+      longitude: 2.3522,
+      category: "restaurant",
+      website: "https://example.com",
+      phone: "123-456-7890",
+      priceLevel: 3,
+      openingHours: [
+        {
+          open: {
+            day: 0,
+            hour: 0,
+            minute: 0,
+          },
+          close: {
+            day: 0,
+            hour: 0,
+            minute: 0,
+          },
+        },
+      ],
+      placeId: "1234567890",
+      nameLang: "en",
+      categoryDisplayName: "Restaurant",
+      categoryDisplayNameLang: "en",
+      rating: 4.5,
+      userRatingCount: 100,
+      photoReferences: ["https://example.com/photo1.jpg", "https://example.com/photo2.jpg"],
+      googleMapsUri: "https://example.com/maps",
+      cachedAt: "2021-01-01T00:00:00.000Z",
+    },
+  },
+  ShareLinkResponse: {
+    type: "object",
+    properties: {
+      shareLink: { type: "string", format: "uri" },
+    },
+    required: ["shareLink"],
+    example: {
+      shareLink: "https://example.com/share",
+    },
+  },
+  EditLinkResponse: {
+    type: "object",
+    properties: {
+      editLink: { type: "string", format: "uri" },
+    },
+    required: ["editLink"],
+    example: {
+      editLink: "https://example.com/edit",
+    },
+  },
+  CreatePoiResponse: {
+    type: "object",
+    properties: {
+      poi: { $ref: "#/components/schemas/POI" },
+    },
+    required: ["poi"],
+  },
+  UpdatePoiResponse: {
+    type: "object",
+    properties: {
+      poi: { $ref: "#/components/schemas/POI" },
+    },
+    required: ["poi"],
+  },
+  SavedPoiBasicResponse: {
+    type: "object",
+    properties: {
+      savedPoi: { $ref: "#/components/schemas/SavedPoiBasic" },
+    },
+    required: ["savedPoi"],
+  },
+  GetSavedPoisResponse: {
+    type: "object",
+    properties: {
+      savedPois: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            id: { type: "string" },
+            createdAt: { type: "string", format: "date-time" },
+            listId: { type: "string" },
+            poiId: { type: "string", nullable: true },
+            googlePlaceId: { type: "string", nullable: true },
+            poi: { $ref: "#/components/schemas/POI" },
+            googlePlaceCache: { $ref: "#/components/schemas/GooglePlace" },
+          },
+        },
+      },
+    },
+    required: ["savedPois"],
+  },
+  SharedListResponse: {
+    type: "object",
+    properties: {
+      list: {
+        type: "object",
+        properties: {
+          id: { type: "string" },
+          name: { type: "string" },
+          description: { type: "string", nullable: true },
+          visibility: { type: "string", enum: ["PRIVATE", "SHARED", "PUBLIC"] },
+          imageUrl: { type: "string", format: "uri", nullable: true },
+          shareToken: { type: "string", nullable: true },
+          shareTokenExpiresAt: { type: "string", format: "date-time", nullable: true },
+          editToken: { type: "string", nullable: true },
+          editTokenExpiresAt: { type: "string", format: "date-time", nullable: true },
+          createdAt: { type: "string", format: "date-time" },
+          updatedAt: { type: "string", format: "date-time" },
+          creator: {
+            type: "object",
+            properties: {
+              name: { type: "string", nullable: true },
+              avatarUrl: { type: "string", format: "uri", nullable: true },
+            },
+          },
+        },
+      },
+    },
+    required: ["list"],
+  },
+  SharedPoisResponse: {
+    type: "object",
+    properties: {
+      pois: { type: "array", items: { type: "object" } },
+    },
+    required: ["pois"],
+  },
+} as const;
