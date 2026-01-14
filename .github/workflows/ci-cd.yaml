@@ -142,11 +142,11 @@ jobs:
             -e EMAIL_ACCOUNT_DELETED_TEMPLATE_ID_FR=${{ vars.EMAIL_ACCOUNT_DELETED_TEMPLATE_ID_FR }} \
             -e EMAIL_COLLABORATOR_INVITE_TEMPLATE_ID_EN=${{ vars.EMAIL_COLLABORATOR_INVITE_TEMPLATE_ID_EN }} \
             -e EMAIL_COLLABORATOR_INVITE_TEMPLATE_ID_FR=${{ vars.EMAIL_COLLABORATOR_INVITE_TEMPLATE_ID_FR }} \
-            -e S3_BUCKET=${{ vars.S3_BUCKET }} \
-            -e S3_REGION=${{ vars.S3_REGION }} \
-            -e S3_ACCESS_KEY_ID=${{ secrets.S3_ACCESS_KEY_ID }} \
-            -e S3_SECRET_ACCESS_KEY=${{ secrets.S3_SECRET_ACCESS_KEY }} \
-            -e S3_PUBLIC_URL=${{ vars.S3_PUBLIC_URL }} \
+            -e S3_BUCKET=fake-bucket-for-ci \
+            -e S3_REGION=eu-west-3 \
+            -e S3_ACCESS_KEY_ID=AKIAFAKEKEY \
+            -e S3_SECRET_ACCESS_KEY=fakesecret123456789 \
+            -e S3_PUBLIC_URL=https://fake.example.com \
             nirby-api:ci
           sleep 10
           curl -f http://localhost:4000/health || (docker logs nirby-api-test && exit 1)
