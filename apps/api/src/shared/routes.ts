@@ -13,7 +13,7 @@ export const sharedRouter = Router();
  *     summary: Get a shared list
  *     description: Returns a shared list
  *     tags:
- *       - 🔗 Shared
+ *       - Shared Access
  *     security:
  *       - []
  *     parameters:
@@ -74,7 +74,7 @@ sharedRouter.get("/:shareToken", async (req, res) => {
  *     summary: Get shared POIs in a list
  *     description: Returns shared POIs in a list
  *     tags:
- *       - 🔗 Shared
+ *       - Shared Access
  *     security:
  *       - []
  *     parameters:

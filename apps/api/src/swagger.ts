@@ -8,6 +8,46 @@ export const SwaggerSpec = swaggerJsdoc({
       version: "0.0.1",
       description: "API for the Nirby application",
     },
+    tags: [
+      // Auth
+      { name: "🔐 Auth", description: "Authentication & user management" },
+
+      // POI
+      { name: "📍 POI", description: "Points of Interest (custom)" },
+
+      // Google Places
+      { name: "🌍 Google Places", description: "Google Places API integration" },
+
+      // List
+      { name: "Core", description: "List CRUD operations" },
+      { name: "POI", description: "Manage POIs in lists" },
+      { name: "Sharing", description: "Share lists (read-only & edit links)" },
+      { name: "Collaborators", description: "Manage list collaborators" },
+      { name: "Shared Access", description: "Public access to shared lists" },
+
+      // Health
+      { name: "❤️ Health", description: "Health check endpoints" },
+    ],
+
+    "x-tagGroups": [
+      // Groupe Auth
+      {
+        name: "🔑 Authentication & Core",
+        tags: ["🔐 Auth", "❤️ Health"],
+      },
+
+      // Groupe POI & Google Places
+      {
+        name: "🏞️ POI Management",
+        tags: ["📍 POI", "🌍 Google Places"],
+      },
+
+      // Groupe List Management
+      {
+        name: "📝 List Management",
+        tags: ["Core", "POI", "Sharing", "Collaborators", "Shared Access"],
+      },
+    ],
     components: {
       securitySchemes: {
         bearerAuth: {

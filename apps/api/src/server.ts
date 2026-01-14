@@ -9,7 +9,7 @@ import { authRouter } from "./auth/routes";
 import { prisma } from "./db";
 import { env } from "./env";
 import { googlePlaceRouter } from "./google-place/routes";
-import { listRouter } from "./list/routes";
+import { listRouter } from "./list";
 import { poiRouter } from "./poi/routes";
 import { sharedRouter } from "./shared/routes";
 import { SwaggerSpec } from "./swagger";
