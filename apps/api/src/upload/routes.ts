@@ -31,6 +31,7 @@ const upload = multer({
  * @openapi
  * /upload/avatar:
  *   post:
+ *     operationId: uploadAvatar
  *     summary: Upload user avatar
  *     description: Upload a new avatar for the authenticated user. Replaces the existing avatar if any.
  *     tags:
@@ -59,17 +60,25 @@ const upload = multer({
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 url:
- *                   type: string
- *                   format: uri
+ *               $ref: '#/components/schemas/UploadResponse'
  *       400:
  *         description: Invalid file type or size
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       401:
  *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       500:
  *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 uploadRouter.post("/avatar", requireAuth, upload.single("file"), async (req, res) => {
   try {
@@ -129,6 +138,7 @@ uploadRouter.post("/avatar", requireAuth, upload.single("file"), async (req, res
  * @openapi
  * /upload/poi-photo:
  *   post:
+ *     operationId: uploadPoiPhoto
  *     summary: Upload POI photo
  *     description: Upload a photo for a POI. Optionally associate it with a specific POI.
  *     tags:
@@ -160,21 +170,37 @@ uploadRouter.post("/avatar", requireAuth, upload.single("file"), async (req, res
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 url:
- *                   type: string
- *                   format: uri
+ *               $ref: '#/components/schemas/UploadResponse'
  *       400:
  *         description: Invalid file type or size
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       401:
  *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       403:
  *         description: Access denied to POI
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       404:
  *         description: POI not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       500:
  *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 uploadRouter.post("/poi-photo", requireAuth, upload.single("file"), async (req, res) => {
   try {

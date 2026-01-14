@@ -49,6 +49,7 @@ const updateListSchema = z.object({
  * @openapi
  * /list:
  *   post:
+ *     operationId: createList
  *     summary: Create a new list
  *     description: Creates a POI list for the authenticated user
  *     tags:
@@ -77,12 +78,28 @@ const updateListSchema = z.object({
  *     responses:
  *       201:
  *         description: List created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/CreateListResponse'
  *       400:
  *         description: Invalid input
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       401:
  *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       500:
  *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 listRouter.post("/", requireAuth, async (req, res) => {
   try {
@@ -98,7 +115,7 @@ listRouter.post("/", requireAuth, async (req, res) => {
       },
     });
 
-    res.status(201).json({ message: "List created successfully", list });
+    res.status(201).json({ list });
   } catch (err) {
     if (err instanceof z.ZodError) {
       const details = handleZodError(err);
@@ -115,6 +132,7 @@ listRouter.post("/", requireAuth, async (req, res) => {
  * @openapi
  * /list:
  *   get:
+ *     operationId: getLists
  *     summary: Get user's lists
  *     description: Returns paginated lists for the authenticated user
  *     tags:
@@ -144,10 +162,22 @@ listRouter.post("/", requireAuth, async (req, res) => {
  *     responses:
  *       200:
  *         description: Lists retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/GetListsResponse'
  *       401:
  *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       500:
  *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 listRouter.get("/", requireAuth, async (req, res) => {
   try {
@@ -230,6 +260,7 @@ listRouter.get("/", requireAuth, async (req, res) => {
  * @openapi
  * /list/{listId}:
  *   get:
+ *     operationId: getListById
  *     summary: Get a list by ID
  *     description: Returns a specific list
  *     tags:
@@ -245,14 +276,34 @@ listRouter.get("/", requireAuth, async (req, res) => {
  *     responses:
  *       200:
  *         description: List retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/GetListResponse'
  *       401:
  *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       403:
  *         description: Access denied
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       404:
  *         description: List not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       500:
  *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 listRouter.get("/:listId", requireAuth, async (req, res) => {
   try {
@@ -278,6 +329,7 @@ listRouter.get("/:listId", requireAuth, async (req, res) => {
  * @openapi
  * /list/{listId}:
  *   put:
+ *     operationId: updateList
  *     summary: Update a list
  *     description: Updates a list owned by the authenticated user
  *     tags:
@@ -310,16 +362,40 @@ listRouter.get("/:listId", requireAuth, async (req, res) => {
  *     responses:
  *       200:
  *         description: List updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UpdateListResponse'
  *       400:
  *         description: Invalid input
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       401:
  *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       403:
  *         description: Access denied
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       404:
  *         description: List not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       500:
  *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 listRouter.put("/:listId", requireAuth, async (req, res) => {
   try {
@@ -345,7 +421,7 @@ listRouter.put("/:listId", requireAuth, async (req, res) => {
       data,
     });
 
-    res.json({ message: "List updated successfully", list: updatedList });
+    res.json({ list: updatedList });
   } catch (err) {
     if (err instanceof z.ZodError) {
       const details = handleZodError(err);
@@ -362,6 +438,7 @@ listRouter.put("/:listId", requireAuth, async (req, res) => {
  * @openapi
  * /list/{listId}:
  *   delete:
+ *     operationId: deleteList
  *     summary: Delete a list
  *     description: Deletes a list owned by the authenticated user
  *     tags:
@@ -377,14 +454,34 @@ listRouter.put("/:listId", requireAuth, async (req, res) => {
  *     responses:
  *       200:
  *         description: List deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/SingleMessageResponse'
  *       401:
  *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       403:
  *         description: Access denied
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       404:
  *         description: List not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       500:
  *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 listRouter.delete("/:listId", requireAuth, async (req, res) => {
   try {

@@ -1,5 +1,7 @@
 import swaggerJsdoc from "swagger-jsdoc";
 
+import { schemas } from "./schemas";
+
 export const SwaggerSpec = swaggerJsdoc({
   definition: {
     openapi: "3.0.0",
@@ -13,7 +15,7 @@ export const SwaggerSpec = swaggerJsdoc({
       { name: "🔐 Auth", description: "Authentication & user management" },
 
       // Upload
-      { name: "📂 Upload", description: "File upload endpoints" },
+      { name: "📤 Upload", description: "File upload endpoints" },
 
       // POI
       { name: "📍 POI", description: "Points of Interest (custom)" },
@@ -31,7 +33,6 @@ export const SwaggerSpec = swaggerJsdoc({
       // Health
       { name: "❤️ Health", description: "Health check endpoints" },
     ],
-
     "x-tagGroups": [
       // Groupe Auth
       {
@@ -52,6 +53,9 @@ export const SwaggerSpec = swaggerJsdoc({
       },
     ],
     components: {
+      schemas: {
+        ...schemas,
+      },
       securitySchemes: {
         bearerAuth: {
           type: "http",
