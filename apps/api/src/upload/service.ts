@@ -96,7 +96,6 @@ export async function uploadFile(
     Key: key,
     Body: buffer,
     ContentType: contentType,
-    ACL: "public-read",
   });
 
   await s3.send(command);
