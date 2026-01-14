@@ -106,7 +106,7 @@ const updatePoiSchema = z.object({
  *     summary: Create a new POI
  *     description: Creates a custom POI for the authenticated user
  *     tags:
- *       - 📌 POI
+ *       - 📍 POI
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -254,7 +254,7 @@ poiRouter.post("/", requireAuth, async (req, res) => {
  *     summary: List user's POIs
  *     description: Returns all POIs created by the authenticated user with pagination
  *     tags:
- *       - 📌 POI
+ *       - 📍 POI
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -327,7 +327,7 @@ poiRouter.get("/", requireAuth, async (req, res) => {
  *     summary: Get a POI by ID
  *     description: Returns a specific POI if the user has access to it
  *     tags:
- *       - 📌 POI
+ *       - 📍 POI
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -379,7 +379,7 @@ poiRouter.get("/:id", requireAuth, async (req, res) => {
  *     summary: Update a POI
  *     description: Updates a POI owned by the authenticated user
  *     tags:
- *       - 📌 POI
+ *       - 📍 POI
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -524,7 +524,7 @@ poiRouter.put("/:id", requireAuth, async (req, res) => {
  *     summary: Delete a POI
  *     description: Deletes a POI owned by the authenticated user
  *     tags:
- *       - 📌 POI
+ *       - 📍 POI
  *     security:
  *       - bearerAuth: []
  *     parameters:

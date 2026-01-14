@@ -97,7 +97,7 @@ const updateProfileSchema = z.object({
  *   post:
  *     summary: Sign up a new user
  *     tags:
- *       - 🔑 Auth
+ *       - 🔐 Auth
  *     requestBody:
  *       required: true
  *       content:
@@ -187,7 +187,8 @@ authRouter.post("/signup", async (req, res) => {
  * /auth/verify-email:
  *   get:
  *     summary: Verify user email address
- *     tags: [🔑 Auth]
+ *     tags:
+ *       - 🔐 Auth
  *     parameters:
  *       - in: query
  *         name: token
@@ -272,7 +273,8 @@ authRouter.get("/verify-email", async (req, res) => {
  * /auth/resend-verification:
  *   post:
  *     summary: Resend email verification
- *     tags: [🔑 Auth]
+ *     tags:
+ *       - 🔐 Auth
  *     requestBody:
  *       required: true
  *       content:
@@ -359,7 +361,7 @@ authRouter.post("/resend-verification", async (req, res) => {
  *   post:
  *     summary: Login a user
  *     tags:
- *       - 🔑 Auth
+ *       - 🔐 Auth
  *     requestBody:
  *       required: true
  *       content:
@@ -440,7 +442,7 @@ authRouter.post("/login", async (req, res) => {
  *   post:
  *     summary: Refresh an access token
  *     tags:
- *       - 🔑 Auth
+ *       - 🔐 Auth
  *     requestBody:
  *       required: true
  *       content:
@@ -509,7 +511,7 @@ authRouter.post("/refresh", async (req, res) => {
  *   post:
  *     summary: Logout and invalidate session
  *     tags:
- *       - 🔑 Auth
+ *       - 🔐 Auth
  *     requestBody:
  *       required: true
  *       content:
@@ -555,7 +557,7 @@ authRouter.post("/logout", async (req, res) => {
  *   post:
  *     summary: Request a password reset
  *     tags:
- *       - 🔑 Auth
+ *       - 🔐 Auth
  *     requestBody:
  *       required: true
  *       content:
@@ -620,7 +622,7 @@ authRouter.post("/forgot-password", async (req, res) => {
  *   post:
  *     summary: Reset password with token
  *     tags:
- *       - 🔑 Auth
+ *       - 🔐 Auth
  *     requestBody:
  *       required: true
  *       content:
@@ -698,7 +700,7 @@ authRouter.post("/reset-password", async (req, res) => {
  *     summary: Change user password
  *     description: Allows an authenticated user to change their password. All existing sessions will be invalidated after the password is changed.
  *     tags:
- *       - 🔑 Auth
+ *       - 🔐 Auth
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -784,7 +786,7 @@ authRouter.post("/change-password", requireAuth, async (req, res) => {
  *     summary: Delete user account
  *     description: Permanently deletes the authenticated user's account and all associated data. A confirmation email will be sent.
  *     tags:
- *       - 🔑 Auth
+ *       - 🔐 Auth
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -856,7 +858,7 @@ authRouter.delete("/account", requireAuth, async (req, res) => {
  *   get:
  *     summary: Get current user profile
  *     tags:
- *       - 🔑 Auth
+ *       - 🔐 Auth
  *     security:
  *       - bearerAuth: []
  *     responses:
@@ -889,7 +891,7 @@ authRouter.get("/me", requireAuth, async (req, res) => {
  *   put:
  *     summary: Update current user profile
  *     tags:
- *       - 🔑 Auth
+ *       - 🔐 Auth
  *     security:
  *       - bearerAuth: []
  *     requestBody:
