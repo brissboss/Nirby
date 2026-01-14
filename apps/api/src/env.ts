@@ -23,6 +23,12 @@ const envSchema = z.object({
   FRONTEND_URL: z.string().url().default("http://localhost:3000"),
   EMAIL_VERIFICATION_TEMPLATE_ID_EN: z.string().optional(),
   EMAIL_VERIFICATION_TEMPLATE_ID_FR: z.string().optional(),
+  S3_REGION: z.string().default("eu-west-3"),
+  S3_ACCESS_KEY_ID: z.string().optional().default(""),
+  S3_SECRET_ACCESS_KEY: z.string().optional().default(""),
+  S3_BUCKET: z.string().optional().default(""),
+  S3_ENDPOINT: z.string().optional(), // For MinIO (dev)
+  S3_PUBLIC_URL: z.string().optional(), // Public URL prefix for files (prod CDN)
 });
 
 export const env = envSchema.parse(process.env);
