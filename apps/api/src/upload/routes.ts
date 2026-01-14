@@ -13,8 +13,6 @@ import {
   isValidMimeType,
   isValidAvatarSize,
   isValidPoiPhotoSize,
-  MAX_AVATAR_SIZE,
-  MAX_POI_PHOTO_SIZE,
 } from "./service";
 
 export const uploadRouter = Router();
