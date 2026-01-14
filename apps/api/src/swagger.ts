@@ -12,6 +12,9 @@ export const SwaggerSpec = swaggerJsdoc({
       // Auth
       { name: "🔐 Auth", description: "Authentication & user management" },
 
+      // Upload
+      { name: "📂 Upload", description: "File upload endpoints" },
+
       // POI
       { name: "📍 POI", description: "Points of Interest (custom)" },
 
@@ -33,7 +36,7 @@ export const SwaggerSpec = swaggerJsdoc({
       // Groupe Auth
       {
         name: "🔑 Authentication & Core",
-        tags: ["🔐 Auth", "❤️ Health"],
+        tags: ["🔐 Auth", "❤️ Health", "📤 Upload"],
       },
 
       // Groupe POI & Google Places
