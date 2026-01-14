@@ -17,6 +17,7 @@ describe("List Routes", () => {
     await prisma.listCollaborator.deleteMany();
     await prisma.savedPoi.deleteMany();
     await prisma.poiList.deleteMany();
+    await prisma.googlePlaceCache.deleteMany();
     await prisma.poi.deleteMany();
     await prisma.session.deleteMany();
     await prisma.user.deleteMany();
@@ -37,6 +38,7 @@ describe("List Routes", () => {
     await prisma.listCollaborator.deleteMany();
     await prisma.savedPoi.deleteMany();
     await prisma.poiList.deleteMany();
+    await prisma.googlePlaceCache.deleteMany();
     await prisma.poi.deleteMany();
     await prisma.session.deleteMany();
     await prisma.user.deleteMany();
@@ -46,6 +48,7 @@ describe("List Routes", () => {
     await prisma.listCollaborator.deleteMany();
     await prisma.savedPoi.deleteMany();
     await prisma.poiList.deleteMany();
+    await prisma.googlePlaceCache.deleteMany();
     await prisma.poi.deleteMany();
   });
 
@@ -1792,6 +1795,334 @@ describe("List Routes", () => {
         where: { listId_userId: { listId: list.id, userId: invitee.id } },
       });
       expect(collaborator?.role).toBe("ADMIN");
+    });
+  });
+
+  describe("GET /list/:listId/poi/nearby", () => {
+    it("should return nearby POIs from a list", async () => {
+      const list = await prisma.poiList.create({
+        data: { name: "My List", createdBy: userId },
+      });
+
+      const poi1 = await prisma.poi.create({
+        data: {
+          name: "Nearby POI",
+          latitude: 48.8566, // Paris
+          longitude: 2.3522,
+          createdBy: userId,
+        },
+      });
+
+      const poi2 = await prisma.poi.create({
+        data: {
+          name: "Far POI",
+          latitude: 51.5074, // London
+          longitude: -0.1278,
+          createdBy: userId,
+        },
+      });
+
+      await prisma.savedPoi.createMany({
+        data: [
+          { listId: list.id, poiId: poi1.id },
+          { listId: list.id, poiId: poi2.id },
+        ],
+      });
+
+      const res = await request(app)
+        .get(`/list/${list.id}/poi/nearby`)
+        .set("Authorization", `Bearer ${accessToken}`)
+        .query({ latitude: 48.8566, longitude: 2.3522, radius: 1000 });
+
+      expect(res.status).toBe(200);
+      expect(res.body.pois).toHaveLength(1);
+      expect(res.body.pois[0].name).toBe("Nearby POI");
+      expect(res.body.pois[0].distance).toBeDefined();
+    });
+
+    it("should return POIs sorted by distance", async () => {
+      const list = await prisma.poiList.create({
+        data: { name: "My List", createdBy: userId },
+      });
+
+      const poi1 = await prisma.poi.create({
+        data: {
+          name: "POI 500m away",
+          latitude: 48.861,
+          longitude: 2.3522,
+          createdBy: userId,
+        },
+      });
+
+      const poi2 = await prisma.poi.create({
+        data: {
+          name: "POI 100m away",
+          latitude: 48.8575,
+          longitude: 2.3522,
+          createdBy: userId,
+        },
+      });
+
+      await prisma.savedPoi.createMany({
+        data: [
+          { listId: list.id, poiId: poi1.id },
+          { listId: list.id, poiId: poi2.id },
+        ],
+      });
+
+      const res = await request(app)
+        .get(`/list/${list.id}/poi/nearby`)
+        .set("Authorization", `Bearer ${accessToken}`)
+        .query({ latitude: 48.8566, longitude: 2.3522, radius: 5000 });
+
+      expect(res.status).toBe(200);
+      expect(res.body.pois).toHaveLength(2);
+      expect(res.body.pois[0].name).toBe("POI 100m away");
+      expect(res.body.pois[1].name).toBe("POI 500m away");
+    });
+
+    it("should allow collaborator to access nearby POIs", async () => {
+      const owner = await prisma.user.create({
+        data: {
+          email: "owner-nearby@example.com",
+          passwordHash: await hashPassword("password123"),
+          emailVerified: true,
+        },
+      });
+
+      const list = await prisma.poiList.create({
+        data: { name: "Owner List", createdBy: owner.id },
+      });
+
+      // Add current user as collaborator
+      await prisma.listCollaborator.create({
+        data: { listId: list.id, userId: userId, role: "VIEWER" },
+      });
+
+      const poi = await prisma.poi.create({
+        data: {
+          name: "Nearby POI",
+          latitude: 48.8566,
+          longitude: 2.3522,
+          createdBy: owner.id,
+        },
+      });
+
+      await prisma.savedPoi.create({
+        data: { listId: list.id, poiId: poi.id },
+      });
+
+      const res = await request(app)
+        .get(`/list/${list.id}/poi/nearby`)
+        .set("Authorization", `Bearer ${accessToken}`)
+        .query({ latitude: 48.8566, longitude: 2.3522, radius: 1000 });
+
+      expect(res.status).toBe(200);
+      expect(res.body.pois).toHaveLength(1);
+    });
+
+    it("should deny access to non-collaborator", async () => {
+      const owner = await prisma.user.create({
+        data: {
+          email: "stranger-nearby@example.com",
+          passwordHash: await hashPassword("password123"),
+          emailVerified: true,
+        },
+      });
+
+      const privateList = await prisma.poiList.create({
+        data: { name: "Private List", createdBy: owner.id, visibility: "PRIVATE" },
+      });
+
+      const res = await request(app)
+        .get(`/list/${privateList.id}/poi/nearby`)
+        .set("Authorization", `Bearer ${accessToken}`)
+        .query({ latitude: 48.8566, longitude: 2.3522, radius: 1000 });
+
+      expect(res.status).toBe(404);
+    });
+
+    it("should return 404 for non-existent list", async () => {
+      const res = await request(app)
+        .get("/list/non-existent-id/poi/nearby")
+        .set("Authorization", `Bearer ${accessToken}`)
+        .query({ latitude: 48.8566, longitude: 2.3522, radius: 1000 });
+
+      expect(res.status).toBe(404);
+    });
+
+    it("should return empty array when no POIs in radius", async () => {
+      const list = await prisma.poiList.create({
+        data: { name: "My List", createdBy: userId },
+      });
+
+      const poi = await prisma.poi.create({
+        data: {
+          name: "Far POI",
+          latitude: 51.5074, // London
+          longitude: -0.1278,
+          createdBy: userId,
+        },
+      });
+
+      await prisma.savedPoi.create({
+        data: { listId: list.id, poiId: poi.id },
+      });
+
+      const res = await request(app)
+        .get(`/list/${list.id}/poi/nearby`)
+        .set("Authorization", `Bearer ${accessToken}`)
+        .query({ latitude: 48.8566, longitude: 2.3522, radius: 1000 }); // Paris
+
+      expect(res.status).toBe(200);
+      expect(res.body.pois).toHaveLength(0);
+    });
+
+    it("should use default radius when not provided", async () => {
+      const list = await prisma.poiList.create({
+        data: { name: "My List", createdBy: userId },
+      });
+
+      const poi = await prisma.poi.create({
+        data: {
+          name: "Nearby POI",
+          latitude: 48.857,
+          longitude: 2.3522,
+          createdBy: userId,
+        },
+      });
+
+      await prisma.savedPoi.create({
+        data: { listId: list.id, poiId: poi.id },
+      });
+
+      const res = await request(app)
+        .get(`/list/${list.id}/poi/nearby`)
+        .set("Authorization", `Bearer ${accessToken}`)
+        .query({ latitude: 48.8566, longitude: 2.3522 }); // No radius
+
+      expect(res.status).toBe(200);
+      expect(res.body.pois).toHaveLength(1);
+    });
+
+    it("should fail without authentication", async () => {
+      const list = await prisma.poiList.create({
+        data: { name: "My List", createdBy: userId },
+      });
+
+      const res = await request(app)
+        .get(`/list/${list.id}/poi/nearby`)
+        .query({ latitude: 48.8566, longitude: 2.3522, radius: 1000 });
+
+      expect(res.status).toBe(401);
+    });
+
+    it("should fail with invalid latitude", async () => {
+      const list = await prisma.poiList.create({
+        data: { name: "My List", createdBy: userId },
+      });
+
+      const res = await request(app)
+        .get(`/list/${list.id}/poi/nearby`)
+        .set("Authorization", `Bearer ${accessToken}`)
+        .query({ latitude: 100, longitude: 2.3522, radius: 1000 });
+
+      expect(res.status).toBe(400);
+    });
+
+    it("should fail with invalid longitude", async () => {
+      const list = await prisma.poiList.create({
+        data: { name: "My List", createdBy: userId },
+      });
+
+      const res = await request(app)
+        .get(`/list/${list.id}/poi/nearby`)
+        .set("Authorization", `Bearer ${accessToken}`)
+        .query({ latitude: 48.8566, longitude: 200, radius: 1000 });
+
+      expect(res.status).toBe(400);
+    });
+
+    it("should fail with radius exceeding maximum", async () => {
+      const list = await prisma.poiList.create({
+        data: { name: "My List", createdBy: userId },
+      });
+
+      const res = await request(app)
+        .get(`/list/${list.id}/poi/nearby`)
+        .set("Authorization", `Bearer ${accessToken}`)
+        .query({ latitude: 48.8566, longitude: 2.3522, radius: 100000 });
+
+      expect(res.status).toBe(400);
+    });
+
+    it("should include Google Places in nearby results", async () => {
+      const list = await prisma.poiList.create({
+        data: { name: "My List", createdBy: userId },
+      });
+
+      // Create a Google Place cache entry
+      const googlePlace = await prisma.googlePlaceCache.create({
+        data: {
+          placeId: "ChIJD7fiBh9u5kcRYJSMaMOCCwQ",
+          name: "Google Place",
+          latitude: 48.8566,
+          longitude: 2.3522,
+        },
+      });
+
+      await prisma.savedPoi.create({
+        data: { listId: list.id, googlePlaceId: googlePlace.placeId },
+      });
+
+      const res = await request(app)
+        .get(`/list/${list.id}/poi/nearby`)
+        .set("Authorization", `Bearer ${accessToken}`)
+        .query({ latitude: 48.8566, longitude: 2.3522, radius: 1000 });
+
+      expect(res.status).toBe(200);
+      expect(res.body.pois).toHaveLength(1);
+      expect(res.body.pois[0].name).toBe("Google Place");
+      expect(res.body.pois[0].googlePlaceId).toBe("ChIJD7fiBh9u5kcRYJSMaMOCCwQ");
+    });
+
+    it("should return both custom POIs and Google Places", async () => {
+      const list = await prisma.poiList.create({
+        data: { name: "My List", createdBy: userId },
+      });
+
+      const poi = await prisma.poi.create({
+        data: {
+          name: "Custom POI",
+          latitude: 48.8566,
+          longitude: 2.3522,
+          createdBy: userId,
+        },
+      });
+
+      const googlePlace = await prisma.googlePlaceCache.create({
+        data: {
+          placeId: "ChIJD7fiBh9u5kcRYJSMaMOCCwR",
+          name: "Google Place",
+          latitude: 48.857,
+          longitude: 2.3522,
+        },
+      });
+
+      await prisma.savedPoi.createMany({
+        data: [
+          { listId: list.id, poiId: poi.id },
+          { listId: list.id, googlePlaceId: googlePlace.placeId },
+        ],
+      });
+
+      const res = await request(app)
+        .get(`/list/${list.id}/poi/nearby`)
+        .set("Authorization", `Bearer ${accessToken}`)
+        .query({ latitude: 48.8566, longitude: 2.3522, radius: 1000 });
+
+      expect(res.status).toBe(200);
+      expect(res.body.pois).toHaveLength(2);
     });
   });
 });

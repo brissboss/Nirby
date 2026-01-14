@@ -22,6 +22,22 @@ const addPoiToListSchema = z
     message: "Cannot specify both poiId and googlePlaceId",
   });
 
+const nearbyPoiSchema = z.object({
+  latitude: z.coerce
+    .number()
+    .min(-90, ErrorCodes.POI_LATITUDE_INVALID)
+    .max(90, ErrorCodes.POI_LATITUDE_INVALID),
+  longitude: z.coerce
+    .number()
+    .min(-180, ErrorCodes.POI_LONGITUDE_INVALID)
+    .max(180, ErrorCodes.POI_LONGITUDE_INVALID),
+  radius: z.coerce
+    .number()
+    .min(1, ErrorCodes.POI_RADIUS_INVALID)
+    .max(50000, ErrorCodes.POI_RADIUS_INVALID)
+    .default(1000),
+});
+
 /**
  * @openapi
  * /list/{listId}/poi:
@@ -182,6 +198,127 @@ listPoiRouter.get("/:listId/pois", requireAuth, async (req, res) => {
     res.json({ savedPois });
   } catch (err) {
     req.log?.error({ err }, "Failed to get POIs in list");
+    return res.status(500).json(formatError(ErrorCodes.INTERNAL_ERROR, "Internal server error"));
+  }
+});
+
+/**
+ * @openapi
+ * /list/{listId}/poi/nearby:
+ *   get:
+ *     summary: Get nearby POIs in a list
+ *     description: Returns nearby POIs within a specified radius
+ *     tags:
+ *       - POI
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: listId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: latitude
+ *         required: true
+ *         schema:
+ *           type: number
+ *         description: Latitude
+ *       - in: query
+ *         name: longitude
+ *         required: true
+ *         schema:
+ *           type: number
+ *         description: Longitude
+ *       - in: query
+ *         name: radius
+ *         required: false
+ *         schema:
+ *           type: number
+ *           default: 1000
+ *         description: "Radius in meters (default: 1000)"
+ *     responses:
+ *       200:
+ *         description: Nearby POIs
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Access denied
+ *       404:
+ *         description: List not found
+ *       500:
+ *         description: Internal server error
+ */
+listPoiRouter.get("/:listId/poi/nearby", requireAuth, async (req, res) => {
+  try {
+    const data = nearbyPoiSchema.parse(req.query);
+
+    const list = await prisma.poiList.findUnique({ where: { id: req.params.listId } });
+    if (!list) {
+      return res.status(404).json(formatError(ErrorCodes.LIST_NOT_FOUND, "List not found"));
+    }
+
+    const role = await checkListAccess(list, req.user!.id);
+
+    if (!role) {
+      return res.status(404).json(formatError(ErrorCodes.LIST_NOT_FOUND, "List not found"));
+    }
+
+    if (!["EDITOR", "ADMIN", "OWNER", "VIEWER"].includes(role)) {
+      return res.status(403).json(formatError(ErrorCodes.LIST_ACCESS_DENIED, "Access denied"));
+    }
+
+    const results = (await prisma.$queryRaw`
+      SELECT 
+        sp.id as "savedPoiId",
+        sp."listId",
+        sp."poiId",
+        sp."googlePlaceId",
+        sp."createdAt",
+        COALESCE(p.name, g.name) as name,
+        COALESCE(p.address, g.address) as address,
+        COALESCE(p.latitude, g.latitude) as latitude,
+        COALESCE(p.longitude, g.longitude) as longitude,
+        COALESCE(p.category, g.category) as category,
+        ST_Distance(
+          COALESCE(p.location, g.location)::geography,
+          ST_SetSRID(ST_MakePoint(${data.longitude}, ${data.latitude}), 4326)::geography
+        )::float as distance
+      FROM "SavedPoi" sp
+      LEFT JOIN "Poi" p ON sp."poiId" = p.id
+      LEFT JOIN "GooglePlaceCache" g ON sp."googlePlaceId" = g."placeId"
+      WHERE 
+        sp."listId" = ${list.id}
+        AND COALESCE(p.location, g.location) IS NOT NULL
+        AND ST_DWithin(
+          COALESCE(p.location, g.location)::geography,
+          ST_SetSRID(ST_MakePoint(${data.longitude}, ${data.latitude}), 4326)::geography,
+          ${data.radius}
+        )
+      ORDER BY distance ASC
+    `) as Array<{
+      savedPoiId: string;
+      listId: string;
+      poiId: string | null;
+      googlePlaceId: string | null;
+      createdAt: Date;
+      name: string;
+      address: string | null;
+      latitude: number;
+      longitude: number;
+      category: string | null;
+      distance: number;
+    }>;
+
+    res.json({ pois: results });
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      const details = handleZodError(err);
+      return res
+        .status(400)
+        .json(formatError(ErrorCodes.VALIDATION_ERROR, "Invalid input", details));
+    }
+    req.log?.error({ err }, "Failed to get nearby POIs in list");
     return res.status(500).json(formatError(ErrorCodes.INTERNAL_ERROR, "Internal server error"));
   }
 });

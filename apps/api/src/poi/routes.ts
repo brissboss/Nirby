@@ -99,6 +99,22 @@ const updatePoiSchema = z.object({
     .refine((arr) => arr.every((url) => /^https?:\/\/.+/.test(url)), { message: "Invalid url" }),
 });
 
+const nearbyPoiSchema = z.object({
+  latitude: z.coerce
+    .number()
+    .min(-90, ErrorCodes.POI_LATITUDE_INVALID)
+    .max(90, ErrorCodes.POI_LATITUDE_INVALID),
+  longitude: z.coerce
+    .number()
+    .min(-180, ErrorCodes.POI_LONGITUDE_INVALID)
+    .max(180, ErrorCodes.POI_LONGITUDE_INVALID),
+  radius: z.coerce
+    .number()
+    .min(1, ErrorCodes.POI_RADIUS_INVALID)
+    .max(50000, ErrorCodes.POI_RADIUS_INVALID)
+    .default(1000),
+});
+
 /**
  * @openapi
  * /poi:
@@ -235,6 +251,103 @@ poiRouter.post("/", requireAuth, async (req, res) => {
       message: "POI created successfully",
       poi,
     });
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      const details = handleZodError(err);
+      return res
+        .status(400)
+        .json(formatError(ErrorCodes.VALIDATION_ERROR, "Invalid input", details));
+    }
+    req.log?.error({ err });
+    return res.status(500).json(formatError(ErrorCodes.INTERNAL_ERROR, "Internal server error"));
+  }
+});
+
+/**
+ * @openapi
+ * /poi/nearby:
+ *   get:
+ *     summary: Get nearby POIs
+ *     description: Returns nearby POIs within a specified radius
+ *     tags:
+ *       - 📍 POI
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: latitude
+ *         required: true
+ *         schema:
+ *           type: number
+ *         description: Latitude
+ *       - in: query
+ *         name: longitude
+ *         required: true
+ *         schema:
+ *           type: number
+ *         description: Longitude
+ *       - in: query
+ *         name: radius
+ *         required: false
+ *         schema:
+ *           type: number
+ *           default: 1000
+ *         description: "Radius in meters (default: 1000)"
+ *     responses:
+ *       200:
+ *         description: Nearby POIs
+ *       401:
+ *         description: Unauthorized
+ */
+poiRouter.get("/nearby", requireAuth, async (req, res) => {
+  try {
+    const data = nearbyPoiSchema.parse(req.query);
+
+    const results = (await prisma.$queryRaw`
+      SELECT 
+        sp.id as "savedPoiId",
+        sp."listId",
+        sp."poiId",
+        sp."googlePlaceId",
+        sp."createdAt",
+        COALESCE(p.name, g.name) as name,
+        COALESCE(p.address, g.address) as address,
+        COALESCE(p.latitude, g.latitude) as latitude,
+        COALESCE(p.longitude, g.longitude) as longitude,
+        COALESCE(p.category, g.category) as category,
+        ST_Distance(
+          COALESCE(p.location, g.location)::geography,
+          ST_SetSRID(ST_MakePoint(${data.longitude}, ${data.latitude}), 4326)::geography
+        )::float as distance
+      FROM "SavedPoi" sp
+      JOIN "PoiList" pl ON sp."listId" = pl.id
+      LEFT JOIN "Poi" p ON sp."poiId" = p.id
+      LEFT JOIN "GooglePlaceCache" g ON sp."googlePlaceId" = g."placeId"
+      LEFT JOIN "ListCollaborator" lc ON pl.id = lc."listId" AND lc."userId" = ${req.user!.id}
+      WHERE 
+        (pl."createdBy" = ${req.user!.id} OR lc."userId" IS NOT NULL)
+        AND COALESCE(p.location, g.location) IS NOT NULL
+        AND ST_DWithin(
+          COALESCE(p.location, g.location)::geography,
+          ST_SetSRID(ST_MakePoint(${data.longitude}, ${data.latitude}), 4326)::geography,
+          ${data.radius}
+        )
+      ORDER BY distance ASC
+    `) as Array<{
+      savedPoiId: string;
+      listId: string;
+      poiId: string | null;
+      googlePlaceId: string | null;
+      createdAt: Date;
+      name: string;
+      address: string | null;
+      latitude: number;
+      longitude: number;
+      category: string | null;
+      distance: number;
+    }>;
+
+    res.json({ pois: results });
   } catch (err) {
     if (err instanceof z.ZodError) {
       const details = handleZodError(err);
