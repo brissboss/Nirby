@@ -15,6 +15,8 @@ export default tseslint.config(
       "**/__test__/**",
       "**/test/**",
       "**/prisma/seed.ts",
+      "**/src/lib/api/generated/**",
+      "**/next.config.ts",
     ],
   },
   js.configs.recommended,
