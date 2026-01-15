@@ -264,6 +264,15 @@ jobs:
           source: "nirby-web.tar.gz"
           target: "/tmp/"
 
+      - name: Copy docker-compose to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "infra/staging/docker-compose.yaml"
+          target: "/tmp/"
+
       - name: Deploy on server
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -277,12 +286,17 @@ jobs:
             docker load < /tmp/nirby-web.tar.gz
             docker tag nirby-web:${{ github.sha }} nirby-web:latest
 
+            # Update docker-compose
+            mkdir -p /opt/nirby/staging
+            cp /tmp/infra/staging/docker-compose.yaml /opt/nirby/staging/
+
             # Restart web container
             cd /opt/nirby/staging
             docker-compose up -d --force-recreate web
 
             # Cleanup
             rm -f /tmp/nirby-web.tar.gz
+            rm -rf /tmp/infra
 
             # Show logs
             docker-compose logs --tail=20 web
@@ -405,6 +419,15 @@ jobs:
           source: "nirby-web.tar.gz"
           target: "/tmp/"
 
+      - name: Copy docker-compose to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "infra/prod/docker-compose.yaml"
+          target: "/tmp/"
+
       - name: Deploy on server
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -418,12 +441,17 @@ jobs:
             docker load < /tmp/nirby-web.tar.gz
             docker tag nirby-web:${{ github.sha }} nirby-web:latest
 
+            # Update docker-compose
+            mkdir -p /opt/nirby/prod
+            cp /tmp/infra/prod/docker-compose.yaml /opt/nirby/prod/
+
             # Restart web container
             cd /opt/nirby/prod
             docker-compose up -d --force-recreate web
 
             # Cleanup
             rm -f /tmp/nirby-web.tar.gz
+            rm -rf /tmp/infra
 
             # Show logs
             docker-compose logs --tail=20 web
