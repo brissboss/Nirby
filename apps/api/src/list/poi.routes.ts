@@ -42,6 +42,7 @@ const nearbyPoiSchema = z.object({
  * @openapi
  * /list/{listId}/poi:
  *   post:
+ *     operationId: addPoiToList
  *     summary: Add a POI to a list
  *     description: Adds a custom POI or Google Place to a list
  *     tags:
@@ -68,16 +69,40 @@ const nearbyPoiSchema = z.object({
  *     responses:
  *       201:
  *         description: POI added to list successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/SavedPoiBasicResponse'
  *       400:
  *         description: Invalid input or POI already in list
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       401:
  *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       403:
  *         description: Access denied
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       404:
  *         description: List not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       500:
  *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 listPoiRouter.post("/:listId/poi", requireAuth, async (req, res) => {
   try {
@@ -135,7 +160,7 @@ listPoiRouter.post("/:listId/poi", requireAuth, async (req, res) => {
       },
     });
 
-    res.status(201).json({ message: "POI added to list successfully", savedPoi });
+    res.status(201).json({ savedPoi });
   } catch (err) {
     if (err instanceof z.ZodError) {
       const details = handleZodError(err);
@@ -152,6 +177,7 @@ listPoiRouter.post("/:listId/poi", requireAuth, async (req, res) => {
  * @openapi
  * /list/{listId}/pois:
  *   get:
+ *     operationId: getListPois
  *     summary: Get POIs in a list
  *     description: Returns all POIs saved in a list
  *     tags:
@@ -164,20 +190,54 @@ listPoiRouter.post("/:listId/poi", requireAuth, async (req, res) => {
  *         required: true
  *         schema:
  *           type: string
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
  *     responses:
  *       200:
  *         description: POIs retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/GetSavedPoisResponse'
  *       401:
  *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       403:
  *         description: Access denied
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       404:
  *         description: List not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       500:
  *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 listPoiRouter.get("/:listId/pois", requireAuth, async (req, res) => {
   try {
+    const page = Math.max(1, parseInt(req.query.page as string) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 20));
+    const skip = (page - 1) * limit;
+
     const list = await prisma.poiList.findUnique({ where: { id: req.params.listId } });
     if (!list) {
       return res.status(404).json(formatError(ErrorCodes.LIST_NOT_FOUND, "List not found"));
@@ -189,13 +249,29 @@ listPoiRouter.get("/:listId/pois", requireAuth, async (req, res) => {
       return res.status(404).json(formatError(ErrorCodes.LIST_NOT_FOUND, "List not found"));
     }
 
-    const savedPois = await prisma.savedPoi.findMany({
-      where: { listId: list.id },
-      include: { poi: true, googlePlaceCache: true },
-      orderBy: { createdAt: "desc" },
-    });
+    const [savedPois, total] = await Promise.all([
+      prisma.savedPoi.findMany({
+        where: { listId: list.id },
+        include: { poi: true, googlePlaceCache: true },
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: limit,
+      }),
 
-    res.json({ savedPois });
+      prisma.savedPoi.count({
+        where: { listId: list.id },
+      }),
+    ]);
+
+    res.json({
+      savedPois: savedPois,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    });
   } catch (err) {
     req.log?.error({ err }, "Failed to get POIs in list");
     return res.status(500).json(formatError(ErrorCodes.INTERNAL_ERROR, "Internal server error"));
@@ -206,6 +282,7 @@ listPoiRouter.get("/:listId/pois", requireAuth, async (req, res) => {
  * @openapi
  * /list/{listId}/poi/nearby:
  *   get:
+ *     operationId: getNearbyListPois
  *     summary: Get nearby POIs in a list
  *     description: Returns nearby POIs within a specified radius
  *     tags:
@@ -240,14 +317,34 @@ listPoiRouter.get("/:listId/pois", requireAuth, async (req, res) => {
  *     responses:
  *       200:
  *         description: Nearby POIs
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/NearbyPOIsResponse'
  *       401:
  *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       403:
  *         description: Access denied
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       404:
  *         description: List not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       500:
  *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 listPoiRouter.get("/:listId/poi/nearby", requireAuth, async (req, res) => {
   try {
@@ -327,6 +424,7 @@ listPoiRouter.get("/:listId/poi/nearby", requireAuth, async (req, res) => {
  * @openapi
  * /list/{listId}/poi/{savedPoiId}:
  *   delete:
+ *     operationId: removePoiFromList
  *     summary: Remove a POI from a list
  *     description: Removes a saved POI from a list
  *     tags:
@@ -347,14 +445,34 @@ listPoiRouter.get("/:listId/poi/nearby", requireAuth, async (req, res) => {
  *     responses:
  *       200:
  *         description: POI removed from list successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/SingleMessageResponse'
  *       401:
  *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       403:
  *         description: Access denied
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       404:
  *         description: List or saved POI not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       500:
  *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 listPoiRouter.delete("/:listId/poi/:savedPoiId", requireAuth, async (req, res) => {
   try {

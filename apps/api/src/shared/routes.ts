@@ -10,6 +10,7 @@ export const sharedRouter = Router();
  * @openapi
  * /shared/{shareToken}:
  *   get:
+ *     operationId: getSharedList
  *     summary: Get a shared list
  *     description: Returns a shared list
  *     tags:
@@ -25,12 +26,22 @@ export const sharedRouter = Router();
  *     responses:
  *       200:
  *         description: List retrieved successfully
- *       401:
- *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/SharedListResponse'
  *       404:
  *         description: List not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       500:
  *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 sharedRouter.get("/:shareToken", async (req, res) => {
   try {
@@ -71,6 +82,7 @@ sharedRouter.get("/:shareToken", async (req, res) => {
  * @openapi
  * /shared/{shareToken}/pois:
  *   get:
+ *     operationId: getSharedListPois
  *     summary: Get shared POIs in a list
  *     description: Returns shared POIs in a list
  *     tags:
@@ -83,18 +95,42 @@ sharedRouter.get("/:shareToken", async (req, res) => {
  *         required: true
  *         schema:
  *           type: string
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
  *     responses:
  *       200:
  *         description: Shared POIs retrieved successfully
- *       401:
- *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/SharedPoisResponse'
  *       404:
  *         description: Shared POIs not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       500:
  *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 sharedRouter.get("/:shareToken/pois", async (req, res) => {
   try {
+    const page = Math.max(1, parseInt(req.query.page as string) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 20));
+    const skip = (page - 1) * limit;
+
     const list = await prisma.poiList.findUnique({ where: { shareToken: req.params.shareToken } });
 
     if (!list) {
@@ -107,11 +143,19 @@ sharedRouter.get("/:shareToken/pois", async (req, res) => {
         .json(formatError(ErrorCodes.SHARE_TOKEN_EXPIRED, "List share token expired"));
     }
 
-    const savedPois = await prisma.savedPoi.findMany({
-      where: { listId: list.id },
-      include: { poi: true, googlePlaceCache: true },
-      orderBy: { createdAt: "desc" },
-    });
+    const [savedPois, total] = await Promise.all([
+      prisma.savedPoi.findMany({
+        where: { listId: list.id },
+        include: { poi: true, googlePlaceCache: true },
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: limit,
+      }),
+
+      prisma.savedPoi.count({
+        where: { listId: list.id },
+      }),
+    ]);
 
     const publicPois = savedPois
       .map((savedPoi) => {
@@ -126,7 +170,15 @@ sharedRouter.get("/:shareToken/pois", async (req, res) => {
       })
       .filter((poi) => poi !== null);
 
-    res.json({ pois: publicPois });
+    res.json({
+      pois: publicPois,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    });
   } catch (err) {
     req.log?.error({ err }, "Failed to get shared POIs");
     return res.status(500).json(formatError(ErrorCodes.INTERNAL_ERROR, "Internal server error"));

@@ -25,6 +25,36 @@ const createListSchema = z.object({
   visibility: z.enum(["PRIVATE", "SHARED", "PUBLIC"]).optional().default("PRIVATE"),
 });
 
+const getListsSchema = z.object({
+  page: z.coerce.number().min(1).optional().default(1),
+  limit: z.coerce.number().min(1).max(100).optional().default(20),
+  roles: z.preprocess(
+    (val) => {
+      if (!val) return undefined;
+      if (Array.isArray(val)) return val;
+      if (typeof val === "string") return val.split(",");
+      return undefined;
+    },
+    z.array(z.enum(["OWNER", "EDITOR", "VIEWER", "ADMIN"])).optional()
+  ),
+  search: z
+    .string()
+    .optional()
+    .transform((val) => {
+      if (!val || val.trim().length < 2) return undefined;
+      return val.trim();
+    }),
+  visibility: z.preprocess(
+    (val) => {
+      if (!val) return undefined;
+      if (Array.isArray(val)) return val;
+      if (typeof val === "string") return val.split(",");
+      return undefined;
+    },
+    z.array(z.enum(["PRIVATE", "SHARED", "PUBLIC"])).optional()
+  ),
+});
+
 const updateListSchema = z.object({
   name: z
     .string()
@@ -49,6 +79,7 @@ const updateListSchema = z.object({
  * @openapi
  * /list:
  *   post:
+ *     operationId: createList
  *     summary: Create a new list
  *     description: Creates a POI list for the authenticated user
  *     tags:
@@ -77,12 +108,28 @@ const updateListSchema = z.object({
  *     responses:
  *       201:
  *         description: List created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/CreateListResponse'
  *       400:
  *         description: Invalid input
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       401:
  *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       500:
  *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 listRouter.post("/", requireAuth, async (req, res) => {
   try {
@@ -98,7 +145,7 @@ listRouter.post("/", requireAuth, async (req, res) => {
       },
     });
 
-    res.status(201).json({ message: "List created successfully", list });
+    res.status(201).json({ list });
   } catch (err) {
     if (err instanceof z.ZodError) {
       const details = handleZodError(err);
@@ -115,6 +162,7 @@ listRouter.post("/", requireAuth, async (req, res) => {
  * @openapi
  * /list:
  *   get:
+ *     operationId: getLists
  *     summary: Get user's lists
  *     description: Returns paginated lists for the authenticated user
  *     tags:
@@ -141,37 +189,63 @@ listRouter.post("/", requireAuth, async (req, res) => {
  *           items:
  *             type: string
  *           enum: [OWNER, EDITOR, VIEWER, ADMIN]
+ *       - in: query
+ *         name: search
+ *         description: Filter lists by name
+ *         schema:
+ *           type: string
+ *           default: ""
+ *       - in: query
+ *         name: visibility
+ *         description: Filter lists by visibility
+ *         schema:
+ *           type: array
+ *           items:
+ *             type: string
+ *           enum: [PRIVATE, SHARED, PUBLIC]
+ *           default: [PRIVATE, SHARED, PUBLIC]
  *     responses:
  *       200:
  *         description: Lists retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/GetListsResponse'
  *       401:
  *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       500:
  *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 listRouter.get("/", requireAuth, async (req, res) => {
   try {
     const userId = req.user!.id;
-    const page = Math.max(1, parseInt(req.query.page as string) || 1);
-    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 20));
+    const data = getListsSchema.parse(req.query);
+    const { page, limit, roles, search, visibility } = data;
     const skip = (page - 1) * limit;
-    const roleFilter = req.query.roles;
-    const roles = roleFilter
-      ? Array.isArray(roleFilter)
-        ? roleFilter.map((r) => r.toString().trim())
-        : roleFilter
-            .toString()
-            .split(",")
-            .map((r) => r.trim())
+
+    const rolesArray = roles
+      ? roles.map((r) => r.toString().trim())
       : ["OWNER", "EDITOR", "VIEWER", "ADMIN"];
+
+    const visibilityArray = visibility
+      ? visibility.map((v) => v.toString().trim())
+      : ["PRIVATE", "SHARED", "PUBLIC"];
 
     const conditions = [];
 
-    if (roles.includes("OWNER")) {
+    if (rolesArray.includes("OWNER")) {
       conditions.push({ createdBy: userId });
     }
 
-    const collabRoles = roles.filter(
+    const collabRoles = rolesArray.filter(
       (r) => typeof r === "string" && ["EDITOR", "VIEWER", "ADMIN"].includes(r)
     );
     if (collabRoles.length > 0) {
@@ -184,6 +258,10 @@ listRouter.get("/", requireAuth, async (req, res) => {
       prisma.poiList.findMany({
         where: {
           OR: conditions.length > 0 ? conditions : [{ id: "impossible" }],
+          ...(visibility && { visibility: { in: visibilityArray as PoiVisibility[] } }),
+          ...(search && {
+            name: { contains: search, mode: "insensitive" },
+          }),
         },
         include: {
           collaborators: {
@@ -198,6 +276,10 @@ listRouter.get("/", requireAuth, async (req, res) => {
       prisma.poiList.count({
         where: {
           OR: conditions.length > 0 ? conditions : [{ id: "impossible" }],
+          ...(visibility && { visibility: { in: visibilityArray as PoiVisibility[] } }),
+          ...(search && {
+            name: { contains: search, mode: "insensitive" },
+          }),
         },
       }),
     ]);
@@ -221,6 +303,12 @@ listRouter.get("/", requireAuth, async (req, res) => {
       },
     });
   } catch (err) {
+    if (err instanceof z.ZodError) {
+      const details = handleZodError(err);
+      return res
+        .status(400)
+        .json(formatError(ErrorCodes.VALIDATION_ERROR, "Invalid input", details));
+    }
     req.log?.error({ err }, "Failed to get lists");
     return res.status(500).json(formatError(ErrorCodes.INTERNAL_ERROR, "Internal server error"));
   }
@@ -230,6 +318,7 @@ listRouter.get("/", requireAuth, async (req, res) => {
  * @openapi
  * /list/{listId}:
  *   get:
+ *     operationId: getListById
  *     summary: Get a list by ID
  *     description: Returns a specific list
  *     tags:
@@ -245,14 +334,34 @@ listRouter.get("/", requireAuth, async (req, res) => {
  *     responses:
  *       200:
  *         description: List retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/GetListResponse'
  *       401:
  *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       403:
  *         description: Access denied
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       404:
  *         description: List not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       500:
  *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 listRouter.get("/:listId", requireAuth, async (req, res) => {
   try {
@@ -278,6 +387,7 @@ listRouter.get("/:listId", requireAuth, async (req, res) => {
  * @openapi
  * /list/{listId}:
  *   put:
+ *     operationId: updateList
  *     summary: Update a list
  *     description: Updates a list owned by the authenticated user
  *     tags:
@@ -310,16 +420,40 @@ listRouter.get("/:listId", requireAuth, async (req, res) => {
  *     responses:
  *       200:
  *         description: List updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UpdateListResponse'
  *       400:
  *         description: Invalid input
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       401:
  *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       403:
  *         description: Access denied
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       404:
  *         description: List not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       500:
  *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 listRouter.put("/:listId", requireAuth, async (req, res) => {
   try {
@@ -345,7 +479,7 @@ listRouter.put("/:listId", requireAuth, async (req, res) => {
       data,
     });
 
-    res.json({ message: "List updated successfully", list: updatedList });
+    res.json({ list: updatedList });
   } catch (err) {
     if (err instanceof z.ZodError) {
       const details = handleZodError(err);
@@ -362,6 +496,7 @@ listRouter.put("/:listId", requireAuth, async (req, res) => {
  * @openapi
  * /list/{listId}:
  *   delete:
+ *     operationId: deleteList
  *     summary: Delete a list
  *     description: Deletes a list owned by the authenticated user
  *     tags:
@@ -377,14 +512,34 @@ listRouter.put("/:listId", requireAuth, async (req, res) => {
  *     responses:
  *       200:
  *         description: List deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/SingleMessageResponse'
  *       401:
  *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       403:
  *         description: Access denied
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       404:
  *         description: List not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       500:
  *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 listRouter.delete("/:listId", requireAuth, async (req, res) => {
   try {

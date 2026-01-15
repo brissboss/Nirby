@@ -10,6 +10,7 @@ import {
   sendVerificationEmail,
 } from "../email/service";
 import { env } from "../env";
+import { authBrutForceRateLimiter, authSpamRateLimiter } from "../middleware/rate-limit";
 import { SUPPORTED_LANGUAGES } from "../types";
 import { ErrorCodes } from "../utils/error-codes";
 import { formatError, handleZodError } from "../utils/errors";
@@ -95,6 +96,7 @@ const updateProfileSchema = z.object({
  * @openapi
  * /auth/signup:
  *   post:
+ *     operationId: signup
  *     summary: Sign up a new user
  *     tags:
  *       - 🔐 Auth
@@ -122,12 +124,30 @@ const updateProfileSchema = z.object({
  *     responses:
  *       201:
  *         description: User created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/SignupResponse'
  *       400:
  *         description: Email already in use
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       429:
+ *         description: Too many requests
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       500:
  *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
-authRouter.post("/signup", async (req, res) => {
+authRouter.post("/signup", authSpamRateLimiter, async (req, res) => {
   try {
     const { email, password, language } = authSchema.parse(req.body);
 
@@ -166,7 +186,6 @@ authRouter.post("/signup", async (req, res) => {
     }
 
     res.status(201).json({
-      message: "User created. Please check your email to verify your account",
       user: { id: user.id, email: user.email },
     });
   } catch (err) {
@@ -186,6 +205,7 @@ authRouter.post("/signup", async (req, res) => {
  * @openapi
  * /auth/verify-email:
  *   get:
+ *     operationId: verifyEmail
  *     summary: Verify user email address
  *     tags:
  *       - 🔐 Auth
@@ -199,12 +219,37 @@ authRouter.post("/signup", async (req, res) => {
  *     responses:
  *       200:
  *         description: Email verified successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/VerifyEmailResponse'
+ *       302:
+ *         description: Redirect to the verification email page
+ *         headers:
+ *           Location:
+ *             description: URL to redirect to
+ *             schema:
+ *               type: string
+ *               format: uri
+ *               example: "http://localhost:3000/verify-email?success=true"
  *       400:
  *         description: Invalid or expired token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       404:
  *         description: Token not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       500:
  *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 authRouter.get("/verify-email", async (req, res) => {
   try {
@@ -251,14 +296,13 @@ authRouter.get("/verify-email", async (req, res) => {
       req.query.format === "json" ||
       isFromScalar;
 
+    const redirectUrl = `${env.FRONTEND_URL}/verify-email?success=true`;
     if (isApiRequest) {
       return res.status(200).json({
-        message: "Email verified successfully",
         user: { id: user.id, email: user.email },
-        redirectUrl: `${env.FRONTEND_URL}/verify-email?success=true`,
+        redirectUrl,
       });
     } else {
-      const redirectUrl = `${env.FRONTEND_URL}/verify-email?success=true`;
       return res.redirect(redirectUrl);
     }
   } catch (err) {
@@ -272,6 +316,7 @@ authRouter.get("/verify-email", async (req, res) => {
  * @openapi
  * /auth/resend-verification:
  *   post:
+ *     operationId: resendVerification
  *     summary: Resend email verification
  *     tags:
  *       - 🔐 Auth
@@ -294,10 +339,22 @@ authRouter.get("/verify-email", async (req, res) => {
  *     responses:
  *       200:
  *         description: Verification email sent (if user exists and not verified)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/SingleMessageResponse'
  *       400:
  *         description: Invalid input or email already verified
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       500:
  *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 authRouter.post("/resend-verification", async (req, res) => {
   try {
@@ -359,6 +416,7 @@ authRouter.post("/resend-verification", async (req, res) => {
  * @openapi
  * /auth/login:
  *   post:
+ *     operationId: login
  *     summary: Login a user
  *     tags:
  *       - 🔐 Auth
@@ -382,12 +440,36 @@ authRouter.post("/resend-verification", async (req, res) => {
  *     responses:
  *       200:
  *         description: Login successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/LoginResponse'
  *       401:
  *         description: Invalid credentials
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       403:
+ *         description: Email not verified
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       429:
+ *         description: Too many requests
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       500:
  *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
-authRouter.post("/login", async (req, res) => {
+authRouter.post("/login", authBrutForceRateLimiter, async (req, res) => {
   try {
     const { email, password } = authSchema.parse(req.body);
 
@@ -403,6 +485,18 @@ authRouter.post("/login", async (req, res) => {
       return res
         .status(401)
         .json(formatError(ErrorCodes.INVALID_CREDENTIALS, "Invalid email or password"));
+    }
+
+    if (!user.emailVerified) {
+      return res.status(403).json(
+        formatError(
+          ErrorCodes.EMAIL_NOT_VERIFIED,
+          "Please verify your email before logging in. Check your inbox or resend the verification email.",
+          {
+            email: user.email,
+          }
+        )
+      );
     }
 
     const accessToken = signAccessToken({ userId: user.id, email: user.email });
@@ -440,6 +534,7 @@ authRouter.post("/login", async (req, res) => {
  * @openapi
  * /auth/refresh:
  *   post:
+ *     operationId: refreshToken
  *     summary: Refresh an access token
  *     tags:
  *       - 🔐 Auth
@@ -457,10 +552,22 @@ authRouter.post("/login", async (req, res) => {
  *     responses:
  *       200:
  *         description: Token refreshed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/RefreshTokenResponse'
  *       401:
  *         description: Invalid or expired refresh token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       500:
  *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 authRouter.post("/refresh", async (req, res) => {
   try {
@@ -509,6 +616,7 @@ authRouter.post("/refresh", async (req, res) => {
  * @openapi
  * /auth/logout:
  *   post:
+ *     operationId: logout
  *     summary: Logout and invalidate session
  *     tags:
  *       - 🔐 Auth
@@ -526,8 +634,16 @@ authRouter.post("/refresh", async (req, res) => {
  *     responses:
  *       200:
  *         description: Logout successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/SingleMessageResponse'
  *       500:
  *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 authRouter.post("/logout", async (req, res) => {
   try {
@@ -555,6 +671,7 @@ authRouter.post("/logout", async (req, res) => {
  * @openapi
  * /auth/forgot-password:
  *   post:
+ *     operationId: forgotPassword
  *     summary: Request a password reset
  *     tags:
  *       - 🔐 Auth
@@ -577,12 +694,30 @@ authRouter.post("/logout", async (req, res) => {
  *     responses:
  *       200:
  *         description: If the email exists, a password reset email has been sent
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/SingleMessageResponse'
  *       400:
  *         description: Invalid input
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       429:
+ *         description: Too many requests
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       500:
  *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
-authRouter.post("/forgot-password", async (req, res) => {
+authRouter.post("/forgot-password", authSpamRateLimiter, async (req, res) => {
   try {
     const { email, language } = forgotPasswordSchema.parse(req.body);
 
@@ -620,6 +755,7 @@ authRouter.post("/forgot-password", async (req, res) => {
  * @openapi
  * /auth/reset-password:
  *   post:
+ *     operationId: resetPassword
  *     summary: Reset password with token
  *     tags:
  *       - 🔐 Auth
@@ -643,12 +779,30 @@ authRouter.post("/forgot-password", async (req, res) => {
  *     responses:
  *       200:
  *         description: Password reset successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/SingleMessageResponse'
  *       400:
  *         description: Invalid or expired token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       429:
+ *         description: Too many requests
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       500:
  *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
-authRouter.post("/reset-password", async (req, res) => {
+authRouter.post("/reset-password", authBrutForceRateLimiter, async (req, res) => {
   try {
     const { token, password } = resetPasswordSchema.parse(req.body);
 
@@ -697,6 +851,7 @@ authRouter.post("/reset-password", async (req, res) => {
  * @openapi
  * /auth/change-password:
  *   post:
+ *     operationId: changePassword
  *     summary: Change user password
  *     description: Allows an authenticated user to change their password. All existing sessions will be invalidated after the password is changed.
  *     tags:
@@ -724,14 +879,34 @@ authRouter.post("/reset-password", async (req, res) => {
  *     responses:
  *       200:
  *         description: Password changed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/SingleMessageResponse'
  *       400:
  *         description: Invalid input or new password same as old
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       401:
  *         description: Unauthorized or invalid old password
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       404:
  *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       500:
  *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 authRouter.post("/change-password", requireAuth, async (req, res) => {
   try {
@@ -783,6 +958,7 @@ authRouter.post("/change-password", requireAuth, async (req, res) => {
  * @openapi
  * /auth/account:
  *   delete:
+ *     operationId: deleteAccount
  *     summary: Delete user account
  *     description: Permanently deletes the authenticated user's account and all associated data. A confirmation email will be sent.
  *     tags:
@@ -809,14 +985,34 @@ authRouter.post("/change-password", requireAuth, async (req, res) => {
  *     responses:
  *       200:
  *         description: Account deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/SingleMessageResponse'
  *       400:
  *         description: Invalid input
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       401:
  *         description: Unauthorized or invalid password
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       404:
  *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       500:
  *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 authRouter.delete("/account", requireAuth, async (req, res) => {
   try {
@@ -856,6 +1052,7 @@ authRouter.delete("/account", requireAuth, async (req, res) => {
  * @openapi
  * /auth/me:
  *   get:
+ *     operationId: getMe
  *     summary: Get current user profile
  *     tags:
  *       - 🔐 Auth
@@ -864,31 +1061,57 @@ authRouter.delete("/account", requireAuth, async (req, res) => {
  *     responses:
  *       200:
  *         description: User profile retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/GetMeResponse'
  *       401:
  *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 authRouter.get("/me", requireAuth, async (req, res) => {
-  const user = await prisma.user.findUnique({ where: { id: req.user?.id } });
-  if (!user) {
-    return res.status(404).json(formatError(ErrorCodes.NOT_FOUND, "User not found"));
-  }
+  try {
+    const user = await prisma.user.findUnique({ where: { id: req.user?.id } });
+    if (!user) {
+      return res.status(404).json(formatError(ErrorCodes.NOT_FOUND, "User not found"));
+    }
 
-  res.json({
-    user: {
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      avatarUrl: user.avatarUrl,
-      bio: user.bio,
-      emailVerified: user.emailVerified,
-    },
-  });
+    res.json({
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        avatarUrl: user.avatarUrl,
+        bio: user.bio,
+        emailVerified: user.emailVerified,
+      },
+    });
+  } catch (err) {
+    req.log?.error({ err });
+    return res.status(500).json(formatError(ErrorCodes.INTERNAL_ERROR, "Internal server error"));
+  }
 });
 
 /**
  * @openapi
  * /auth/me:
  *   put:
+ *     operationId: updateMe
  *     summary: Update current user profile
  *     tags:
  *       - 🔐 Auth
@@ -913,14 +1136,34 @@ authRouter.get("/me", requireAuth, async (req, res) => {
  *     responses:
  *       200:
  *         description: User profile updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/GetMeResponse'
  *       400:
  *         description: Invalid input
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       401:
  *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       404:
  *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       500:
  *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 authRouter.put("/me", requireAuth, async (req, res) => {
   try {

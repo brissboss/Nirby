@@ -40,6 +40,7 @@ const getPlaceQuerySchema = z.object({
  * @openapi
  * /google-place/search:
  *   post:
+ *     operationId: searchGooglePlaces
  *     summary: Search for Google Places
  *     description: Searches for Google Places using the Google Places API
  *     tags:
@@ -74,14 +75,34 @@ const getPlaceQuerySchema = z.object({
  *     responses:
  *       200:
  *         description: Google Places found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/GooglePlaceSearchResponse'
  *       401:
  *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       400:
  *         description: Invalid input
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       429:
  *         description: Rate limit exceeded
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       500:
  *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 googlePlaceRouter.post("/search", requireAuth, searchRateLimiter, async (req, res) => {
   try {
@@ -112,6 +133,7 @@ googlePlaceRouter.post("/search", requireAuth, searchRateLimiter, async (req, re
  * @openapi
  * /google-place/photo:
  *   get:
+ *     operationId: getGooglePlacePhoto
  *     summary: Get a Google Place photo
  *     description: Gets a Google Place photo from the Google Places API
  *     tags:
@@ -138,16 +160,31 @@ googlePlaceRouter.post("/search", requireAuth, searchRateLimiter, async (req, re
  *         content:
  *           image/jpeg:
  *             schema:
- *               type: string
- *               format: binary
+ *               $ref: '#/components/schemas/Image'
  *       401:
  *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       400:
  *         description: Invalid input
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       429:
  *         description: Rate limit exceeded
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       500:
  *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 googlePlaceRouter.get("/photo", requireAuth, photoRateLimiter, async (req, res) => {
   try {
@@ -179,6 +216,7 @@ googlePlaceRouter.get("/photo", requireAuth, photoRateLimiter, async (req, res) 
  * @openapi
  * /google-place/{placeId}:
  *   get:
+ *     operationId: getGooglePlace
  *     summary: Get a Google Place
  *     description: Returns cached Google Place data or fetches from Google API if not cached/expired
  *     tags:
@@ -202,14 +240,34 @@ googlePlaceRouter.get("/photo", requireAuth, photoRateLimiter, async (req, res) 
  *     responses:
  *       200:
  *         description: Google Place found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/SavedPoi'
  *       401:
  *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       404:
  *         description: Google Place not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       429:
  *         description: Rate limit exceeded
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       500:
  *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 googlePlaceRouter.get("/:placeId", requireAuth, getPlaceRateLimiter, async (req, res, next) => {
   try {

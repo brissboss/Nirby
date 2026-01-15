@@ -35,7 +35,6 @@ describe("Auth routes", () => {
 
       expect(res.status).toBe(201);
       expect(res.body).toHaveProperty("user");
-      expect(res.body).toHaveProperty("message");
       expect(res.body.user.email).toBe("test@example.com");
 
       const user = await prisma.user.findUnique({ where: { email: "test@example.com" } });
@@ -90,6 +89,12 @@ describe("Auth routes", () => {
     });
 
     it("should login with valid credentials", async () => {
+      const user = await prisma.user.findUnique({ where: { email: "login@example.com" } });
+      await prisma.user.update({
+        where: { id: user!.id },
+        data: { emailVerified: true },
+      });
+
       const res = await request(app).post("/auth/login").send({
         email: "login@example.com",
         password: "password123",
@@ -112,6 +117,12 @@ describe("Auth routes", () => {
     });
 
     it("should reject invalid password", async () => {
+      const user = await prisma.user.findUnique({ where: { email: "login@example.com" } });
+      await prisma.user.update({
+        where: { id: user!.id },
+        data: { emailVerified: true },
+      });
+
       const res = await request(app).post("/auth/login").send({
         email: "login@example.com",
         password: "wrongpassword",
@@ -119,6 +130,19 @@ describe("Auth routes", () => {
 
       expect(res.status).toBe(401);
       expect(res.body.error.code).toBe("INVALID_CREDENTIALS");
+    });
+
+    it("should return 403 if email is not verified", async () => {
+      const res = await request(app).post("/auth/login").send({
+        email: "login@example.com",
+        password: "password123",
+      });
+
+      expect(res.status).toBe(403);
+      expect(res.body.success).toBe(false);
+      expect(res.body.error.code).toBe("EMAIL_NOT_VERIFIED");
+      expect(res.body.error.message).toContain("verify your email");
+      expect(res.body.error.details).toHaveProperty("email", "login@example.com");
     });
   });
 
@@ -593,7 +617,6 @@ describe("Auth routes", () => {
         .set("Accept", "application/json");
 
       expect(res.status).toBe(200);
-      expect(res.body.message).toBe("Email verified successfully");
       expect(res.body.user.email).toBe("verify@example.com");
 
       const updatedUser = await prisma.user.findUnique({ where: { id: user.id } });

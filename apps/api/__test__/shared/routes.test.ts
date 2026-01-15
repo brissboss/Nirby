@@ -146,7 +146,7 @@ describe("Shared Routes", () => {
   });
 
   describe("GET /shared/:shareToken/pois", () => {
-    it("should return POIs from a shared list without authentication", async () => {
+    it("should return POIs from a shared list with pagination", async () => {
       const poi = await prisma.poi.create({
         data: {
           name: "Test POI",
@@ -171,6 +171,9 @@ describe("Shared Routes", () => {
       expect(res.body.pois[0]).toHaveProperty("name", "Test POI");
       expect(res.body.pois[0]).toHaveProperty("description", "A test POI");
       expect(res.body.pois[0]).not.toHaveProperty("createdBy");
+      expect(res.body.pagination).toBeDefined();
+      expect(res.body.pagination.page).toBe(1);
+      expect(res.body.pagination.total).toBe(1);
     });
 
     it("should return Google Place Cache POIs", async () => {
@@ -237,6 +240,8 @@ describe("Shared Routes", () => {
 
       expect(res.status).toBe(200);
       expect(res.body.pois).toEqual([]);
+      expect(res.body.pagination).toBeDefined();
+      expect(res.body.pagination.total).toBe(0);
     });
 
     it("should return 404 for invalid token", async () => {

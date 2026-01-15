@@ -16,6 +16,7 @@ export const listShareRouter = Router();
  * @openapi
  * /list/{listId}/share:
  *   post:
+ *     operationId: shareList
  *     summary: Share a list
  *     description: Shares a list with a user by generating a share link
  *     tags:
@@ -31,16 +32,40 @@ export const listShareRouter = Router();
  *     responses:
  *       200:
  *         description: List shared successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ShareLinkResponse'
  *       400:
  *         description: Invalid input
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       401:
  *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       403:
  *         description: Access denied
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       404:
  *         description: List not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       500:
  *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 listShareRouter.post("/:listId/share", requireAuth, async (req, res) => {
   try {
@@ -82,6 +107,7 @@ listShareRouter.post("/:listId/share", requireAuth, async (req, res) => {
  * @openapi
  * /list/{listId}/share:
  *   delete:
+ *     operationId: unshareList
  *     summary: Unshare a list
  *     description: Unshares a list
  *     tags:
@@ -97,14 +123,34 @@ listShareRouter.post("/:listId/share", requireAuth, async (req, res) => {
  *     responses:
  *       200:
  *         description: List unshared successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/SingleMessageResponse'
  *       401:
  *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       403:
  *         description: Access denied
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       404:
  *         description: List not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       500:
  *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 listShareRouter.delete("/:listId/share", requireAuth, async (req, res) => {
   try {
@@ -139,6 +185,7 @@ listShareRouter.delete("/:listId/share", requireAuth, async (req, res) => {
  * @openapi
  * /list/{listId}/edit-link:
  *   post:
+ *     operationId: generateEditLink
  *     summary: Generate an edit link for a list
  *     description: Generates an edit link for a list
  *     tags:
@@ -154,14 +201,40 @@ listShareRouter.delete("/:listId/share", requireAuth, async (req, res) => {
  *     responses:
  *       200:
  *         description: Edit link generated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/EditLinkResponse'
  *       400:
  *         description: Invalid input
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       401:
  *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       403:
  *         description: Access denied
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       404:
  *         description: List not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 listShareRouter.post("/:listId/edit-link", requireAuth, async (req, res) => {
   try {
@@ -200,6 +273,7 @@ listShareRouter.post("/:listId/edit-link", requireAuth, async (req, res) => {
  * @openapi
  * /list/{listId}/edit-link:
  *   delete:
+ *     operationId: revokeEditLink
  *     summary: Revoke an edit link for a list
  *     description: Revokes an edit link for a list
  *     tags:
@@ -215,14 +289,34 @@ listShareRouter.post("/:listId/edit-link", requireAuth, async (req, res) => {
  *     responses:
  *       200:
  *         description: Edit link revoked successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/SingleMessageResponse'
  *       401:
  *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       403:
  *         description: Access denied
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       404:
  *         description: List not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       500:
  *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 listShareRouter.delete("/:listId/edit-link", requireAuth, async (req, res) => {
   try {
@@ -257,6 +351,7 @@ listShareRouter.delete("/:listId/edit-link", requireAuth, async (req, res) => {
  * @openapi
  * /list/join:
  *   post:
+ *     operationId: joinListByEditLink
  *     summary: Join a list using an edit link
  *     description: Joins a list using an edit link
  *     tags:
@@ -272,16 +367,40 @@ listShareRouter.delete("/:listId/edit-link", requireAuth, async (req, res) => {
  *     responses:
  *       200:
  *         description: List joined successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/JoinListResponse'
  *       400:
  *         description: Invalid input
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       401:
  *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       403:
  *         description: Access denied
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       404:
  *         description: List not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       500:
  *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 listShareRouter.post("/join", requireAuth, async (req, res) => {
   try {
@@ -325,7 +444,6 @@ listShareRouter.post("/join", requireAuth, async (req, res) => {
     });
 
     res.json({
-      message: "You are now a collaborator of this list. You can now edit the list.",
       list,
     });
   } catch (err) {

@@ -119,6 +119,7 @@ const nearbyPoiSchema = z.object({
  * @openapi
  * /poi:
  *   post:
+ *     operationId: createPoi
  *     summary: Create a new POI
  *     description: Creates a custom POI for the authenticated user
  *     tags:
@@ -217,12 +218,28 @@ const nearbyPoiSchema = z.object({
  *     responses:
  *       201:
  *         description: POI created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/CreatePoiResponse'
  *       400:
  *         description: Invalid input
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       401:
  *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       500:
  *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 poiRouter.post("/", requireAuth, async (req, res) => {
   try {
@@ -248,7 +265,6 @@ poiRouter.post("/", requireAuth, async (req, res) => {
     });
 
     res.status(201).json({
-      message: "POI created successfully",
       poi,
     });
   } catch (err) {
@@ -267,6 +283,7 @@ poiRouter.post("/", requireAuth, async (req, res) => {
  * @openapi
  * /poi/nearby:
  *   get:
+ *     operationId: getNearbyPois
  *     summary: Get nearby POIs
  *     description: Returns nearby POIs within a specified radius
  *     tags:
@@ -296,8 +313,28 @@ poiRouter.post("/", requireAuth, async (req, res) => {
  *     responses:
  *       200:
  *         description: Nearby POIs
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/NearbyPOIsResponse'
+ *       400:
+ *         description: Invalid input
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       401:
  *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 poiRouter.get("/nearby", requireAuth, async (req, res) => {
   try {
@@ -364,6 +401,7 @@ poiRouter.get("/nearby", requireAuth, async (req, res) => {
  * @openapi
  * /poi:
  *   get:
+ *     operationId: getPois
  *     summary: List user's POIs
  *     description: Returns all POIs created by the authenticated user with pagination
  *     tags:
@@ -389,10 +427,22 @@ poiRouter.get("/nearby", requireAuth, async (req, res) => {
  *     responses:
  *       200:
  *         description: List of POIs with pagination info
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/GetPoisResponse'
  *       401:
  *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       500:
  *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 poiRouter.get("/", requireAuth, async (req, res) => {
   try {
@@ -437,6 +487,7 @@ poiRouter.get("/", requireAuth, async (req, res) => {
  * @openapi
  * /poi/{id}:
  *   get:
+ *     operationId: getPoiById
  *     summary: Get a POI by ID
  *     description: Returns a specific POI if the user has access to it
  *     tags:
@@ -453,14 +504,34 @@ poiRouter.get("/", requireAuth, async (req, res) => {
  *     responses:
  *       200:
  *         description: POI found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/POI'
  *       401:
  *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       403:
  *         description: Access denied
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       404:
  *         description: POI not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       500:
  *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 poiRouter.get("/:id", requireAuth, async (req, res) => {
   try {
@@ -489,6 +560,7 @@ poiRouter.get("/:id", requireAuth, async (req, res) => {
  * @openapi
  * /poi/{id}:
  *   put:
+ *     operationId: updatePoi
  *     summary: Update a POI
  *     description: Updates a POI owned by the authenticated user
  *     tags:
@@ -579,16 +651,40 @@ poiRouter.get("/:id", requireAuth, async (req, res) => {
  *     responses:
  *       200:
  *         description: POI updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UpdatePoiResponse'
  *       400:
  *         description: Invalid input
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       401:
  *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       403:
  *         description: Access denied
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       404:
  *         description: POI not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       500:
  *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 poiRouter.put("/:id", requireAuth, async (req, res) => {
   try {
@@ -617,7 +713,7 @@ poiRouter.put("/:id", requireAuth, async (req, res) => {
       },
     });
 
-    res.json({ message: "POI updated successfully", poi: updatedPoi });
+    res.json({ poi: updatedPoi });
   } catch (err) {
     if (err instanceof z.ZodError) {
       const details = handleZodError(err);
@@ -634,6 +730,7 @@ poiRouter.put("/:id", requireAuth, async (req, res) => {
  * @openapi
  * /poi/{id}:
  *   delete:
+ *     operationId: deletePoi
  *     summary: Delete a POI
  *     description: Deletes a POI owned by the authenticated user
  *     tags:
@@ -650,14 +747,34 @@ poiRouter.put("/:id", requireAuth, async (req, res) => {
  *     responses:
  *       200:
  *         description: POI deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/SingleMessageResponse'
  *       401:
  *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       403:
  *         description: Access denied
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       404:
  *         description: POI not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       500:
  *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 poiRouter.delete("/:id", requireAuth, async (req, res) => {
   try {

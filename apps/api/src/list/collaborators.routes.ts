@@ -25,10 +25,15 @@ const inviteCollaboratorSchema = z.object({
   sendEmail: z.boolean().optional().default(true),
 });
 
+const updateCollaboratorRoleSchema = z.object({
+  role: z.enum(["EDITOR", "VIEWER", "ADMIN"]).optional().default("VIEWER"),
+});
+
 /**
  * @openapi
  * /list/{listId}/collaborators:
  *   get:
+ *     operationId: getCollaborators
  *     summary: Get the collaborators of a list
  *     description: Gets the collaborators of a list
  *     tags:
@@ -41,20 +46,54 @@ const inviteCollaboratorSchema = z.object({
  *         required: true
  *         schema:
  *           type: string
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
  *     responses:
  *       200:
  *         description: Collaborators retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/GetCollaboratorsResponse'
  *       401:
  *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       403:
  *         description: Access denied
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       404:
  *         description: List not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       500:
  *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 listCollaboratorsRouter.get("/:listId/collaborators", requireAuth, async (req, res) => {
   try {
+    const page = Math.max(1, parseInt(req.query.page as string) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 20));
+    const skip = (page - 1) * limit;
+
     const list = await prisma.poiList.findUnique({ where: { id: req.params.listId } });
     if (!list) {
       return res.status(404).json(formatError(ErrorCodes.LIST_NOT_FOUND, "List not found"));
@@ -65,16 +104,33 @@ listCollaboratorsRouter.get("/:listId/collaborators", requireAuth, async (req, r
       return res.status(404).json(formatError(ErrorCodes.LIST_NOT_FOUND, "List not found"));
     }
 
-    const collaborators = await prisma.listCollaborator.findMany({
-      where: { listId: list.id },
-      select: {
-        role: true,
-        joinedAt: true,
-        user: { select: { id: true, email: true, name: true, avatarUrl: true } },
+    const [collaborators, total] = await Promise.all([
+      prisma.listCollaborator.findMany({
+        where: { listId: list.id },
+        select: {
+          role: true,
+          joinedAt: true,
+          user: { select: { id: true, email: true, name: true, avatarUrl: true } },
+        },
+        orderBy: { joinedAt: "desc" },
+        skip,
+        take: limit,
+      }),
+
+      prisma.listCollaborator.count({
+        where: { listId: list.id },
+      }),
+    ]);
+
+    res.json({
+      collaborators: collaborators,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
       },
     });
-
-    res.json({ collaborators });
   } catch (err) {
     req.log?.error({ err }, "Failed to get collaborators");
     return res.status(500).json(formatError(ErrorCodes.INTERNAL_ERROR, "Internal server error"));
@@ -85,6 +141,7 @@ listCollaboratorsRouter.get("/:listId/collaborators", requireAuth, async (req, r
  * @openapi
  * /list/{listId}/collaborators/me:
  *   delete:
+ *     operationId: leaveList
  *     summary: Leave a list
  *     description: Leaves a list
  *     tags:
@@ -100,14 +157,34 @@ listCollaboratorsRouter.get("/:listId/collaborators", requireAuth, async (req, r
  *     responses:
  *       200:
  *         description: List left successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/SingleMessageResponse'
  *       401:
  *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       403:
  *         description: Access denied
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       404:
  *         description: List not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       500:
  *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 listCollaboratorsRouter.delete("/:listId/collaborators/me", requireAuth, async (req, res) => {
   try {
@@ -141,7 +218,124 @@ listCollaboratorsRouter.delete("/:listId/collaborators/me", requireAuth, async (
 /**
  * @openapi
  * /list/{listId}/collaborators/{collaboratorId}:
+ *   put:
+ *     operationId: updateCollaboratorRole
+ *     summary: Update the role of a collaborator
+ *     description: Updates the role of a collaborator
+ *     tags:
+ *       - Collaborators
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: listId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: path
+ *         name: collaboratorId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               role:
+ *                 type: string
+ *                 enum: [EDITOR, VIEWER, ADMIN]
+ *                 description: Role to assign to the collaborator
+ *             required:
+ *               - role
+ *     responses:
+ *       200:
+ *         description: Collaborator role updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/SingleMessageResponse'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       403:
+ *         description: Access denied
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: List not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+listCollaboratorsRouter.put(
+  "/:listId/collaborators/:collaboratorId",
+  requireAuth,
+  async (req, res) => {
+    try {
+      const { role } = updateCollaboratorRoleSchema.parse(req.body);
+
+      const list = await prisma.poiList.findUnique({ where: { id: req.params.listId } });
+      if (!list) {
+        return res.status(404).json(formatError(ErrorCodes.LIST_NOT_FOUND, "List not found"));
+      }
+
+      const userRole = await checkListAccess(list, req.user!.id);
+      if (!userRole) {
+        return res.status(404).json(formatError(ErrorCodes.LIST_NOT_FOUND, "List not found"));
+      }
+
+      if (!["ADMIN", "OWNER"].includes(userRole)) {
+        return res.status(403).json(formatError(ErrorCodes.LIST_ACCESS_DENIED, "Access denied"));
+      }
+
+      const collaborator = await prisma.listCollaborator.findUnique({
+        where: { listId_userId: { listId: list.id, userId: req.params.collaboratorId } },
+      });
+      if (!collaborator) {
+        return res
+          .status(404)
+          .json(formatError(ErrorCodes.COLLABORATOR_NOT_FOUND, "Collaborator not found"));
+      }
+
+      await prisma.listCollaborator.update({
+        where: { id: collaborator.id },
+        data: { role },
+      });
+
+      res.json({ message: "Collaborator role updated successfully" });
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        const details = handleZodError(err);
+        return res
+          .status(400)
+          .json(formatError(ErrorCodes.VALIDATION_ERROR, "Invalid input", details));
+      }
+      req.log?.error({ err }, "Failed to update collaborator role");
+      return res.status(500).json(formatError(ErrorCodes.INTERNAL_ERROR, "Internal server error"));
+    }
+  }
+);
+
+/**
+ * @openapi
+ * /list/{listId}/collaborators/{collaboratorId}:
  *   delete:
+ *     operationId: removeCollaborator
  *     summary: Remove a collaborator from a list
  *     description: Removes a collaborator from a list
  *     tags:
@@ -162,14 +356,34 @@ listCollaboratorsRouter.delete("/:listId/collaborators/me", requireAuth, async (
  *     responses:
  *       200:
  *         description: Collaborator removed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/SingleMessageResponse'
  *       401:
  *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       403:
  *         description: Access denied
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       404:
  *         description: List not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       500:
  *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 listCollaboratorsRouter.delete(
   "/:listId/collaborators/:collaboratorId",
@@ -206,6 +420,7 @@ listCollaboratorsRouter.delete(
  * @openapi
  * /list/{listId}/collaborators/invite:
  *   post:
+ *     operationId: inviteCollaborator
  *     summary: Invite a collaborator to a list
  *     description: Invites a collaborator to a list by email. Returns an invitation link that can be sent via email or shared directly.
  *     tags:
@@ -251,25 +466,37 @@ listCollaboratorsRouter.delete(
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 inviteLink:
- *                   type: string
- *                   format: uri
- *                   description: Invitation link to share
- *                 emailSent:
- *                   type: boolean
- *                   description: Whether the email was sent
+ *               $ref: '#/components/schemas/InviteCollaboratorResponse'
  *       400:
  *         description: Invalid input or collaborator already exists
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       401:
  *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       403:
  *         description: Access denied
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       404:
  *         description: List not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       500:
  *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 listCollaboratorsRouter.post("/:listId/collaborators/invite", requireAuth, async (req, res) => {
   try {
@@ -359,6 +586,7 @@ listCollaboratorsRouter.post("/:listId/collaborators/invite", requireAuth, async
  * @openapi
  * /list/{listId}/collaborators/join:
  *   post:
+ *     operationId: joinListByInvite
  *     summary: Join a list as a collaborator
  *     description: Joins a list as a collaborator by token
  *     tags:
@@ -379,12 +607,28 @@ listCollaboratorsRouter.post("/:listId/collaborators/invite", requireAuth, async
  *     responses:
  *       200:
  *         description: Collaborator joined successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/JoinListResponse'
  *       400:
  *         description: Invalid token or expired token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       404:
  *         description: List not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       500:
  *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 listCollaboratorsRouter.post("/:listId/collaborators/join", requireAuth, async (req, res) => {
   try {
@@ -451,7 +695,7 @@ listCollaboratorsRouter.post("/:listId/collaborators/join", requireAuth, async (
       },
     });
 
-    res.json({ message: "Collaborator joined successfully", list: list });
+    res.json({ list: list });
   } catch (err) {
     req.log?.error({ err }, "Failed to join list");
     return res.status(500).json(formatError(ErrorCodes.INTERNAL_ERROR, "Internal server error"));
