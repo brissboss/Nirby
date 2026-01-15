@@ -102,8 +102,17 @@ describe("Auth routes", () => {
 
       expect(res.status).toBe(200);
       expect(res.body).toHaveProperty("accessToken");
-      expect(res.body).toHaveProperty("refreshToken");
       expect(res.body.user.email).toBe("login@example.com");
+
+      // refreshToken is now in httpOnly cookie
+      const cookies = res.headers["set-cookie"];
+      expect(cookies).toBeDefined();
+      const refreshTokenCookie = (cookies as unknown as string[]).find((c: string) =>
+        c.startsWith("refreshToken=")
+      );
+      expect(refreshTokenCookie).toBeDefined();
+      expect(refreshTokenCookie).toContain("HttpOnly");
+      expect(refreshTokenCookie).toContain("Path=/auth");
     });
 
     it("should reject invalid email", async () => {
@@ -170,14 +179,26 @@ describe("Auth routes", () => {
     });
 
     it("should refresh access token", async () => {
-      const res = await request(app).post("/auth/refresh").send({ refreshToken });
+      const res = await request(app)
+        .post("/auth/refresh")
+        .set("Cookie", `refreshToken=${refreshToken}`);
 
       expect(res.status).toBe(200);
       expect(res.body).toHaveProperty("accessToken");
+
+      // New refresh token cookie should be set
+      const cookies = res.headers["set-cookie"];
+      expect(cookies).toBeDefined();
+      const newRefreshTokenCookie = (cookies as unknown as string[]).find((c: string) =>
+        c.startsWith("refreshToken=")
+      );
+      expect(newRefreshTokenCookie).toBeDefined();
     });
 
     it("should reject invalid refresh token", async () => {
-      const res = await request(app).post("/auth/refresh").send({ refreshToken: "invalid-token" });
+      const res = await request(app)
+        .post("/auth/refresh")
+        .set("Cookie", "refreshToken=invalid-token");
 
       expect(res.status).toBe(401);
       expect(res.body.error.code).toBe("INVALID_REFRESH_TOKEN");
@@ -197,11 +218,12 @@ describe("Auth routes", () => {
 
       const res = await request(app)
         .post("/auth/refresh")
-        .send({ refreshToken: expiredSession.refreshToken });
+        .set("Cookie", `refreshToken=${expiredSession.refreshToken}`);
 
       expect(res.status).toBe(401);
       expect(res.body.error.code).toBe("INVALID_REFRESH_TOKEN");
 
+      // Expired session should be deleted
       const deleted = await prisma.session.findUnique({
         where: { id: expiredSession.id },
       });
@@ -209,10 +231,10 @@ describe("Auth routes", () => {
     });
 
     it("should reject missing refresh token", async () => {
-      const res = await request(app).post("/auth/refresh").send({});
+      const res = await request(app).post("/auth/refresh");
 
-      expect(res.status).toBe(400);
-      expect(res.body.error.code).toBe("VALIDATION_ERROR");
+      expect(res.status).toBe(401);
+      expect(res.body.error.code).toBe("INVALID_REFRESH_TOKEN");
     });
   });
 
