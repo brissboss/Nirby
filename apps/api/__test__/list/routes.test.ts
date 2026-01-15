@@ -269,7 +269,7 @@ describe("List Routes", () => {
   });
 
   describe("GET /list/:listid/pois", () => {
-    it("should return POIs in a list", async () => {
+    it("should return POIs in a list with pagination", async () => {
       const list = await prisma.poiList.create({
         data: { name: "Test List", createdBy: userId },
       });
@@ -289,6 +289,9 @@ describe("List Routes", () => {
       expect(res.status).toBe(200);
       expect(res.body.savedPois).toHaveLength(1);
       expect(res.body.savedPois[0].poi.name).toBe("Test POI");
+      expect(res.body.pagination).toBeDefined();
+      expect(res.body.pagination.page).toBe(1);
+      expect(res.body.pagination.total).toBe(1);
     });
 
     it("should return 404 for non-existent list", async () => {
@@ -881,7 +884,7 @@ describe("List Routes", () => {
   });
 
   describe("GET /list/:listId/collaborators", () => {
-    it("should return collaborators for owner", async () => {
+    it("should return collaborators for owner with pagination", async () => {
       const list = await prisma.poiList.create({
         data: { name: "My List", createdBy: userId },
       });
@@ -907,9 +910,12 @@ describe("List Routes", () => {
       expect(res.body.collaborators).toHaveLength(1);
       expect(res.body.collaborators[0].user.email).toBe("collab@example.com");
       expect(res.body.collaborators[0].role).toBe("EDITOR");
+      expect(res.body.pagination).toBeDefined();
+      expect(res.body.pagination.page).toBe(1);
+      expect(res.body.pagination.total).toBe(1);
     });
 
-    it("should return collaborators for collaborator", async () => {
+    it("should return collaborators for collaborator with pagination", async () => {
       const otherUser = await prisma.user.create({
         data: {
           email: "owner-collabs@example.com",
@@ -932,6 +938,7 @@ describe("List Routes", () => {
 
       expect(res.status).toBe(200);
       expect(res.body.collaborators).toHaveLength(1);
+      expect(res.body.pagination).toBeDefined();
     });
 
     it("should return 404 for non-collaborator on private list", async () => {

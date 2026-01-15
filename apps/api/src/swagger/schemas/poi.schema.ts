@@ -275,8 +275,9 @@ export const poiSchemas = {
           },
         },
       },
+      pagination: { $ref: "#/components/schemas/PaginationResponse" },
     },
-    required: ["savedPois"],
+    required: ["savedPois", "pagination"],
   },
   SharedListResponse: {
     type: "object",
@@ -311,7 +312,8 @@ export const poiSchemas = {
     type: "object",
     properties: {
       pois: { type: "array", items: { type: "object" } },
+      pagination: { $ref: "#/components/schemas/PaginationResponse" },
     },
-    required: ["pois"],
+    required: ["pois", "pagination"],
   },
 } as const;
