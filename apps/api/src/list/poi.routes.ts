@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { requireAuth } from "../auth/middleware";
 import { prisma } from "../db";
+import { getOrFetchPlace } from "../google-place/service";
 import { ErrorCodes } from "../utils/error-codes";
 import { formatError, handleZodError } from "../utils/errors";
 
@@ -131,13 +132,11 @@ listPoiRouter.post("/:listId/poi", requireAuth, async (req, res) => {
     }
 
     if (data.googlePlaceId) {
-      const cachedPlace = await prisma.googlePlaceCache.findUnique({
-        where: { placeId: data.googlePlaceId },
-      });
+      const cachedPlace = await getOrFetchPlace(data.googlePlaceId, "en-US");
       if (!cachedPlace) {
         return res
           .status(404)
-          .json(formatError(ErrorCodes.GOOGLE_PLACE_NOT_FOUND, "Google Place not found in cache"));
+          .json(formatError(ErrorCodes.GOOGLE_PLACE_NOT_FOUND, "Google Place not found"));
       }
     }
 
@@ -155,8 +154,8 @@ listPoiRouter.post("/:listId/poi", requireAuth, async (req, res) => {
     const savedPoi = await prisma.savedPoi.create({
       data: {
         listId: list.id,
-        poiId: data.poiId,
-        googlePlaceId: data.googlePlaceId,
+        poiId: data.poiId || undefined,
+        googlePlaceId: data.googlePlaceId || undefined,
       },
     });
 

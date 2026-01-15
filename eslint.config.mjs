@@ -14,6 +14,7 @@ export default tseslint.config(
       "**/vitest.config.ts",
       "**/__test__/**",
       "**/test/**",
+      "**/prisma/seed.ts",
     ],
   },
   js.configs.recommended,
