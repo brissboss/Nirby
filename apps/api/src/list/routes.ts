@@ -44,7 +44,15 @@ const getListsSchema = z.object({
       if (!val || val.trim().length < 2) return undefined;
       return val.trim();
     }),
-  visibility: z.enum(["PRIVATE", "SHARED", "PUBLIC"]).optional(),
+  visibility: z.preprocess(
+    (val) => {
+      if (!val) return undefined;
+      if (Array.isArray(val)) return val;
+      if (typeof val === "string") return val.split(",");
+      return undefined;
+    },
+    z.array(z.enum(["PRIVATE", "SHARED", "PUBLIC"])).optional()
+  ),
 });
 
 const updateListSchema = z.object({
@@ -191,9 +199,11 @@ listRouter.post("/", requireAuth, async (req, res) => {
  *         name: visibility
  *         description: Filter lists by visibility
  *         schema:
- *           type: string
+ *           type: array
+ *           items:
+ *             type: string
  *           enum: [PRIVATE, SHARED, PUBLIC]
- *           default: PRIVATE
+ *           default: [PRIVATE, SHARED, PUBLIC]
  *     responses:
  *       200:
  *         description: Lists retrieved successfully
@@ -222,13 +232,12 @@ listRouter.get("/", requireAuth, async (req, res) => {
     const skip = (page - 1) * limit;
 
     const rolesArray = roles
-      ? Array.isArray(roles)
-        ? roles.map((r) => r.toString().trim())
-        : (roles as string[])
-            .toString()
-            .split(",")
-            .map((r) => r.trim())
+      ? roles.map((r) => r.toString().trim())
       : ["OWNER", "EDITOR", "VIEWER", "ADMIN"];
+
+    const visibilityArray = visibility
+      ? visibility.map((v) => v.toString().trim())
+      : ["PRIVATE", "SHARED", "PUBLIC"];
 
     const conditions = [];
 
@@ -249,7 +258,7 @@ listRouter.get("/", requireAuth, async (req, res) => {
       prisma.poiList.findMany({
         where: {
           OR: conditions.length > 0 ? conditions : [{ id: "impossible" }],
-          ...(visibility && { visibility }),
+          ...(visibility && { visibility: { in: visibilityArray as PoiVisibility[] } }),
           ...(search && {
             name: { contains: search, mode: "insensitive" },
           }),
@@ -267,7 +276,7 @@ listRouter.get("/", requireAuth, async (req, res) => {
       prisma.poiList.count({
         where: {
           OR: conditions.length > 0 ? conditions : [{ id: "impossible" }],
-          ...(visibility && { visibility }),
+          ...(visibility && { visibility: { in: visibilityArray as PoiVisibility[] } }),
           ...(search && {
             name: { contains: search, mode: "insensitive" },
           }),
@@ -294,6 +303,12 @@ listRouter.get("/", requireAuth, async (req, res) => {
       },
     });
   } catch (err) {
+    if (err instanceof z.ZodError) {
+      const details = handleZodError(err);
+      return res
+        .status(400)
+        .json(formatError(ErrorCodes.VALIDATION_ERROR, "Invalid input", details));
+    }
     req.log?.error({ err }, "Failed to get lists");
     return res.status(500).json(formatError(ErrorCodes.INTERNAL_ERROR, "Internal server error"));
   }
