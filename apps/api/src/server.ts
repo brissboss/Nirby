@@ -35,7 +35,7 @@ export function createServer() {
 
   app.use(
     cors({
-      origin: true,
+      origin: env.NODE_ENV === "production" || env.NODE_ENV === "staging" ? env.FRONTEND_URL : true,
       credentials: true,
     })
   );
