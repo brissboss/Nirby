@@ -25,6 +25,10 @@ const inviteCollaboratorSchema = z.object({
   sendEmail: z.boolean().optional().default(true),
 });
 
+const updateCollaboratorRoleSchema = z.object({
+  role: z.enum(["EDITOR", "VIEWER", "ADMIN"]).optional().default("VIEWER"),
+});
+
 /**
  * @openapi
  * /list/{listId}/collaborators:
@@ -210,6 +214,122 @@ listCollaboratorsRouter.delete("/:listId/collaborators/me", requireAuth, async (
     return res.status(500).json(formatError(ErrorCodes.INTERNAL_ERROR, "Internal server error"));
   }
 });
+
+/**
+ * @openapi
+ * /list/{listId}/collaborators/{collaboratorId}:
+ *   put:
+ *     operationId: updateCollaboratorRole
+ *     summary: Update the role of a collaborator
+ *     description: Updates the role of a collaborator
+ *     tags:
+ *       - Collaborators
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: listId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: path
+ *         name: collaboratorId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               role:
+ *                 type: string
+ *                 enum: [EDITOR, VIEWER, ADMIN]
+ *                 description: Role to assign to the collaborator
+ *             required:
+ *               - role
+ *     responses:
+ *       200:
+ *         description: Collaborator role updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/SingleMessageResponse'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       403:
+ *         description: Access denied
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: List not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+listCollaboratorsRouter.put(
+  "/:listId/collaborators/:collaboratorId",
+  requireAuth,
+  async (req, res) => {
+    try {
+      const { role } = updateCollaboratorRoleSchema.parse(req.body);
+
+      const list = await prisma.poiList.findUnique({ where: { id: req.params.listId } });
+      if (!list) {
+        return res.status(404).json(formatError(ErrorCodes.LIST_NOT_FOUND, "List not found"));
+      }
+
+      const userRole = await checkListAccess(list, req.user!.id);
+      if (!userRole) {
+        return res.status(404).json(formatError(ErrorCodes.LIST_NOT_FOUND, "List not found"));
+      }
+
+      if (!["ADMIN", "OWNER"].includes(userRole)) {
+        return res.status(403).json(formatError(ErrorCodes.LIST_ACCESS_DENIED, "Access denied"));
+      }
+
+      const collaborator = await prisma.listCollaborator.findUnique({
+        where: { listId_userId: { listId: list.id, userId: req.params.collaboratorId } },
+      });
+      if (!collaborator) {
+        return res
+          .status(404)
+          .json(formatError(ErrorCodes.COLLABORATOR_NOT_FOUND, "Collaborator not found"));
+      }
+
+      await prisma.listCollaborator.update({
+        where: { id: collaborator.id },
+        data: { role },
+      });
+
+      res.json({ message: "Collaborator role updated successfully" });
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        const details = handleZodError(err);
+        return res
+          .status(400)
+          .json(formatError(ErrorCodes.VALIDATION_ERROR, "Invalid input", details));
+      }
+      req.log?.error({ err }, "Failed to update collaborator role");
+      return res.status(500).json(formatError(ErrorCodes.INTERNAL_ERROR, "Internal server error"));
+    }
+  }
+);
 
 /**
  * @openapi

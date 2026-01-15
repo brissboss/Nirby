@@ -1100,6 +1100,213 @@ describe("List Routes", () => {
     });
   });
 
+  describe("PUT /list/:listId/collaborators/:collaboratorId", () => {
+    it("should allow owner to update collaborator role", async () => {
+      const list = await prisma.poiList.create({
+        data: { name: "My List", createdBy: userId },
+      });
+
+      const collaborator = await prisma.user.create({
+        data: {
+          email: "collab-update@example.com",
+          passwordHash: await hashPassword("password123"),
+          emailVerified: true,
+        },
+      });
+
+      await prisma.listCollaborator.create({
+        data: { listId: list.id, userId: collaborator.id, role: "VIEWER" },
+      });
+
+      const res = await request(app)
+        .put(`/list/${list.id}/collaborators/${collaborator.id}`)
+        .set("Authorization", `Bearer ${accessToken}`)
+        .send({ role: "EDITOR" });
+
+      expect(res.status).toBe(200);
+      expect(res.body.message).toBe("Collaborator role updated successfully");
+
+      const updatedCollab = await prisma.listCollaborator.findUnique({
+        where: { listId_userId: { listId: list.id, userId: collaborator.id } },
+      });
+      expect(updatedCollab?.role).toBe("EDITOR");
+    });
+
+    it("should allow admin to update collaborator role", async () => {
+      const owner = await prisma.user.create({
+        data: {
+          email: "owner-admin-update@example.com",
+          passwordHash: await hashPassword("password123"),
+          emailVerified: true,
+        },
+      });
+
+      const list = await prisma.poiList.create({
+        data: { name: "Owner's List", createdBy: owner.id },
+      });
+
+      // Current user is ADMIN
+      await prisma.listCollaborator.create({
+        data: { listId: list.id, userId, role: "ADMIN" },
+      });
+
+      const collaborator = await prisma.user.create({
+        data: {
+          email: "collab-by-admin@example.com",
+          passwordHash: await hashPassword("password123"),
+          emailVerified: true,
+        },
+      });
+
+      await prisma.listCollaborator.create({
+        data: { listId: list.id, userId: collaborator.id, role: "VIEWER" },
+      });
+
+      const res = await request(app)
+        .put(`/list/${list.id}/collaborators/${collaborator.id}`)
+        .set("Authorization", `Bearer ${accessToken}`)
+        .send({ role: "EDITOR" });
+
+      expect(res.status).toBe(200);
+      expect(res.body.message).toBe("Collaborator role updated successfully");
+
+      const updatedCollab = await prisma.listCollaborator.findUnique({
+        where: { listId_userId: { listId: list.id, userId: collaborator.id } },
+      });
+      expect(updatedCollab?.role).toBe("EDITOR");
+    });
+
+    it("should reject non-owner/non-admin from updating role", async () => {
+      const owner = await prisma.user.create({
+        data: {
+          email: "owner-reject-update@example.com",
+          passwordHash: await hashPassword("password123"),
+          emailVerified: true,
+        },
+      });
+
+      const list = await prisma.poiList.create({
+        data: { name: "Owner's List", createdBy: owner.id },
+      });
+
+      // Current user is EDITOR (not ADMIN)
+      await prisma.listCollaborator.create({
+        data: { listId: list.id, userId, role: "EDITOR" },
+      });
+
+      const collaborator = await prisma.user.create({
+        data: {
+          email: "collab-reject@example.com",
+          passwordHash: await hashPassword("password123"),
+          emailVerified: true,
+        },
+      });
+
+      await prisma.listCollaborator.create({
+        data: { listId: list.id, userId: collaborator.id, role: "VIEWER" },
+      });
+
+      const res = await request(app)
+        .put(`/list/${list.id}/collaborators/${collaborator.id}`)
+        .set("Authorization", `Bearer ${accessToken}`)
+        .send({ role: "ADMIN" });
+
+      expect(res.status).toBe(403);
+      expect(res.body.error.code).toBe(ErrorCodes.LIST_ACCESS_DENIED);
+    });
+
+    it("should return 404 for non-existent list", async () => {
+      const res = await request(app)
+        .put("/list/non-existent-id/collaborators/some-user-id")
+        .set("Authorization", `Bearer ${accessToken}`)
+        .send({ role: "EDITOR" });
+
+      expect(res.status).toBe(404);
+    });
+
+    it("should return 404 for non-existent collaborator", async () => {
+      const list = await prisma.poiList.create({
+        data: { name: "My List", createdBy: userId },
+      });
+
+      const res = await request(app)
+        .put(`/list/${list.id}/collaborators/non-existent-id`)
+        .set("Authorization", `Bearer ${accessToken}`)
+        .send({ role: "EDITOR" });
+
+      expect(res.status).toBe(404);
+      expect(res.body.error.code).toBe(ErrorCodes.COLLABORATOR_NOT_FOUND);
+    });
+
+    it("should return 400 for invalid role", async () => {
+      const list = await prisma.poiList.create({
+        data: { name: "My List", createdBy: userId },
+      });
+
+      const collaborator = await prisma.user.create({
+        data: {
+          email: "collab-invalid@example.com",
+          passwordHash: await hashPassword("password123"),
+          emailVerified: true,
+        },
+      });
+
+      await prisma.listCollaborator.create({
+        data: { listId: list.id, userId: collaborator.id, role: "VIEWER" },
+      });
+
+      const res = await request(app)
+        .put(`/list/${list.id}/collaborators/${collaborator.id}`)
+        .set("Authorization", `Bearer ${accessToken}`)
+        .send({ role: "INVALID_ROLE" });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe(ErrorCodes.VALIDATION_ERROR);
+    });
+
+    it("should reject unauthenticated request", async () => {
+      const list = await prisma.poiList.create({
+        data: { name: "My List", createdBy: userId },
+      });
+
+      const res = await request(app)
+        .put(`/list/${list.id}/collaborators/some-user-id`)
+        .send({ role: "EDITOR" });
+
+      expect(res.status).toBe(401);
+    });
+
+    it("should update role to ADMIN", async () => {
+      const list = await prisma.poiList.create({
+        data: { name: "My List", createdBy: userId },
+      });
+
+      const collaborator = await prisma.user.create({
+        data: {
+          email: "collab-to-admin@example.com",
+          passwordHash: await hashPassword("password123"),
+          emailVerified: true,
+        },
+      });
+
+      await prisma.listCollaborator.create({
+        data: { listId: list.id, userId: collaborator.id, role: "VIEWER" },
+      });
+
+      const res = await request(app)
+        .put(`/list/${list.id}/collaborators/${collaborator.id}`)
+        .set("Authorization", `Bearer ${accessToken}`)
+        .send({ role: "ADMIN" });
+
+      expect(res.status).toBe(200);
+
+      const updatedCollab = await prisma.listCollaborator.findUnique({
+        where: { listId_userId: { listId: list.id, userId: collaborator.id } },
+      });
+      expect(updatedCollab?.role).toBe("ADMIN");
+    });
+  });
+
   describe("Collaborator access to lists", () => {
     it("should allow collaborator to view a private list", async () => {
       const owner = await prisma.user.create({
