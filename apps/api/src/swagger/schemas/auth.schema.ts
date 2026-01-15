@@ -86,16 +86,14 @@ export const authSchemas = {
     properties: {
       user: { $ref: "#/components/schemas/UserBasic" },
       accessToken: { type: "string" },
-      refreshToken: { type: "string" },
     },
-    required: ["user", "accessToken", "refreshToken"],
+    required: ["user", "accessToken"],
     example: {
       user: {
         id: "1234567890",
         email: "test@example.com",
       },
       accessToken: "1234567890",
-      refreshToken: "1234567890",
     },
   },
   RefreshTokenResponse: {

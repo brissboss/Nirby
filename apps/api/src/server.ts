@@ -1,4 +1,5 @@
 import { apiReference } from "@scalar/express-api-reference";
+import cookieParser from "cookie-parser";
 import cors from "cors";
 import express, { Request, Response, NextFunction } from "express";
 import helmet from "helmet";
@@ -40,6 +41,7 @@ export function createServer() {
     })
   );
   app.use(express.json({ limit: "1mb" }));
+  app.use(cookieParser());
 
   app.use(
     "/docs",

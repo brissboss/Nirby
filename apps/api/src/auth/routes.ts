@@ -22,6 +22,8 @@ import { generateVerificationToken, getVerificationTokenExpiration } from "./ver
 
 export const authRouter = Router();
 
+const isProduction = env.NODE_ENV === "production" || env.NODE_ENV === "staging";
+
 const authSchema = z.object({
   email: z
     .string({ required_error: ErrorCodes.EMAIL_REQUIRED })
@@ -512,10 +514,17 @@ authRouter.post("/login", authBrutForceRateLimiter, async (req, res) => {
       },
     });
 
+    res.cookie("refreshToken", refreshToken, {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: "strict",
+      maxAge: env.REFRESH_TOKEN_TTL * 1000,
+      path: "/auth",
+    });
+
     res.json({
       user: { id: user.id, email: user.email },
       accessToken,
-      refreshToken,
     });
   } catch (err) {
     if (err instanceof z.ZodError) {
@@ -571,9 +580,16 @@ authRouter.post("/login", authBrutForceRateLimiter, async (req, res) => {
  */
 authRouter.post("/refresh", async (req, res) => {
   try {
-    const { refreshToken } = z
-      .object({ refreshToken: z.string({ required_error: ErrorCodes.REFRESH_TOKEN_REQUIRED }) })
-      .parse(req.body);
+    // const { refreshToken } = z
+    //   .object({ refreshToken: z.string({ required_error: ErrorCodes.REFRESH_TOKEN_REQUIRED }) })
+    //   .parse(req.body);
+    const refreshToken = req.cookies.refreshToken;
+
+    if (!refreshToken) {
+      return res
+        .status(401)
+        .json(formatError(ErrorCodes.INVALID_REFRESH_TOKEN, "Missing refresh token"));
+    }
 
     const session = await prisma.session.findUnique({
       where: { refreshToken },
@@ -598,7 +614,15 @@ authRouter.post("/refresh", async (req, res) => {
       email: session.user.email,
     });
 
-    res.json({ accessToken });
+    res.cookie("refreshToken", refreshToken, {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: "strict",
+      maxAge: env.REFRESH_TOKEN_TTL * 1000,
+      path: "/auth",
+    });
+
+    res.json({ accessToken: accessToken });
   } catch (err) {
     if (err instanceof z.ZodError) {
       const details = handleZodError(err);
@@ -653,6 +677,12 @@ authRouter.post("/logout", async (req, res) => {
 
     await prisma.session.delete({ where: { refreshToken } });
 
+    res.clearCookie("refreshToken", {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: "strict",
+      path: "/auth",
+    });
     res.json({ message: "Logged out successfully" });
   } catch (err) {
     if (err instanceof z.ZodError) {
@@ -662,7 +692,6 @@ authRouter.post("/logout", async (req, res) => {
         .json(formatError(ErrorCodes.VALIDATION_ERROR, "Invalid input", details));
     }
     req.log?.error({ err });
-
     return res.status(500).json(formatError(ErrorCodes.INTERNAL_ERROR, "Internal server error"));
   }
 });
