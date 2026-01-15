@@ -120,8 +120,9 @@ export const listSchemas = {
         type: "array",
         items: { $ref: "#/components/schemas/Collaborator" },
       },
+      pagination: { $ref: "#/components/schemas/PaginationResponse" },
     },
-    required: ["collaborators"],
+    required: ["collaborators", "pagination"],
   },
   InviteCollaboratorResponse: {
     type: "object",

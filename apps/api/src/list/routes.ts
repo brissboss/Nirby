@@ -25,6 +25,28 @@ const createListSchema = z.object({
   visibility: z.enum(["PRIVATE", "SHARED", "PUBLIC"]).optional().default("PRIVATE"),
 });
 
+const getListsSchema = z.object({
+  page: z.coerce.number().min(1).optional().default(1),
+  limit: z.coerce.number().min(1).max(100).optional().default(20),
+  roles: z.preprocess(
+    (val) => {
+      if (!val) return undefined;
+      if (Array.isArray(val)) return val;
+      if (typeof val === "string") return val.split(",");
+      return undefined;
+    },
+    z.array(z.enum(["OWNER", "EDITOR", "VIEWER", "ADMIN"])).optional()
+  ),
+  search: z
+    .string()
+    .optional()
+    .transform((val) => {
+      if (!val || val.trim().length < 2) return undefined;
+      return val.trim();
+    }),
+  visibility: z.enum(["PRIVATE", "SHARED", "PUBLIC"]).optional(),
+});
+
 const updateListSchema = z.object({
   name: z
     .string()
@@ -159,6 +181,19 @@ listRouter.post("/", requireAuth, async (req, res) => {
  *           items:
  *             type: string
  *           enum: [OWNER, EDITOR, VIEWER, ADMIN]
+ *       - in: query
+ *         name: search
+ *         description: Filter lists by name
+ *         schema:
+ *           type: string
+ *           default: ""
+ *       - in: query
+ *         name: visibility
+ *         description: Filter lists by visibility
+ *         schema:
+ *           type: string
+ *           enum: [PRIVATE, SHARED, PUBLIC]
+ *           default: PRIVATE
  *     responses:
  *       200:
  *         description: Lists retrieved successfully
@@ -182,14 +217,14 @@ listRouter.post("/", requireAuth, async (req, res) => {
 listRouter.get("/", requireAuth, async (req, res) => {
   try {
     const userId = req.user!.id;
-    const page = Math.max(1, parseInt(req.query.page as string) || 1);
-    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 20));
+    const data = getListsSchema.parse(req.query);
+    const { page, limit, roles, search, visibility } = data;
     const skip = (page - 1) * limit;
-    const roleFilter = req.query.roles;
-    const roles = roleFilter
-      ? Array.isArray(roleFilter)
-        ? roleFilter.map((r) => r.toString().trim())
-        : roleFilter
+
+    const rolesArray = roles
+      ? Array.isArray(roles)
+        ? roles.map((r) => r.toString().trim())
+        : (roles as string[])
             .toString()
             .split(",")
             .map((r) => r.trim())
@@ -197,11 +232,11 @@ listRouter.get("/", requireAuth, async (req, res) => {
 
     const conditions = [];
 
-    if (roles.includes("OWNER")) {
+    if (rolesArray.includes("OWNER")) {
       conditions.push({ createdBy: userId });
     }
 
-    const collabRoles = roles.filter(
+    const collabRoles = rolesArray.filter(
       (r) => typeof r === "string" && ["EDITOR", "VIEWER", "ADMIN"].includes(r)
     );
     if (collabRoles.length > 0) {
@@ -214,6 +249,10 @@ listRouter.get("/", requireAuth, async (req, res) => {
       prisma.poiList.findMany({
         where: {
           OR: conditions.length > 0 ? conditions : [{ id: "impossible" }],
+          ...(visibility && { visibility }),
+          ...(search && {
+            name: { contains: search, mode: "insensitive" },
+          }),
         },
         include: {
           collaborators: {
@@ -228,6 +267,10 @@ listRouter.get("/", requireAuth, async (req, res) => {
       prisma.poiList.count({
         where: {
           OR: conditions.length > 0 ? conditions : [{ id: "impossible" }],
+          ...(visibility && { visibility }),
+          ...(search && {
+            name: { contains: search, mode: "insensitive" },
+          }),
         },
       }),
     ]);

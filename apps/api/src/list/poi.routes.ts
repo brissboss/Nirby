@@ -190,6 +190,16 @@ listPoiRouter.post("/:listId/poi", requireAuth, async (req, res) => {
  *         required: true
  *         schema:
  *           type: string
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
  *     responses:
  *       200:
  *         description: POIs retrieved successfully
@@ -224,6 +234,10 @@ listPoiRouter.post("/:listId/poi", requireAuth, async (req, res) => {
  */
 listPoiRouter.get("/:listId/pois", requireAuth, async (req, res) => {
   try {
+    const page = Math.max(1, parseInt(req.query.page as string) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 20));
+    const skip = (page - 1) * limit;
+
     const list = await prisma.poiList.findUnique({ where: { id: req.params.listId } });
     if (!list) {
       return res.status(404).json(formatError(ErrorCodes.LIST_NOT_FOUND, "List not found"));
@@ -235,13 +249,29 @@ listPoiRouter.get("/:listId/pois", requireAuth, async (req, res) => {
       return res.status(404).json(formatError(ErrorCodes.LIST_NOT_FOUND, "List not found"));
     }
 
-    const savedPois = await prisma.savedPoi.findMany({
-      where: { listId: list.id },
-      include: { poi: true, googlePlaceCache: true },
-      orderBy: { createdAt: "desc" },
-    });
+    const [savedPois, total] = await Promise.all([
+      prisma.savedPoi.findMany({
+        where: { listId: list.id },
+        include: { poi: true, googlePlaceCache: true },
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: limit,
+      }),
 
-    res.json({ savedPois });
+      prisma.savedPoi.count({
+        where: { listId: list.id },
+      }),
+    ]);
+
+    res.json({
+      savedPois: savedPois,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    });
   } catch (err) {
     req.log?.error({ err }, "Failed to get POIs in list");
     return res.status(500).json(formatError(ErrorCodes.INTERNAL_ERROR, "Internal server error"));

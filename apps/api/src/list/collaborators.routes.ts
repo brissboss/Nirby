@@ -42,6 +42,16 @@ const inviteCollaboratorSchema = z.object({
  *         required: true
  *         schema:
  *           type: string
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
  *     responses:
  *       200:
  *         description: Collaborators retrieved successfully
@@ -76,6 +86,10 @@ const inviteCollaboratorSchema = z.object({
  */
 listCollaboratorsRouter.get("/:listId/collaborators", requireAuth, async (req, res) => {
   try {
+    const page = Math.max(1, parseInt(req.query.page as string) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 20));
+    const skip = (page - 1) * limit;
+
     const list = await prisma.poiList.findUnique({ where: { id: req.params.listId } });
     if (!list) {
       return res.status(404).json(formatError(ErrorCodes.LIST_NOT_FOUND, "List not found"));
@@ -86,16 +100,33 @@ listCollaboratorsRouter.get("/:listId/collaborators", requireAuth, async (req, r
       return res.status(404).json(formatError(ErrorCodes.LIST_NOT_FOUND, "List not found"));
     }
 
-    const collaborators = await prisma.listCollaborator.findMany({
-      where: { listId: list.id },
-      select: {
-        role: true,
-        joinedAt: true,
-        user: { select: { id: true, email: true, name: true, avatarUrl: true } },
+    const [collaborators, total] = await Promise.all([
+      prisma.listCollaborator.findMany({
+        where: { listId: list.id },
+        select: {
+          role: true,
+          joinedAt: true,
+          user: { select: { id: true, email: true, name: true, avatarUrl: true } },
+        },
+        orderBy: { joinedAt: "desc" },
+        skip,
+        take: limit,
+      }),
+
+      prisma.listCollaborator.count({
+        where: { listId: list.id },
+      }),
+    ]);
+
+    res.json({
+      collaborators: collaborators,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
       },
     });
-
-    res.json({ collaborators });
   } catch (err) {
     req.log?.error({ err }, "Failed to get collaborators");
     return res.status(500).json(formatError(ErrorCodes.INTERNAL_ERROR, "Internal server error"));
