@@ -10,6 +10,7 @@ import {
   sendVerificationEmail,
 } from "../email/service";
 import { env } from "../env";
+import { authBrutForceRateLimiter, authSpamRateLimiter } from "../middleware/rate-limit";
 import { SUPPORTED_LANGUAGES } from "../types";
 import { ErrorCodes } from "../utils/error-codes";
 import { formatError, handleZodError } from "../utils/errors";
@@ -133,6 +134,12 @@ const updateProfileSchema = z.object({
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Error'
+ *       429:
+ *         description: Too many requests
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       500:
  *         description: Internal server error
  *         content:
@@ -140,7 +147,7 @@ const updateProfileSchema = z.object({
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-authRouter.post("/signup", async (req, res) => {
+authRouter.post("/signup", authSpamRateLimiter, async (req, res) => {
   try {
     const { email, password, language } = authSchema.parse(req.body);
 
@@ -443,6 +450,12 @@ authRouter.post("/resend-verification", async (req, res) => {
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Error'
+ *       429:
+ *         description: Too many requests
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       500:
  *         description: Internal server error
  *         content:
@@ -450,7 +463,7 @@ authRouter.post("/resend-verification", async (req, res) => {
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-authRouter.post("/login", async (req, res) => {
+authRouter.post("/login", authBrutForceRateLimiter, async (req, res) => {
   try {
     const { email, password } = authSchema.parse(req.body);
 
@@ -673,6 +686,12 @@ authRouter.post("/logout", async (req, res) => {
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Error'
+ *       429:
+ *         description: Too many requests
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       500:
  *         description: Internal server error
  *         content:
@@ -680,7 +699,7 @@ authRouter.post("/logout", async (req, res) => {
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-authRouter.post("/forgot-password", async (req, res) => {
+authRouter.post("/forgot-password", authSpamRateLimiter, async (req, res) => {
   try {
     const { email, language } = forgotPasswordSchema.parse(req.body);
 
@@ -752,6 +771,12 @@ authRouter.post("/forgot-password", async (req, res) => {
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Error'
+ *       429:
+ *         description: Too many requests
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       500:
  *         description: Internal server error
  *         content:
@@ -759,7 +784,7 @@ authRouter.post("/forgot-password", async (req, res) => {
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-authRouter.post("/reset-password", async (req, res) => {
+authRouter.post("/reset-password", authBrutForceRateLimiter, async (req, res) => {
   try {
     const { token, password } = resetPasswordSchema.parse(req.body);
 

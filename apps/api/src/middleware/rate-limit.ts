@@ -10,7 +10,7 @@ import { formatError } from "../utils/errors";
 /**
  * Create a rate limiter with Redis store if available, otherwise use in-memory storage
  */
-function createRateLimiter(windowMs: number, max: number) {
+function createRateLimiter(windowMs: number, max: number, message?: string) {
   const useRedis = redisClient && redisClient.isReady;
 
   return rateLimit({
@@ -39,7 +39,10 @@ function createRateLimiter(windowMs: number, max: number) {
       res
         .status(429)
         .json(
-          formatError(ErrorCodes.RATE_LIMIT_EXCEEDED, "Too many requests, please try again later.")
+          formatError(
+            ErrorCodes.RATE_LIMIT_EXCEEDED,
+            message || "Too many requests, please try again later."
+          )
         );
     },
   });
@@ -51,7 +54,8 @@ function createRateLimiter(windowMs: number, max: number) {
  */
 export const searchRateLimiter = createRateLimiter(
   60 * 60 * 1000, // 1 hour
-  20
+  20,
+  "Too many requests, please try again in 1 hour"
 );
 
 /**
@@ -60,7 +64,8 @@ export const searchRateLimiter = createRateLimiter(
  */
 export const getPlaceRateLimiter = createRateLimiter(
   60 * 60 * 1000, // 1 hour
-  100
+  100,
+  "Too many requests, please try again in 1 hour"
 );
 
 /**
@@ -69,5 +74,26 @@ export const getPlaceRateLimiter = createRateLimiter(
  */
 export const photoRateLimiter = createRateLimiter(
   60 * 60 * 1000, // 1 hour
-  50
+  50,
+  "Too many requests, please try again in 1 hour"
+);
+
+/**
+ * Rate limiter for auth brut force protection
+ * 10 requests per 15 minutes
+ */
+export const authBrutForceRateLimiter = createRateLimiter(
+  15 * 60 * 1000, // 15 minutes
+  10,
+  "Too many requests, please try again in 15 minutes"
+);
+
+/**
+ * Rate limiter for auth spam protection
+ * 5 requests per 1 hour
+ */
+export const authSpamRateLimiter = createRateLimiter(
+  1 * 60 * 60 * 1000, // 1 hour
+  5,
+  "Too many requests, please try again in 1 hour"
 );
