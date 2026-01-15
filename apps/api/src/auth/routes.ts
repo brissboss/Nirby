@@ -450,6 +450,12 @@ authRouter.post("/resend-verification", async (req, res) => {
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Error'
+ *       403:
+ *         description: Email not verified
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       429:
  *         description: Too many requests
  *         content:
@@ -479,6 +485,18 @@ authRouter.post("/login", authBrutForceRateLimiter, async (req, res) => {
       return res
         .status(401)
         .json(formatError(ErrorCodes.INVALID_CREDENTIALS, "Invalid email or password"));
+    }
+
+    if (!user.emailVerified) {
+      return res.status(403).json(
+        formatError(
+          ErrorCodes.EMAIL_NOT_VERIFIED,
+          "Please verify your email before logging in. Check your inbox or resend the verification email.",
+          {
+            email: user.email,
+          }
+        )
+      );
     }
 
     const accessToken = signAccessToken({ userId: user.id, email: user.email });
