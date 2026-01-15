@@ -7,7 +7,7 @@ export const SwaggerSpec = swaggerJsdoc({
     openapi: "3.0.0",
     info: {
       title: "Nirby API",
-      version: "0.0.1",
+      version: "0.1.0",
       description: "API for the Nirby application",
     },
     tags: [
