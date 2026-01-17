@@ -1,0 +1,17 @@
+{
+  "name": "Nirby",
+  "short_name": "Nirby",
+  "description": "Nirby is a platform for creating and sharing lists of places",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#000000",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "any",
+      "type": "image/x-icon"
+    }
+  ]
+}

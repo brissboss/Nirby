@@ -230,30 +230,22 @@ export const login = <ThrowOnError extends boolean = false>(
  * Refresh an access token
  */
 export const refreshToken = <ThrowOnError extends boolean = false>(
-  options: Options<RefreshTokenData, ThrowOnError>
+  options?: Options<RefreshTokenData, ThrowOnError>
 ) =>
-  (options.client ?? client).post<RefreshTokenResponses, RefreshTokenErrors, ThrowOnError>({
+  (options?.client ?? client).post<RefreshTokenResponses, RefreshTokenErrors, ThrowOnError>({
     url: "/auth/refresh",
     ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...options.headers,
-    },
   });
 
 /**
  * Logout and invalidate session
  */
 export const logout = <ThrowOnError extends boolean = false>(
-  options: Options<LogoutData, ThrowOnError>
+  options?: Options<LogoutData, ThrowOnError>
 ) =>
-  (options.client ?? client).post<LogoutResponses, LogoutErrors, ThrowOnError>({
+  (options?.client ?? client).post<LogoutResponses, LogoutErrors, ThrowOnError>({
     url: "/auth/logout",
     ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...options.headers,
-    },
   });
 
 /**

@@ -112,7 +112,7 @@ describe("Auth routes", () => {
       );
       expect(refreshTokenCookie).toBeDefined();
       expect(refreshTokenCookie).toContain("HttpOnly");
-      expect(refreshTokenCookie).toContain("Path=/auth");
+      expect(refreshTokenCookie).toContain("Path=/");
     });
 
     it("should reject invalid email", async () => {
@@ -268,11 +268,11 @@ describe("Auth routes", () => {
       expect(res.body.message).toBe("Logged out successfully");
     });
 
-    it("should reject missing refresh token", async () => {
+    it("should logout successfully even without refresh token cookie", async () => {
       const res = await request(app).post("/auth/logout").send({});
 
-      expect(res.status).toBe(400);
-      expect(res.body.error.code).toBe("VALIDATION_ERROR");
+      expect(res.status).toBe(200);
+      expect(res.body.message).toBe("Logged out successfully");
     });
   });
 

@@ -69,16 +69,18 @@ export const authSchemas = {
   VerifyEmailResponse: {
     type: "object",
     properties: {
-      user: { $ref: "#/components/schemas/UserBasic" },
-      redirectUrl: { type: "string" },
+      user: { $ref: "#/components/schemas/User" },
     },
-    required: ["user", "redirectUrl"],
+    required: ["user"],
     example: {
       user: {
         id: "1234567890",
         email: "test@example.com",
+        name: "John Doe",
+        avatarUrl: "https://example.com/avatar.png",
+        bio: "I am a test user",
+        emailVerified: true,
       },
-      redirectUrl: "https://example.com/verify-email?success=true",
     },
   },
   LoginResponse: {

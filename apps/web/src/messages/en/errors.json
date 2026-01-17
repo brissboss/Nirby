@@ -1,0 +1,21 @@
+{
+  "api": {
+    "INVALID_CREDENTIALS": "Invalid email or password",
+    "EMAIL_IN_USE": "This email is already in use",
+    "EMAIL_NOT_VERIFIED": "Your email is not verified",
+    "EMAIL_ALREADY_VERIFIED": "Your email is already verified",
+    "EMAIL_REQUIRED": "Email is required",
+    "TOKEN_EXPIRED": "The verification link has expired, please generate a new one",
+    "TOKEN_REQUIRED": "The verification link is required",
+    "RATE_LIMIT_EXCEEDED": "Too many attempts, try again later",
+    "INTERNAL_ERROR": "An error occurred"
+  },
+  "validation": {
+    "formErrors": {
+      "requiredEmail": "Email is required",
+      "invalidEmail": "Invalid email",
+      "requiredPassword": "Password is required",
+      "passwordTooShort": "Password must be at least 8 characters"
+    }
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "language": "Langage",
+  "buttons": {
+    "submit": "Soumettre",
+    "send": "Envoyer",
+    "back": "Retour"
+  },
+  "labels": {
+    "email": "Email",
+    "emailPlaceholder": "exemple@email.com",
+    "password": "Mot de passe"
+  }
+}

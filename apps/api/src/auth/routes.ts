@@ -10,7 +10,11 @@ import {
   sendVerificationEmail,
 } from "../email/service";
 import { env } from "../env";
-import { authBrutForceRateLimiter, authSpamRateLimiter } from "../middleware/rate-limit";
+import {
+  authBrutForceRateLimiter,
+  authEmailVerificationRateLimiter,
+  authSpamRateLimiter,
+} from "../middleware/rate-limit";
 import { SUPPORTED_LANGUAGES } from "../types";
 import { ErrorCodes } from "../utils/error-codes";
 import { formatError, handleZodError } from "../utils/errors";
@@ -225,15 +229,6 @@ authRouter.post("/signup", authSpamRateLimiter, async (req, res) => {
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/VerifyEmailResponse'
- *       302:
- *         description: Redirect to the verification email page
- *         headers:
- *           Location:
- *             description: URL to redirect to
- *             schema:
- *               type: string
- *               format: uri
- *               example: "http://localhost:3000/verify-email?success=true"
  *       400:
  *         description: Invalid or expired token
  *         content:
@@ -291,22 +286,18 @@ authRouter.get("/verify-email", async (req, res) => {
       },
     });
 
-    // Check if the request is from Scalar or an API request
-    const isFromScalar = req.headers.referer?.includes("/docs");
-    const isApiRequest =
-      req.headers.accept?.includes("application/json") ||
-      req.query.format === "json" ||
-      isFromScalar;
+    const userUpdated = await prisma.user.findUnique({ where: { id: user.id } });
 
-    const redirectUrl = `${env.FRONTEND_URL}/verify-email?success=true`;
-    if (isApiRequest) {
-      return res.status(200).json({
-        user: { id: user.id, email: user.email },
-        redirectUrl,
-      });
-    } else {
-      return res.redirect(redirectUrl);
-    }
+    res.status(200).json({
+      user: {
+        id: userUpdated?.id,
+        email: userUpdated?.email,
+        name: userUpdated?.name,
+        avatarUrl: userUpdated?.avatarUrl,
+        bio: userUpdated?.bio,
+        emailVerified: userUpdated?.emailVerified,
+      },
+    });
   } catch (err) {
     req.log?.error({ err });
 
@@ -358,7 +349,7 @@ authRouter.get("/verify-email", async (req, res) => {
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-authRouter.post("/resend-verification", async (req, res) => {
+authRouter.post("/resend-verification", authEmailVerificationRateLimiter, async (req, res) => {
   try {
     const { email, language } = resendVerificationEmailSchema.parse(req.body);
 
@@ -519,7 +510,7 @@ authRouter.post("/login", authBrutForceRateLimiter, async (req, res) => {
       secure: isProduction,
       sameSite: "strict",
       maxAge: env.REFRESH_TOKEN_TTL * 1000,
-      path: "/auth",
+      path: "/",
     });
 
     res.json({
@@ -547,17 +538,6 @@ authRouter.post("/login", authBrutForceRateLimiter, async (req, res) => {
  *     summary: Refresh an access token
  *     tags:
  *       - 🔐 Auth
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               refreshToken:
- *                 type: string
- *             required:
- *               - refreshToken
  *     responses:
  *       200:
  *         description: Token refreshed successfully
@@ -619,7 +599,7 @@ authRouter.post("/refresh", async (req, res) => {
       secure: isProduction,
       sameSite: "strict",
       maxAge: env.REFRESH_TOKEN_TTL * 1000,
-      path: "/auth",
+      path: "/",
     });
 
     res.json({ accessToken: accessToken });
@@ -644,17 +624,6 @@ authRouter.post("/refresh", async (req, res) => {
  *     summary: Logout and invalidate session
  *     tags:
  *       - 🔐 Auth
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               refreshToken:
- *                 type: string
- *             required:
- *               - refreshToken
  *     responses:
  *       200:
  *         description: Logout successful
@@ -671,26 +640,30 @@ authRouter.post("/refresh", async (req, res) => {
  */
 authRouter.post("/logout", async (req, res) => {
   try {
-    const { refreshToken } = z
-      .object({ refreshToken: z.string({ required_error: ErrorCodes.REFRESH_TOKEN_REQUIRED }) })
-      .parse(req.body);
-
-    await prisma.session.delete({ where: { refreshToken } });
+    const refreshToken = req.cookies.refreshToken;
+    if (refreshToken) {
+      try {
+        await prisma.session.delete({ where: { refreshToken } });
+      } catch {
+        // Ignore error if session does not exist
+      }
+    }
 
     res.clearCookie("refreshToken", {
       httpOnly: true,
       secure: isProduction,
       sameSite: "strict",
-      path: "/auth",
+      path: "/",
     });
     res.json({ message: "Logged out successfully" });
   } catch (err) {
-    if (err instanceof z.ZodError) {
-      const details = handleZodError(err);
-      return res
-        .status(400)
-        .json(formatError(ErrorCodes.VALIDATION_ERROR, "Invalid input", details));
-    }
+    res.clearCookie("refreshToken", {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: "strict",
+      path: "/",
+    });
+
     req.log?.error({ err });
     return res.status(500).json(formatError(ErrorCodes.INTERNAL_ERROR, "Internal server error"));
   }
