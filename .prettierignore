@@ -2,3 +2,6 @@ node_modules
 dist
 .turbo
 coverage
+apps/web/node_modules
+apps/web/dist
+apps/web/.next

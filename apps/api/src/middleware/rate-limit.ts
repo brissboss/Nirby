@@ -97,3 +97,13 @@ export const authSpamRateLimiter = createRateLimiter(
   5,
   "Too many requests, please try again in 1 hour"
 );
+
+/**
+ * Rate limiter for auth email verification
+ * 1 request per 1 minute
+ */
+export const authEmailVerificationRateLimiter = createRateLimiter(
+  1 * 60 * 1000, // 1 minute
+  1,
+  "Too many requests, please try again in 1 minute"
+);

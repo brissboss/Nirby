@@ -33,7 +33,7 @@ export async function sendVerificationEmail(
   verificationToken: string,
   language: Language = "en"
 ): Promise<void> {
-  const verificationUrl = `${env.FRONTEND_URL || "https://localhost:3000"}/verify-email?token=${verificationToken}`;
+  const verificationUrl = `${env.FRONTEND_URL || "https://localhost:3000"}/verify-email?token=${verificationToken}&email=${email}`;
 
   const templateId = TEMPLATE_IDS.verification[language] || TEMPLATE_IDS.verification.en;
 
