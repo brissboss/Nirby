@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Poppins, Quicksand } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
 import { getMessages, getLocale } from "next-intl/server";
@@ -25,6 +25,18 @@ export const metadata: Metadata = {
   title: "Nirby",
   description: "Nirby is a platform for creating and sharing lists of places",
   manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Nirby",
+  },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  viewportFit: "cover",
 };
 
 export default async function RootLayout({
