@@ -3,6 +3,7 @@
 import { GeolocationButton } from "@/components/map/controls/geolocation-button";
 import { ZoomControls } from "@/components/map/controls/zoom-controls";
 import { MapboxMap } from "@/components/map/mapbox-map";
+import { Card, CardContent } from "@/components/ui/card";
 import { MapProvider } from "@/lib/map/context";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -32,8 +33,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <ZoomControls />
       </div>
 
-      <div
-        className="fixed w-[380px] h-[60%] bg-white border border-border rounded-xl shadow-lg overflow-hidden z-10 hidden md:block"
+      {/* <Card
+        className="fixed w-[380px] h-fit bg-white dark:bg-background border border-border rounded-xl shadow-lg overflow-hidden z-10 hidden md:block"
         style={{
           top: "calc(1rem + env(safe-area-inset-top))",
           left: "calc(1rem + env(safe-area-inset-left))",
@@ -41,8 +42,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           right: "calc(1rem + env(safe-area-inset-right))",
         }}
       >
-        <div className="h-full overflow-y-auto p-4">{children}</div>
-      </div>
+        <CardContent>{children}</CardContent>
+      </Card> */}
     </MapProvider>
   );
 }

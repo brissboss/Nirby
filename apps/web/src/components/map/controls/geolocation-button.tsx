@@ -40,8 +40,11 @@ export const GeolocationButton = () => {
     map?.flyTo({
       center: [longitude, latitude],
       zoom: 15,
+      bearing: 0,
+      pitch: 0,
       duration: 3000,
     });
+
     setIsLoading(false);
   };
 
