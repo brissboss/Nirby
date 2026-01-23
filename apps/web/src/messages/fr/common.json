@@ -1,0 +1,30 @@
+{
+  "language": "Langage",
+  "theme": {
+    "title": "Thème",
+    "light": "Clair",
+    "dark": "Sombre",
+    "system": "Système"
+  },
+  "profile": {
+    "myAccount": "Mon compte",
+    "name": "Nom",
+    "description": "Description",
+    "avatar": "Avatar",
+    "save": "Enregistrer"
+  },
+  "buttons": {
+    "submit": "Soumettre",
+    "send": "Envoyer",
+    "back": "Retour",
+    "logout": "Déconnexion",
+    "profile": "Profil",
+    "cancel": "Annuler",
+    "delete": "Supprimer"
+  },
+  "labels": {
+    "email": "Email",
+    "emailPlaceholder": "exemple@email.com",
+    "password": "Mot de passe"
+  }
+}

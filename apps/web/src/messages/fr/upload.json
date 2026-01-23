@@ -1,0 +1,6 @@
+{
+  "uploadError": "Erreur de téléchargement",
+  "fileEmpty": "Le fichier est vide",
+  "fileTooLarge": "Le fichier est trop grand (2MB max)",
+  "invalidMimeType": "Le fichier n'est pas un type de fichier valide (jpeg, png, webp)"
+}

@@ -27,8 +27,7 @@ export type GetMeResponse = {
 };
 
 export type VerifyEmailResponse = {
-  user: UserBasic;
-  redirectUrl: string;
+  user: User;
 };
 
 export type LoginResponse = {
@@ -448,9 +447,7 @@ export type LoginResponses = {
 export type LoginResponse2 = LoginResponses[keyof LoginResponses];
 
 export type RefreshTokenData = {
-  body: {
-    refreshToken: string;
-  };
+  body?: never;
   path?: never;
   query?: never;
   url: "/auth/refresh";
@@ -479,9 +476,7 @@ export type RefreshTokenResponses = {
 export type RefreshTokenResponse2 = RefreshTokenResponses[keyof RefreshTokenResponses];
 
 export type LogoutData = {
-  body: {
-    refreshToken: string;
-  };
+  body?: never;
   path?: never;
   query?: never;
   url: "/auth/logout";

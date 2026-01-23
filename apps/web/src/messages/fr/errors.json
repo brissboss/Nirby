@@ -1,0 +1,79 @@
+{
+  "default": "Une erreur est survenue",
+  "api": {
+    "EMAIL_IN_USE": "Cet email est déjà utilisé",
+    "EMAIL_REQUIRED": "L'email est requis",
+    "EMAIL_TOO_LONG": "L'email ne peut pas contenir plus de 255 caractères",
+    "INVALID_EMAIL": "L'email est invalide",
+    "PASSWORD_REQUIRED": "Le mot de passe est requis",
+    "PASSWORD_TOO_SHORT": "Le mot de passe doit contenir au moins 8 caractères",
+    "PASSWORD_TOO_LONG": "Le mot de passe ne peut pas contenir plus de 255 caractères",
+    "PASSWORD_SAME": "Le nouveau mot de passe ne peut pas être le même que le mot de passe actuel",
+    "INVALID_CREDENTIALS": "Votre email ou mot de passe est incorrect",
+    "INVALID_REFRESH_TOKEN": "Le token de rafraîchissement est invalide",
+    "TOKEN_REQUIRED": "Le lien de vérification est requis",
+    "TOKEN_EXPIRED": "Le lien de vérification a expiré, veuillez en générer un nouveau",
+    "EMAIL_ALREADY_VERIFIED": "Votre email est déjà vérifié",
+    "EMAIL_NOT_VERIFIED": "Votre email n'est pas vérifié, veuillez vérifier votre email",
+    "BIO_TOO_LONG": "La bio ne peut pas contenir plus de 255 caractères",
+    "NAME_TOO_LONG": "Le nom ne peut pas contenir plus de 255 caractères",
+
+    "POI_NOT_FOUND": "Le POI n'a pas été trouvé",
+    "POI_NAME_REQUIRED": "Le nom du POI est requis",
+    "POI_NAME_TOO_LONG": "Le nom du POI ne peut pas contenir plus de 255 caractères",
+    "POI_DESCRIPTION_TOO_LONG": "La description du POI ne peut pas contenir plus de 255 caractères",
+    "POI_ADDRESS_TOO_LONG": "L'adresse du POI ne peut pas contenir plus de 255 caractères",
+    "POI_LATITUDE_INVALID": "La latitude du POI est invalide",
+    "POI_LONGITUDE_INVALID": "La longitude du POI est invalide",
+    "POI_RADIUS_INVALID": "Le rayon du POI est invalide",
+    "POI_ACCESS_DENIED": "Vous n'avez pas accès à ce POI",
+
+    "GOOGLE_PLACE_NOT_FOUND": "Le lieu Google n'a pas été trouvé",
+    "GOOGLE_PLACE_FETCH_ERROR": "Erreur lors de la récupération du lieu Google",
+    "GOOGLE_PLACE_INVALID_ID": "L'ID du lieu Google est invalide",
+    "GOOGLE_PLACE_API_KEY_REQUIRED": "La clé API Google est requise",
+    "GOOGLE_PLACE_SEARCH_ERROR": "Erreur lors de la recherche du lieu Google",
+    "GOOGLE_PLACE_PHOTO_ERROR": "Erreur lors de la récupération de la photo du lieu Google",
+
+    "LIST_NOT_FOUND": "La liste n'a pas été trouvée",
+    "LIST_NAME_REQUIRED": "Le nom de la liste est requis",
+    "LIST_NAME_TOO_LONG": "Le nom de la liste ne peut pas contenir plus de 255 caractères",
+    "LIST_DESCRIPTION_TOO_LONG": "La description de la liste ne peut pas contenir plus de 255 caractères",
+    "LIST_ACCESS_DENIED": "Vous n'avez pas accès à cette liste",
+    "LIST_EDIT_TOKEN_INVALID": "Le token d'édition de la liste est invalide",
+    "LIST_EDIT_TOKEN_EXPIRED": "Le token d'édition de la liste a expiré",
+    "LIST_OWNER_CANNOT_LEAVE": "Le propriétaire de la liste ne peut pas quitter la liste",
+
+    "SAVED_POI_NOT_FOUND": "Le POI sauvegardé n'a pas été trouvé",
+    "POI_ALREADY_SAVED": "Le POI est déjà sauvegardé",
+    "POI_OR_GOOGLE_PLACE_REQUIRED": "Le POI ou le lieu Google est requis",
+
+    "SHARE_TOKEN_EXPIRED": "Le token de partage a expiré",
+    "SHARE_TOKEN_INVALID": "Le token de partage est invalide",
+
+    "COLLABORATOR_ALREADY_EXISTS": "Le collaborateur existe déjà",
+    "COLLABORATOR_CANNOT_INVITE_YOURSELF": "Vous ne pouvez pas vous inviter vous-même",
+    "COLLABORATOR_OWNER_CANNOT_JOIN": "Le propriétaire de la liste ne peut pas rejoindre la liste",
+    "COLLABORATOR_NOT_FOUND": "Le collaborateur n'a pas été trouvé",
+
+    "UPLOAD_FILE_REQUIRED": "Le fichier est requis",
+    "UPLOAD_INVALID_FILE_TYPE": "Le type de fichier est invalide",
+    "UPLOAD_INVALID_FILE_SIZE": "Le fichier est trop grand",
+
+    "VALIDATION_ERROR": "Une erreur de validation est survenue",
+    "INTERNAL_ERROR": "Une erreur est survenue",
+    "NOT_FOUND": "La ressource n'a pas été trouvée",
+    "UNAUTHORIZED": "Vous n'êtes pas autorisé à accéder à cette ressource",
+    "RATE_LIMIT_EXCEEDED": "Trop de tentatives, réessayez plus tard",
+    "INVALID_URL": "L'URL est invalide"
+  },
+  "validation": {
+    "formErrors": {
+      "requiredEmail": "L'email est requis",
+      "invalidEmail": "Email invalide",
+      "requiredPassword": "Le mot de passe est requis",
+      "passwordTooShort": "Le nouveau mot de passe doit contenir au moins 8 caractères",
+      "newPasswordSameAsOldPassword": "Le nouveau mot de passe ne peut pas être le même que le mot de passe actuel"
+    }
+  }
+}
