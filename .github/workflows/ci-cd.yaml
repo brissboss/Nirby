@@ -73,6 +73,11 @@ jobs:
       - name: Lint
         run: pnpm lint
 
+      - name: Type Check
+        run: |
+          pnpm -C apps/api tsc --noEmit
+          pnpm -C apps/web tsc --noEmit
+
       - name: Test
         run: pnpm test -- --reporter=verbose
         env:
@@ -84,8 +89,19 @@ jobs:
           REFRESH_TOKEN_TTL: 604800
           NODE_ENV: test
 
+      - name: Test Frontend with Coverage
+        run: pnpm -C apps/web test:coverage
+
       - name: Build
         run: pnpm build
+
+      - name: Verify Frontend Build
+        run: |
+          if [ ! -d "apps/web/.next" ]; then
+            echo "Error: Frontend build failed - .next directory not found"
+            exit 1
+          fi
+          echo "Frontend build verified successfully"
 
   api-docker:
     runs-on: ubuntu-latest
@@ -150,6 +166,34 @@ jobs:
             nirby-api:ci
           sleep 10
           curl -f http://localhost:4000/health || (docker logs nirby-api-test && exit 1)
+
+  web-docker:
+    runs-on: ubuntu-latest
+    needs: ci
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build Web Docker Image
+        run: |
+          docker build -t nirby-web:ci \
+            --build-arg NEXT_PUBLIC_API_URL=http://localhost:4000 \
+            --build-arg NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN=fake-token-for-ci \
+            -f apps/web/Dockerfile .
+
+      - name: Run Web Container
+        run: |
+          docker run -d \
+            --name nirby-web-test \
+            -p 3000:3000 \
+            nirby-web:ci
+          sleep 10
+          curl -f http://localhost:3000 || (docker logs nirby-web-test && exit 1)
+
+      - name: Cleanup
+        if: always()
+        run: docker rm -f nirby-web-test || true
 
   deploy-staging:
     runs-on: ubuntu-latest
@@ -238,7 +282,7 @@ jobs:
 
   deploy-staging-web:
     runs-on: ubuntu-latest
-    needs: [ci]
+    needs: [ci, web-docker]
     if: github.event_name == 'push' && github.ref == 'refs/heads/staging'
     environment: staging
 
@@ -394,7 +438,7 @@ jobs:
 
   deploy-production-web:
     runs-on: ubuntu-latest
-    needs: [ci]
+    needs: [ci, web-docker]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     environment: production
 

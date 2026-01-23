@@ -1,0 +1,6 @@
+{
+  "uploadError": "Upload error",
+  "fileEmpty": "The file is empty",
+  "fileTooLarge": "The file is too large (2MB max)",
+  "invalidMimeType": "The file is not a valid file type (jpeg, png, webp)"
+}

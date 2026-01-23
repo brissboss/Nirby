@@ -1,21 +1,80 @@
 {
+  "default": "An error occurred",
   "api": {
-    "INVALID_CREDENTIALS": "Invalid email or password",
     "EMAIL_IN_USE": "This email is already in use",
-    "EMAIL_NOT_VERIFIED": "Your email is not verified",
-    "EMAIL_ALREADY_VERIFIED": "Your email is already verified",
     "EMAIL_REQUIRED": "Email is required",
-    "TOKEN_EXPIRED": "The verification link has expired, please generate a new one",
+    "EMAIL_TOO_LONG": "Email cannot contain more than 255 characters",
+    "INVALID_EMAIL": "Invalid email",
+    "PASSWORD_REQUIRED": "Password is required",
+    "PASSWORD_TOO_SHORT": "Password must be at least 8 characters",
+    "PASSWORD_TOO_LONG": "Password cannot contain more than 255 characters",
+    "PASSWORD_SAME": "New password cannot be the same as the old password",
+    "INVALID_CREDENTIALS": "Invalid email or password",
+    "INVALID_REFRESH_TOKEN": "Invalid refresh token",
+    "REFRESH_TOKEN_REQUIRED": "Refresh token is required",
     "TOKEN_REQUIRED": "The verification link is required",
+    "TOKEN_EXPIRED": "The verification link has expired, please generate a new one",
+    "EMAIL_ALREADY_VERIFIED": "Your email is already verified",
+    "EMAIL_NOT_VERIFIED": "Your email is not verified",
+    "NAME_TOO_LONG": "Name cannot contain more than 255 characters",
+    "BIO_TOO_LONG": "Bio cannot contain more than 255 characters",
+
+    "POI_NOT_FOUND": "POI not found",
+    "POI_NAME_REQUIRED": "POI name is required",
+    "POI_NAME_TOO_LONG": "POI name cannot contain more than 255 characters",
+    "POI_DESCRIPTION_TOO_LONG": "POI description cannot contain more than 255 characters",
+    "POI_ADDRESS_TOO_LONG": "POI address cannot contain more than 255 characters",
+    "POI_LATITUDE_INVALID": "POI latitude is invalid",
+    "POI_LONGITUDE_INVALID": "POI longitude is invalid",
+    "POI_RADIUS_INVALID": "POI radius is invalid",
+    "POI_ACCESS_DENIED": "You are not authorized to access this POI",
+
+    "GOOGLE_PLACE_NOT_FOUND": "Google place not found",
+    "GOOGLE_PLACE_FETCH_ERROR": "Error fetching Google place",
+    "GOOGLE_PLACE_INVALID_ID": "Google place ID is invalid",
+    "GOOGLE_PLACE_API_KEY_REQUIRED": "Google place API key is required",
+    "GOOGLE_PLACE_SEARCH_ERROR": "Error searching Google place",
+    "GOOGLE_PLACE_PHOTO_ERROR": "Error fetching Google place photo",
+
+    "LIST_NOT_FOUND": "List not found",
+    "LIST_NAME_REQUIRED": "List name is required",
+    "LIST_NAME_TOO_LONG": "List name cannot contain more than 255 characters",
+    "LIST_DESCRIPTION_TOO_LONG": "List description cannot contain more than 255 characters",
+    "LIST_ACCESS_DENIED": "You are not authorized to access this list",
+    "LIST_EDIT_TOKEN_INVALID": "List edit token is invalid",
+    "LIST_EDIT_TOKEN_EXPIRED": "List edit token has expired",
+    "LIST_OWNER_CANNOT_LEAVE": "List owner cannot leave the list",
+
+    "SAVED_POI_NOT_FOUND": "Saved POI not found",
+    "POI_ALREADY_SAVED": "POI is already saved",
+    "POI_OR_GOOGLE_PLACE_REQUIRED": "POI or Google place is required",
+
+    "SHARE_TOKEN_EXPIRED": "Share token has expired",
+    "SHARE_TOKEN_INVALID": "Share token is invalid",
+
+    "COLLABORATOR_ALREADY_EXISTS": "Collaborator already exists",
+    "COLLABORATOR_CANNOT_INVITE_YOURSELF": "You cannot invite yourself",
+    "COLLABORATOR_OWNER_CANNOT_JOIN": "List owner cannot join the list",
+    "COLLABORATOR_NOT_FOUND": "Collaborator not found",
+
+    "UPLOAD_FILE_REQUIRED": "File is required",
+    "UPLOAD_INVALID_FILE_TYPE": "Invalid file type",
+    "UPLOAD_INVALID_FILE_SIZE": "File is too large",
+
+    "VALIDATION_ERROR": "Validation error",
+    "INTERNAL_ERROR": "An error occurred",
+    "NOT_FOUND": "Resource not found",
+    "UNAUTHORIZED": "You are not authorized to access this resource",
     "RATE_LIMIT_EXCEEDED": "Too many attempts, try again later",
-    "INTERNAL_ERROR": "An error occurred"
+    "INVALID_URL": "Invalid URL"
   },
   "validation": {
     "formErrors": {
       "requiredEmail": "Email is required",
       "invalidEmail": "Invalid email",
       "requiredPassword": "Password is required",
-      "passwordTooShort": "Password must be at least 8 characters"
+      "passwordTooShort": "Password must be at least 8 characters",
+      "newPasswordSameAsOldPassword": "New password must not be the same as the old password"
     }
   }
 }

@@ -26,16 +26,18 @@ async function getLocale(): Promise<Locale> {
 }
 
 async function loadMessages(locale: Locale) {
-  const [common, auth, errors] = await Promise.all([
+  const [common, auth, errors, upload] = await Promise.all([
     import(`../messages/${locale}/common.json`),
     import(`../messages/${locale}/auth.json`),
     import(`../messages/${locale}/errors.json`),
+    import(`../messages/${locale}/upload.json`),
   ]);
 
   return {
     common: common.default,
     auth: auth.default,
     errors: errors.default,
+    upload: upload.default,
   };
 }
 

@@ -91,7 +91,7 @@ export default function VerifyEmailPage() {
               {t("auth.verifyEmail.successTitle")}
             </h1>
             <p className="text-muted-foreground">{t("auth.verifyEmail.successDescription")}</p>
-            <Button asChild className="w-full h-12 lg:h-10 text-lg lg:text-sm font-semibold mt-4">
+            <Button asChild className="w-full mt-4">
               <Link href="/login">{t("auth.verifyEmail.goToLogin")}</Link>
             </Button>
           </>
@@ -112,7 +112,7 @@ export default function VerifyEmailPage() {
               <Button
                 variant="outline"
                 onClick={handleResendEmail}
-                className="w-full h-12 lg:h-10 text-lg lg:text-sm font-semibold mt-4"
+                className="w-full mt-4"
                 disabled={isLoading}
                 loading={isLoading}
               >

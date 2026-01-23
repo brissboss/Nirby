@@ -42,6 +42,7 @@ apiClient.interceptors.response.use(async (response, request, options) => {
     "/auth/reset-password",
     "/auth/verify-email",
     "/auth/resend-verification",
+    "/auth/account",
   ];
 
   const isAuthRoute = authRoutes.some((route) => request.url.includes(route));

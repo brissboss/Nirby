@@ -28,8 +28,8 @@ export function LanguageSelector({ type = "icon" }: { type?: "icon" | "text" | "
     try {
       await setLocale(newLocale);
       router.refresh();
-    } catch (error) {
-      console.error("Failed to change language:", error);
+    } catch {
+      // Silent error
     } finally {
       setIsChanging(false);
     }
