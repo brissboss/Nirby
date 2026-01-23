@@ -12,6 +12,9 @@ import {
   signup,
   verifyEmail,
   resendVerification,
+  updateMe,
+  changePassword,
+  deleteAccount,
 } from "@/lib/api";
 import { setAccessToken, setRefreshTokenFn } from "@/lib/api/client";
 import type { User } from "@/lib/api/generated";
@@ -118,6 +121,50 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const handleUpdateProfile = useCallback(
+    async (name: string, avatarUrl: string, bio: string) => {
+      const response = await updateMe({
+        body: { name, avatarUrl, bio },
+      });
+
+      if (response.data) {
+        setUser(response.data.user);
+      } else {
+        throw response.error;
+      }
+    },
+    [setUser]
+  );
+
+  const handleChangePassword = useCallback(async (oldPassword: string, newPassword: string) => {
+    const response = await changePassword({
+      body: { oldPassword, newPassword },
+    });
+
+    if (response.data) {
+      return;
+    } else {
+      throw response.error;
+    }
+  }, []);
+
+  const handleDeleteAccount = useCallback(
+    async (password: string, language?: string) => {
+      const response = await deleteAccount({
+        body: { password, language },
+      });
+
+      if (response.data) {
+        updateToken(null);
+        setUser(null);
+        return;
+      } else {
+        throw response.error;
+      }
+    },
+    [updateToken, setUser]
+  );
+
   const handleRefresh = useCallback(async () => {
     try {
       const response = await refreshToken();
@@ -190,6 +237,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signup: handleSignup,
     verifyEmail: handleVerifyEmail,
     resendEmail: handleResendEmail,
+    updateProfile: handleUpdateProfile,
+    changePassword: handleChangePassword,
+    deleteAccount: handleDeleteAccount,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

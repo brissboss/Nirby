@@ -1,9 +1,26 @@
 {
   "language": "Language",
+  "theme": {
+    "title": "Theme",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
+  },
+  "profile": {
+    "myAccount": "My account",
+    "name": "Name",
+    "description": "Description",
+    "avatar": "Avatar",
+    "save": "Save"
+  },
   "buttons": {
     "submit": "Submit",
     "send": "Send",
-    "back": "Back"
+    "back": "Back",
+    "logout": "Logout",
+    "profile": "Profile",
+    "cancel": "Cancel",
+    "delete": "Delete"
   },
   "labels": {
     "email": "Email",

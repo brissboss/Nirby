@@ -33,7 +33,6 @@ export default function LoginPage() {
   const loginSchema = useMemo(
     () =>
       createLoginSignupSchema({
-        requiredEmail: t("errors.validation.formErrors.requiredEmail"),
         invalidEmail: t("errors.validation.formErrors.invalidEmail"),
         requiredPassword: t("errors.validation.formErrors.requiredPassword"),
         passwordTooShort: t("errors.validation.formErrors.passwordTooShort"),
@@ -80,7 +79,7 @@ export default function LoginPage() {
                     <Input
                       placeholder={t("common.labels.emailPlaceholder")}
                       {...field}
-                      className="h-12 lg:h-10 text-md lg:text-sm px-4 lg:px-3"
+                      className="px-4 lg:px-3"
                     />
                   </FormControl>
                   <FormMessage />
@@ -101,19 +100,19 @@ export default function LoginPage() {
                         type={showPassword ? "text" : "password"}
                         placeholder="••••••••"
                         {...field}
-                        className="h-12 lg:h-10 text-md lg:text-sm px-4 lg:px-3 pr-12 lg:pr-10"
+                        className="px-4 lg:px-3 pr-12 lg:pr-10"
                       />
                       <Button
                         type="button"
                         variant="ghost"
                         size="icon"
-                        className="absolute right-0 lg:right-2 top-0 lg:top-2 h-full lg:h-6 w-12 lg:w-6 hover:bg-transparent"
+                        className="absolute right-0 lg:right-2 top-0 lg:top-1.5 h-full lg:h-6 w-12 lg:w-6 hover:bg-transparent"
                         onClick={() => setShowPassword((prev) => !prev)}
                       >
                         {showPassword ? (
-                          <EyeOff className="h-6 w-6 lg:h-4 lg:w-4 text-muted-foreground" />
+                          <EyeOff className="size-5 lg:size-4 text-muted-foreground" />
                         ) : (
-                          <Eye className="h-6 w-6 lg:h-4 lg:w-4 text-muted-foreground" />
+                          <Eye className="size-5 lg:size-4 text-muted-foreground" />
                         )}
                         <span className="sr-only">
                           {showPassword
@@ -137,7 +136,7 @@ export default function LoginPage() {
             />
             <Button
               type="submit"
-              className="w-full h-12 lg:h-10 text-lg lg:text-sm font-semibold mt-4"
+              className="w-full mt-4"
               disabled={form.formState.isSubmitting}
               loading={form.formState.isSubmitting}
             >

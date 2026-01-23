@@ -19,6 +19,9 @@ interface AuthContextType extends AuthState {
   resetPassword: (token: string, password: string) => Promise<void>;
   verifyEmail: (token: string) => Promise<VerifyEmailResponse | Error>;
   resendEmail: (email: string) => Promise<void>;
+  updateProfile: (name: string, avatarUrl: string, bio: string) => Promise<void>;
+  changePassword: (oldPassword: string, newPassword: string) => Promise<void>;
+  deleteAccount: (password: string, language?: string) => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextType | null>(null);

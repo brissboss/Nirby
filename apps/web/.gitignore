@@ -12,6 +12,10 @@
 
 # testing
 /coverage
+.nyc_output
+
+# vitest
+.vitest/
 
 # next.js
 /.next/

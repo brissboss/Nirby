@@ -33,7 +33,6 @@ export default function ForgotPasswordPage() {
   const forgotPasswordSchema = useMemo(
     () =>
       createForgotPasswordSchema({
-        requiredEmail: t("errors.validation.formErrors.requiredEmail"),
         invalidEmail: t("errors.validation.formErrors.invalidEmail"),
       }),
     [t]
@@ -99,7 +98,7 @@ export default function ForgotPasswordPage() {
                         <Input
                           placeholder={t("common.labels.emailPlaceholder")}
                           {...field}
-                          className="h-12 lg:h-10 text-md lg:text-sm px-4 lg:px-3"
+                          className="px-4 lg:px-3"
                         />
                       </FormControl>
                       <FormMessage />
@@ -108,7 +107,7 @@ export default function ForgotPasswordPage() {
                 />
                 <Button
                   type="submit"
-                  className="w-full h-12 lg:h-10 text-lg lg:text-sm font-semibold mt-4"
+                  className="w-full mt-4"
                   disabled={form.formState.isSubmitting}
                   loading={form.formState.isSubmitting}
                 >
