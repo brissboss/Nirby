@@ -75,8 +75,8 @@ jobs:
 
       - name: Type Check
         run: |
-          pnpm -C apps/api tsc --noEmit
-          pnpm -C apps/web tsc --noEmit
+          pnpm -C apps/api exec tsc --noEmit
+          pnpm -C apps/web exec tsc --noEmit
 
       - name: Test
         run: pnpm test -- --reporter=verbose
