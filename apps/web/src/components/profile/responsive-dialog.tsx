@@ -35,7 +35,7 @@ export function ResponsiveDialog({
     <Sheet open={isOpen} onOpenChange={onOpenChange}>
       <SheetContent
         side="bottom"
-        className="gap-0"
+        className="gap-0 rounded-t-2xl"
         onOpenAutoFocus={(e) => e.preventDefault()}
         showCloseButton={false}
       >
