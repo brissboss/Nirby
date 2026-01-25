@@ -35,8 +35,9 @@ import {
 } from "@/components/ui";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { useAuth } from "@/lib/auth";
+import { cn } from "@/lib/utils";
 
-export function UserMenu() {
+export function UserMenu({ className }: { className?: string }) {
   const { user, isLoading, logout } = useAuth();
   const { theme, setTheme } = useTheme();
   const isMobile = useMediaQuery("(max-width: 768px)");
@@ -79,8 +80,12 @@ export function UserMenu() {
       </ResponsiveDialog>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon" className="rounded-full shadow- dark:shadow-accent">
-            <Avatar className="size-12 md:size-10 hover:scale-105 transition-all duration-300 border border-accent shadow-2xl">
+          <Button
+            variant="outline"
+            size="icon"
+            className={cn("rounded-xl shadow-xl dark:shadow-accent overflow-hidden", className)}
+          >
+            <Avatar className="size-10 md:size-12 hover:scale-110 transition-all duration-300 border border-accent rounded-none">
               <AvatarImage
                 src={user?.avatarUrl ?? undefined}
                 alt="User avatar"
