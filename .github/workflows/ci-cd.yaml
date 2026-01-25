@@ -34,7 +34,6 @@ jobs:
               - 'pnpm-lock.yaml'
               - 'pnpm-workspace.yaml'
               - 'turbo.json'
-              - '.github/workflows/**'
               - 'eslint.config.mjs'
               - '.prettierrc'
               - '.prettierignore'
