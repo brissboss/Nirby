@@ -4,8 +4,8 @@ import { Minus, Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
+import { useMap } from "@/features/map";
 import { useMediaQuery } from "@/hooks/use-media-query";
-import { useMap } from "@/lib/map/context";
 
 export function ZoomControls() {
   const { map } = useMap();

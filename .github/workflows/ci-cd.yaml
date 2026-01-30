@@ -7,8 +7,76 @@ on:
     # CI tourne sur toutes les PR
 
 jobs:
-  ci:
+  filter:
     runs-on: ubuntu-latest
+    outputs:
+      run_api: ${{ steps.changes.outputs.run_api }}
+      run_web: ${{ steps.changes.outputs.run_web }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            api:
+              - 'apps/api/**'
+            web:
+              - 'apps/web/**'
+            root:
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'turbo.json'
+              - '.github/**'
+              - 'eslint.config.mjs'
+              - 'infra/**'
+
+      - id: changes
+        run: |
+          echo "run_api=${{ steps.filter.outputs.api == 'true' || steps.filter.outputs.root == 'true' }}" >> $GITHUB_OUTPUT
+          echo "run_web=${{ steps.filter.outputs.web == 'true' || steps.filter.outputs.root == 'true' }}" >> $GITHUB_OUTPUT
+
+  setup:
+    runs-on: ubuntu-latest
+    needs: filter
+    if: needs.filter.outputs.run_api == 'true' || needs.filter.outputs.run_web == 'true'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Enable corepack
+        run: corepack enable
+
+      - name: Install pnpm
+        run: corepack prepare pnpm@10.14.0 --activate
+
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        run: echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+  ci-api:
+    runs-on: ubuntu-latest
+    needs: [filter, setup]
+    if: needs.filter.outputs.run_api == 'true'
 
     services:
       db:
@@ -70,16 +138,11 @@ jobs:
         env:
           DATABASE_URL: postgresql://nirby:nirby@localhost:5432/nirby_test
 
-      - name: Lint
-        run: pnpm lint
+      - name: Type Check API
+        run: pnpm -C apps/api exec tsc --noEmit
 
-      - name: Type Check
-        run: |
-          pnpm -C apps/api exec tsc --noEmit
-          pnpm -C apps/web exec tsc --noEmit
-
-      - name: Test
-        run: pnpm test -- --reporter=verbose
+      - name: Test API
+        run: pnpm -C apps/api test -- --reporter=verbose
         env:
           DATABASE_URL: postgresql://nirby:nirby@localhost:5432/nirby_test
           REDIS_URL: redis://localhost:6379
@@ -89,11 +152,48 @@ jobs:
           REFRESH_TOKEN_TTL: 604800
           NODE_ENV: test
 
-      - name: Test Frontend with Coverage
+  ci-web:
+    runs-on: ubuntu-latest
+    needs: [filter, setup]
+    if: needs.filter.outputs.run_web == 'true'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Enable corepack
+        run: corepack enable
+
+      - name: Install pnpm
+        run: corepack prepare pnpm@10.14.0 --activate
+
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        run: echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Type Check Web
+        run: pnpm -C apps/web exec tsc --noEmit
+
+      - name: Test Web with Coverage
         run: pnpm -C apps/web test:coverage
 
-      - name: Build
-        run: pnpm build
+      - name: Build Web
+        run: pnpm -C apps/web build
 
       - name: Verify Frontend Build
         run: |
@@ -105,7 +205,7 @@ jobs:
 
   api-docker:
     runs-on: ubuntu-latest
-    needs: ci
+    needs: [ci-api]
 
     services:
       db:
@@ -169,7 +269,7 @@ jobs:
 
   web-docker:
     runs-on: ubuntu-latest
-    needs: ci
+    needs: [ci-web]
 
     steps:
       - name: Checkout
@@ -197,7 +297,7 @@ jobs:
 
   deploy-staging:
     runs-on: ubuntu-latest
-    needs: [ci, api-docker]
+    needs: [ci-api, api-docker]
     if: github.event_name == 'push' && github.ref == 'refs/heads/staging'
     environment: staging
 
@@ -282,7 +382,7 @@ jobs:
 
   deploy-staging-web:
     runs-on: ubuntu-latest
-    needs: [ci, web-docker]
+    needs: [ci-web, web-docker]
     if: github.event_name == 'push' && github.ref == 'refs/heads/staging'
     environment: staging
 
@@ -353,7 +453,7 @@ jobs:
 
   deploy-production:
     runs-on: ubuntu-latest
-    needs: [ci, api-docker]
+    needs: [ci-api, api-docker]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     environment: production
 
@@ -438,7 +538,7 @@ jobs:
 
   deploy-production-web:
     runs-on: ubuntu-latest
-    needs: [ci, web-docker]
+    needs: [ci-web, web-docker]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     environment: production
 

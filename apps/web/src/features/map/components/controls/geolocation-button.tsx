@@ -5,8 +5,8 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { useMap } from "@/features/map";
 import { useMediaQuery } from "@/hooks/use-media-query";
-import { useMap } from "@/lib/map/context";
 
 export const GeolocationButton = () => {
   const { map } = useMap();

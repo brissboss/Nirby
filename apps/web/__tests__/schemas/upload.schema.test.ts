@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 
-import { avatarFileSchema } from "@/schemas/upload.schema";
+import { avatarFileSchema } from "@/features/upload";
 
 describe("avatarFileSchema", () => {
   it("should validate a valid JPEG file under 2MB", () => {

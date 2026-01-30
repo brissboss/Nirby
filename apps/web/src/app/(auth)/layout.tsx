@@ -3,7 +3,7 @@ import { getTranslations } from "next-intl/server";
 
 import { Logo } from "@/components/logo";
 import { LanguageSelector } from "@/components/ui/language-selector";
-import { isAuthenticated } from "@/lib/auth/server";
+import { isAuthenticated } from "@/features/auth/server";
 
 export default async function AuthLayout({ children }: { children: React.ReactNode }) {
   const authenticated = await isAuthenticated();

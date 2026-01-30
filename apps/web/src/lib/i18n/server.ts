@@ -2,7 +2,7 @@
 
 import { cookies } from "next/headers";
 
-import { locales, type Locale } from "@/i18n/request";
+import { locales, type Locale } from "@/lib/i18n";
 
 export async function setLocale(locale: Locale) {
   // Vérifier que la locale est valide

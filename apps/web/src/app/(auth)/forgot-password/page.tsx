@@ -18,9 +18,8 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { useAuth, type ForgotPasswordFormData, createForgotPasswordSchema } from "@/features/auth";
 import { useErrorMessage } from "@/hooks/use-error-message";
-import { useAuth } from "@/lib/auth";
-import { createForgotPasswordSchema, type ForgotPasswordFormData } from "@/schemas/auth.schema";
 
 export default function ForgotPasswordPage() {
   const t = useTranslations();

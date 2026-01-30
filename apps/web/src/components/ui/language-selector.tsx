@@ -13,7 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "./dropdown-menu";
 
-import { setLocale } from "@/actions/locale";
+import { setLocale } from "@/lib/i18n";
 
 export function LanguageSelector({ type = "icon" }: { type?: "icon" | "text" | "icon-text" }) {
   const t = useTranslations();

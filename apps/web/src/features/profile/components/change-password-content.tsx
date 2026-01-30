@@ -16,9 +16,8 @@ import {
   Input,
   Separator,
 } from "@/components/ui";
+import { useAuth, type ChangePasswordFormData, createChangePasswordSchema } from "@/features/auth";
 import { useErrorMessage } from "@/hooks/use-error-message";
-import { useAuth } from "@/lib/auth";
-import { ChangePasswordFormData, createChangePasswordSchema } from "@/schemas/auth.schema";
 
 export function ChangePasswordContent({ closeDialog }: { closeDialog: () => void }) {
   const t = useTranslations();

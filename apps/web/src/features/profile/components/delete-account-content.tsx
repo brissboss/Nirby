@@ -16,9 +16,8 @@ import {
   Input,
   Separator,
 } from "@/components/ui";
+import { useAuth, type DeleteAccountFormData, createDeleteAccountSchema } from "@/features/auth";
 import { useErrorMessage } from "@/hooks/use-error-message";
-import { useAuth } from "@/lib/auth";
-import { DeleteAccountFormData, createDeleteAccountSchema } from "@/schemas/auth.schema";
 
 export function DeleteAccountContent({ closeDialog }: { closeDialog: () => void }) {
   const t = useTranslations();

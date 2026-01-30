@@ -1,5 +1,5 @@
+import { useAuth } from "@/features/auth";
 import { uploadAvatar } from "@/lib/api";
-import { useAuth } from "@/lib/auth";
 
 export function useUpload() {
   const { refresh } = useAuth();

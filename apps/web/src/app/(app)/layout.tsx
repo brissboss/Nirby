@@ -1,13 +1,10 @@
 "use client";
 
-import { GeolocationButton } from "@/components/map/controls/geolocation-button";
-import { UserMenu } from "@/components/map/controls/user-menu";
-import { ZoomControls } from "@/components/map/controls/zoom-controls";
-import { MapboxMap } from "@/components/map/mapbox-map";
 import { Card, CardContent } from "@/components/ui/card";
+import { useAuth } from "@/features/auth";
+import { GeolocationButton, MapboxMap, UserMenu, ZoomControls } from "@/features/map";
+import { MapProvider } from "@/features/map";
 import { useMediaQuery } from "@/hooks/use-media-query";
-import { useAuth } from "@/lib/auth";
-import { MapProvider } from "@/lib/map/context";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
