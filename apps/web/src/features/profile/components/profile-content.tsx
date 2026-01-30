@@ -4,11 +4,6 @@ import { useEffect, useState, useRef } from "react";
 import { toast } from "sonner";
 
 import {
-  ChangePasswordContent,
-  DeleteAccountContent,
-  ResponsiveDialog,
-} from "@/components/profile";
-import {
   Avatar,
   AvatarFallback,
   AvatarImage,
@@ -18,10 +13,10 @@ import {
   Label,
   Separator,
 } from "@/components/ui";
+import { useAuth } from "@/features/auth";
+import { ChangePasswordContent, DeleteAccountContent, ResponsiveDialog } from "@/features/profile";
+import { avatarFileSchema, useUpload } from "@/features/upload";
 import { useErrorMessage } from "@/hooks/use-error-message";
-import { useAuth } from "@/lib/auth";
-import { useUpload } from "@/lib/upload/hook";
-import { avatarFileSchema } from "@/schemas/upload.schema";
 
 export function ProfileContent({ closeDialog }: { closeDialog: () => void }) {
   const t = useTranslations();

@@ -8,9 +8,9 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/features/auth";
 import { useErrorMessage } from "@/hooks/use-error-message";
 import type { Error } from "@/lib/api/generated";
-import { useAuth } from "@/lib/auth";
 
 type VerificationState = "loading" | "success" | "error";
 

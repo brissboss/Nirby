@@ -18,9 +18,8 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { useAuth, type ResetPasswordFormData, createResetPasswordSchema } from "@/features/auth";
 import { useErrorMessage } from "@/hooks/use-error-message";
-import { useAuth } from "@/lib/auth";
-import { createResetPasswordSchema, ResetPasswordFormData } from "@/schemas/auth.schema";
 
 export default function ResetPasswordPage({
   searchParams,

@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/lib/auth";
+import { useAuth } from "@/features/auth";
 
 export default function AppPage() {
   const { user, isLoading, logout } = useAuth();

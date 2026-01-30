@@ -5,7 +5,7 @@ import mapboxgl from "mapbox-gl";
 import { useTheme } from "next-themes";
 import { useEffect, useRef, useState } from "react";
 
-import { useMap } from "@/lib/map/context";
+import { useMap } from "@/features/map";
 
 export function MapboxMap() {
   const mapContainer = useRef<HTMLDivElement>(null);

@@ -13,9 +13,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { useTheme } from "next-themes";
 import { useState } from "react";
 
-import { setLocale } from "@/actions/locale";
 import { Logo } from "@/components/logo";
-import { ResponsiveDialog, ProfileContent } from "@/components/profile";
 import {
   Avatar,
   AvatarFallback,
@@ -33,8 +31,10 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
 } from "@/components/ui";
+import { useAuth } from "@/features/auth";
+import { ProfileContent, ResponsiveDialog } from "@/features/profile";
 import { useMediaQuery } from "@/hooks/use-media-query";
-import { useAuth } from "@/lib/auth";
+import { setLocale } from "@/lib/i18n";
 
 export function UserMenu() {
   const { user, isLoading, logout } = useAuth();

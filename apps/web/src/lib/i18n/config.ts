@@ -1,9 +1,10 @@
+import fs from "fs";
+import path from "path";
+
 import { headers, cookies } from "next/headers";
 import { getRequestConfig } from "next-intl/server";
 
-export const locales = ["fr", "en"] as const;
-export type Locale = (typeof locales)[number];
-export const defaultLocale: Locale = "fr";
+import { locales, type Locale, defaultLocale } from "./constants";
 
 async function getLocale(): Promise<Locale> {
   const cookieStore = await cookies();
@@ -26,19 +27,17 @@ async function getLocale(): Promise<Locale> {
 }
 
 async function loadMessages(locale: Locale) {
-  const [common, auth, errors, upload] = await Promise.all([
-    import(`../messages/${locale}/common.json`),
-    import(`../messages/${locale}/auth.json`),
-    import(`../messages/${locale}/errors.json`),
-    import(`../messages/${locale}/upload.json`),
-  ]);
+  const dir = path.join(process.cwd(), "src/lib/i18n/locales", locale);
+  const files = await fs.readdirSync(dir).filter((file) => file.endsWith(".json"));
+  const messages: Record<string, unknown> = {};
 
-  return {
-    common: common.default,
-    auth: auth.default,
-    errors: errors.default,
-    upload: upload.default,
-  };
+  for (const file of files) {
+    const name = file.replace(".json", "");
+    const content = JSON.parse(fs.readFileSync(path.join(dir, file), "utf-8"));
+    messages[name] = content;
+  }
+
+  return messages;
 }
 
 export default getRequestConfig(async () => {

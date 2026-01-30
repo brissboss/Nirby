@@ -5,7 +5,7 @@ import { getMessages, getLocale } from "next-intl/server";
 import { ThemeProvider } from "next-themes";
 
 import { ToasterWrapper } from "@/components/ui";
-import { AuthProvider } from "@/lib/auth";
+import { AuthProvider } from "@/features/auth";
 
 import "./globals.css";
 

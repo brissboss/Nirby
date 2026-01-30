@@ -6,7 +6,7 @@ import {
   createResetPasswordSchema,
   createChangePasswordSchema,
   createDeleteAccountSchema,
-} from "@/schemas/auth.schema";
+} from "@/features/auth";
 
 describe("createLoginSignupSchema", () => {
   it("should validate a valid email and password", () => {

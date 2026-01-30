@@ -19,9 +19,8 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { useAuth, type LoginSignupFormData, createLoginSignupSchema } from "@/features/auth";
 import { useErrorMessage } from "@/hooks/use-error-message";
-import { useAuth } from "@/lib/auth";
-import { createLoginSignupSchema, type LoginSignupFormData } from "@/schemas/auth.schema";
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 
+import { AuthContext, type AuthContextType } from "@/features/auth";
 import {
   login,
   refreshToken,
@@ -18,7 +19,6 @@ import {
 } from "@/lib/api";
 import { setAccessToken, setRefreshTokenFn } from "@/lib/api/client";
 import type { User } from "@/lib/api/generated";
-import { AuthContext, type AuthContextType } from "@/lib/auth";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
