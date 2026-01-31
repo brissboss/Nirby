@@ -7,7 +7,7 @@ function getSnapshot(query: string): boolean {
 }
 
 function getServerSnapshot(): boolean {
-  return false;
+  return true;
 }
 
 function subscribe(query: string, callback: () => void): () => void {

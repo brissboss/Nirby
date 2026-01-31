@@ -86,7 +86,6 @@ export function MapboxMap() {
         }}
       />
       {!isLoaded && (
-        // <div className="absolute inset-0 bg-muted animate-pulse" />
         <div className="absolute inset-0 flex items-center justify-center">
           <Loader2 className="w-10 h-10 animate-spin text-primary" />
         </div>
