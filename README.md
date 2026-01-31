@@ -1,3 +1,5 @@
+[![CI/CD](https://github.com/brissboss/Nirby/actions/workflows/ci-cd.yaml/badge.svg)](https://github.com/brissboss/Nirby/actions/workflows/ci-cd.yaml)
+
 # Nirby test
 
 Full-stack application with Express API, PostgreSQL (PostGIS), and Redis.
