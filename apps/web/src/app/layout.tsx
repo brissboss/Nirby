@@ -6,6 +6,7 @@ import { ThemeProvider } from "next-themes";
 
 import { ToasterWrapper } from "@/components/ui";
 import { AuthProvider } from "@/features/auth";
+import { QueryProvider } from "@/lib/query-client";
 
 import "./globals.css";
 
@@ -60,7 +61,9 @@ export default async function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
-            <AuthProvider>{children}</AuthProvider>
+            <QueryProvider>
+              <AuthProvider>{children}</AuthProvider>
+            </QueryProvider>
             <ToasterWrapper />
           </ThemeProvider>
         </NextIntlClientProvider>

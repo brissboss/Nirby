@@ -15,6 +15,7 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     "src/lib/api/generated/**",
     "next.config.ts",
+    "coverage/**",
   ]),
   {
     plugins: {

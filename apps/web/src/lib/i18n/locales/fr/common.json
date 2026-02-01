@@ -20,7 +20,8 @@
     "logout": "Déconnexion",
     "profile": "Profil",
     "cancel": "Annuler",
-    "delete": "Supprimer"
+    "delete": "Supprimer",
+    "search": "Rechercher"
   },
   "labels": {
     "email": "Email",
