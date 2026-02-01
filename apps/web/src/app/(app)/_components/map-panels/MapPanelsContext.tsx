@@ -3,25 +3,27 @@
 import { createContext, useContext, useState } from "react";
 
 type MapPanelsContextType = {
-  isDrawerOpen: boolean;
-  setIsDrawerOpen: (open: boolean) => void;
   isDrawerExpanded: boolean;
-  setIsDrawerExpanded: (expanded: boolean) => void;
+  snapPoints: (number | string)[];
+  snap: number | string | null;
+  setSnap: (snap: number | string | null) => void;
 };
 
 const MapPanelsContext = createContext<MapPanelsContextType | null>(null);
 
+const snapPoints = ["190px", 1];
+
 export function MapPanelsProvider({ children }: { children: React.ReactNode }) {
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [isDrawerExpanded, setIsDrawerExpanded] = useState(false);
+  const [snap, setSnap] = useState<number | string | null>(snapPoints[0] as number | string);
+  const isDrawerExpanded = snap === 1;
 
   return (
     <MapPanelsContext.Provider
       value={{
-        isDrawerOpen,
-        setIsDrawerOpen,
         isDrawerExpanded,
-        setIsDrawerExpanded,
+        snapPoints,
+        snap,
+        setSnap,
       }}
     >
       {children}

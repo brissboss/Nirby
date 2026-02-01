@@ -20,7 +20,8 @@
     "logout": "Logout",
     "profile": "Profile",
     "cancel": "Cancel",
-    "delete": "Delete"
+    "delete": "Delete",
+    "search": "Search"
   },
   "labels": {
     "email": "Email",
