@@ -28,7 +28,7 @@ export function MapPanels({ isDetailRoute, browseContent, children }: MapPanelsP
           repositionInputs={false}
         >
           <DrawerContent
-            className="h-full overflow-y-auto"
+            className="h-full overflow-hidden flex flex-col"
             style={{
               maxHeight: "90vh",
               paddingBottom: "max(env(safe-area-inset-bottom), 0px)",
@@ -54,7 +54,7 @@ export function MapPanels({ isDetailRoute, browseContent, children }: MapPanelsP
     >
       <Card className="w-[50px] md:w-[380px] h-full bg-background border border-border rounded-xl shadow-lg overflow-hidden z-10 block p-0">
         <CardHeader className="hidden" />
-        <CardContent className="p-0">{browseContent}</CardContent>
+        <CardContent className="p-0 h-full">{browseContent}</CardContent>
       </Card>
 
       {isDetailRoute ? (

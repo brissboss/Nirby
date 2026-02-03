@@ -27,5 +27,9 @@
     "email": "Email",
     "emailPlaceholder": "exemple@email.com",
     "password": "Mot de passe"
+  },
+  "emptyState": {
+    "title": "Aucun résultat",
+    "description": "Aucun résultat trouvé pour \"{searchQuery}\""
   }
 }

@@ -57,6 +57,7 @@ export function useSearchPlace() {
   const clearResults = () => {
     queryClient.setQueryData(queryKeys.places.lastSearch, { places: [] });
     queryClient.setQueryData(queryKeys.places.lastSearchQuery, "");
+    mutation.reset();
   };
 
   return {
