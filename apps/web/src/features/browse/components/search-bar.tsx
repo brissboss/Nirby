@@ -13,20 +13,17 @@ import { Input } from "@/components/ui/input";
 import { useSearchPlace } from "@/features/browse/hooks";
 import { useErrorMessage } from "@/hooks/use-error-message";
 
-export function SearchBar() {
+type SearchBarProps = {
+  searchPlace: ReturnType<typeof useSearchPlace>;
+};
+
+export function SearchBar({ searchPlace }: SearchBarProps) {
   const t = useTranslations();
   const { setSnap, snapPoints } = useMapPanels();
   const shouldPreventFocus = useRef(false);
   const getErrorMessage = useErrorMessage();
 
-  const {
-    mutate: searchPlaces,
-    isPending,
-    data: lastSearch,
-    clearResults,
-    lastSearchQueryText,
-    setLastSearchQueryText,
-  } = useSearchPlace();
+  const { mutate: searchPlaces, isPending, clearResults, lastSearchQueryText } = searchPlace;
 
   const searchSchema = z.object({
     search: z.string().min(1),
@@ -104,10 +101,7 @@ export function SearchBar() {
                       className="pl-4 rounded-full [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden"
                       onFocus={handleFocus}
                       onBlur={handleBlur}
-                      onChange={(e) => {
-                        setLastSearchQueryText(e.target.value ?? "");
-                        field.onChange(e);
-                      }}
+                      onChange={field.onChange}
                     />
                     {(form.formState.isDirty || lastSearchQueryText !== "") && (
                       <Button
@@ -130,11 +124,6 @@ export function SearchBar() {
                       </Button>
                     )}
                   </div>
-                  {(lastSearch?.places?.length ?? 0) > 0 ? (
-                    <p className="text-xs text-muted-foreground self-end pr-2">
-                      {lastSearch?.places?.length} results found
-                    </p>
-                  ) : null}
                 </div>
               </FormControl>
             </FormItem>
