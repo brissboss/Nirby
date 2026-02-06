@@ -153,11 +153,11 @@ html {
 }
 
 .mapboxgl-user-location-dot {
-  background-color: var(--primary) !important;
+  background-color: "#30c8ff" !important;
 }
 
 .mapboxgl-user-location-dot::before {
-  background-color: var(--primary) !important;
+  background-color: "#30c8ff" !important;
 }
 
 @media (max-width: 640px) {
