@@ -3,22 +3,28 @@ import { useLocale } from "next-intl";
 
 import { Item, ItemContent, ItemDescription, ItemTitle } from "@/components/ui";
 import { useMediaQuery } from "@/hooks/use-media-query";
+import { cn } from "@/lib/utils";
 import type { PoiItem } from "@/types/poi";
 
 type PoiItemComponentProps = {
   item: PoiItem;
   onClick: () => void;
+  isSelected?: boolean;
 };
 
-export function PoiItemComponent({ item, onClick }: PoiItemComponentProps) {
+export function PoiItemComponent({ item, onClick, isSelected = false }: PoiItemComponentProps) {
   const isMobile = useMediaQuery("(max-width: 768px)");
   const locale = useLocale();
 
   return (
     <Item
       onClick={onClick}
-      className="hover:bg-muted rounded-none group relative cursor-pointer"
+      className={cn(
+        "hover:bg-muted rounded-none group relative cursor-pointer",
+        isSelected && "bg-muted hover:bg-neutral-200 dark:hover:bg-neutral-700"
+      )}
       size={isMobile ? "default" : "sm"}
+      aria-selected={isSelected}
     >
       <ItemContent>
         <ItemTitle className="w-full">
