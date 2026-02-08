@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useSearchPlace } from "@/features/browse/hooks";
+import { useSearchLocation } from "@/features/map";
 import { useErrorMessage } from "@/hooks/use-error-message";
 
 type SearchBarProps = {
@@ -22,6 +23,7 @@ export function SearchBar({ searchPlace }: SearchBarProps) {
   const { setSnap, snapPoints } = useMapPanels();
   const shouldPreventFocus = useRef(false);
   const getErrorMessage = useErrorMessage();
+  const getSearchLocation = useSearchLocation();
 
   const { mutate: searchPlaces, isPending, clearResults, lastSearchQueryText } = searchPlace;
 
@@ -42,12 +44,13 @@ export function SearchBar({ searchPlace }: SearchBarProps) {
 
   function onSubmit(values: z.infer<typeof searchSchema>) {
     setSnap(snapPoints[1]);
-
     (document.activeElement as HTMLElement)?.blur();
 
+    const location = getSearchLocation?.();
     searchPlaces(
       {
         searchQuery: values.search,
+        ...(location && { lat: location.lat, lng: location.lng }),
       },
       {
         onError: (error) => {
