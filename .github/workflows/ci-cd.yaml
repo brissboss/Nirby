@@ -2,9 +2,8 @@ name: CI/CD
 
 on:
   push:
-    # CI tourne sur toutes les branches
+    branches: [main, staging]
   pull_request:
-    # CI tourne sur toutes les PR
 
 jobs:
   filter:
@@ -338,6 +337,9 @@ jobs:
           script: |
             set -e
 
+            # Prune unused Docker images to prevent disk space issues
+            docker image prune -a -f
+
             # Load the new image
             docker load < /tmp/nirby-api.tar.gz
             docker tag nirby-api:${{ github.sha }} nirby-api:latest
@@ -427,6 +429,9 @@ jobs:
           script: |
             set -e
 
+            # Prune unused Docker images to prevent disk space issues
+            docker image prune -a -f
+
             # Load the new image
             docker load < /tmp/nirby-web.tar.gz
             docker tag nirby-web:${{ github.sha }} nirby-web:latest
@@ -493,6 +498,9 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             set -e
+
+            # Prune unused Docker images to prevent disk space issues
+            docker image prune -a -f
 
             # Load the new image
             docker load < /tmp/nirby-api.tar.gz
@@ -582,6 +590,9 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             set -e
+
+            # Prune unused Docker images to prevent disk space issues
+            docker image prune -a -f
 
             # Load the new image
             docker load < /tmp/nirby-web.tar.gz
