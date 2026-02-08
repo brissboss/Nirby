@@ -21,7 +21,8 @@
     "profile": "Profil",
     "cancel": "Annuler",
     "delete": "Supprimer",
-    "search": "Rechercher"
+    "search": "Rechercher",
+    "searchHere": "Rechercher dans la zone"
   },
   "labels": {
     "email": "Email",

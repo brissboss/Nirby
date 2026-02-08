@@ -8,5 +8,6 @@ export const queryKeys = {
     search: (query: string) => ["places", "search", query] as const,
     lastSearchQuery: ["places", "lastSearchQuery"] as const,
     lastSearch: ["places", "lastSearch"] as const,
+    lastSearchLocation: ["places", "lastSearchLocation"] as const,
   },
 };

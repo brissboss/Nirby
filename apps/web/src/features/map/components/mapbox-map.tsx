@@ -12,7 +12,7 @@ export function MapboxMap() {
   const mapInstance = useRef<mapboxgl.Map | null>(null);
   const mapLoaded = useRef(false);
   const themeRef = useRef<string | undefined>(undefined);
-  const { setMap, setGeolocateControl } = useMap();
+  const { setMap, setGeolocateControl, setUserPosition } = useMap();
   const { resolvedTheme } = useTheme();
   const [isLoaded, setIsLoaded] = useState(false);
 
@@ -44,6 +44,13 @@ export function MapboxMap() {
 
     mapInstance.current.addControl(geolocateControl);
 
+    geolocateControl.on("geolocate", (position: GeolocationPosition) => {
+      setUserPosition({
+        lat: position.coords.latitude,
+        lng: position.coords.longitude,
+      });
+    });
+
     mapInstance.current.on("load", () => {
       mapLoaded.current = true;
       setMap(mapInstance.current);
@@ -63,10 +70,11 @@ export function MapboxMap() {
       setIsLoaded(false);
       setMap(null);
       setGeolocateControl(null);
+      setUserPosition(null);
       mapInstance.current?.remove();
       mapInstance.current = null;
     };
-  }, [setMap, setGeolocateControl]);
+  }, [setMap, setGeolocateControl, setUserPosition]);
 
   useEffect(() => {
     if (!mapInstance.current || !mapLoaded.current) return;
