@@ -7,6 +7,8 @@ interface MapContextType {
   setMap: (map: mapboxgl.Map | null) => void;
   geolocateControl: mapboxgl.GeolocateControl | null;
   setGeolocateControl: (geolocateControl: mapboxgl.GeolocateControl | null) => void;
+  userPosition: { lat: number; lng: number } | null;
+  setUserPosition: (pos: { lat: number; lng: number } | null) => void;
 }
 
 const MapContext = createContext<MapContextType | null>(null);
@@ -14,9 +16,12 @@ const MapContext = createContext<MapContextType | null>(null);
 export function MapProvider({ children }: { children: ReactNode }) {
   const [map, setMap] = useState<mapboxgl.Map | null>(null);
   const [geolocateControl, setGeolocateControl] = useState<mapboxgl.GeolocateControl | null>(null);
+  const [userPosition, setUserPosition] = useState<{ lat: number; lng: number } | null>(null);
 
   return (
-    <MapContext.Provider value={{ map, setMap, geolocateControl, setGeolocateControl }}>
+    <MapContext.Provider
+      value={{ map, setMap, geolocateControl, setGeolocateControl, userPosition, setUserPosition }}
+    >
       {children}
     </MapContext.Provider>
   );

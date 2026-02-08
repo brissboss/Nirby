@@ -106,7 +106,6 @@ describe("useSearchPlace", () => {
 
       result.current.mutate({
         searchQuery: "restaurant",
-        language: "fr",
         lat: 48.8566,
         lng: 2.3522,
       });
@@ -116,7 +115,6 @@ describe("useSearchPlace", () => {
           expect.objectContaining({
             body: expect.objectContaining({
               searchQuery: "restaurant",
-              language: "fr",
               lat: 48.8566,
               lng: 2.3522,
             }),

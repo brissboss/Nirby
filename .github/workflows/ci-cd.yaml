@@ -13,6 +13,8 @@ jobs:
       run_web: ${{ steps.changes.outputs.run_web }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: dorny/paths-filter@v3
         id: filter
@@ -337,9 +339,6 @@ jobs:
           script: |
             set -e
 
-            # Prune unused Docker images to prevent disk space issues
-            docker image prune -a -f
-
             # Load the new image
             docker load < /tmp/nirby-api.tar.gz
             docker tag nirby-api:${{ github.sha }} nirby-api:latest
@@ -369,6 +368,9 @@ jobs:
             export S3_SECRET_ACCESS_KEY="${{ secrets.S3_SECRET_ACCESS_KEY }}"
             export S3_PUBLIC_URL="${{ vars.S3_PUBLIC_URL }}"
             docker-compose up -d --force-recreate
+
+            # Prune unused Docker images to prevent disk space issues
+            docker image prune -a -f
 
             # Cleanup
             rm -f /tmp/nirby-api.tar.gz
@@ -429,9 +431,6 @@ jobs:
           script: |
             set -e
 
-            # Prune unused Docker images to prevent disk space issues
-            docker image prune -a -f
-
             # Load the new image
             docker load < /tmp/nirby-web.tar.gz
             docker tag nirby-web:${{ github.sha }} nirby-web:latest
@@ -443,6 +442,9 @@ jobs:
             # Restart web container
             cd /opt/nirby/staging
             docker-compose up -d --force-recreate web
+
+            # Prune unused Docker images to prevent disk space issues
+            docker image prune -a -f
 
             # Cleanup
             rm -f /tmp/nirby-web.tar.gz
@@ -499,9 +501,6 @@ jobs:
           script: |
             set -e
 
-            # Prune unused Docker images to prevent disk space issues
-            docker image prune -a -f
-
             # Load the new image
             docker load < /tmp/nirby-api.tar.gz
             docker tag nirby-api:${{ github.sha }} nirby-api:latest
@@ -531,6 +530,9 @@ jobs:
             export S3_SECRET_ACCESS_KEY="${{ secrets.S3_SECRET_ACCESS_KEY }}"
             export S3_PUBLIC_URL="${{ vars.S3_PUBLIC_URL }}"
             docker-compose up -d --force-recreate
+
+            # Prune unused Docker images to prevent disk space issues
+            docker image prune -a -f
 
             # Cleanup
             rm -f /tmp/nirby-api.tar.gz
@@ -591,9 +593,6 @@ jobs:
           script: |
             set -e
 
-            # Prune unused Docker images to prevent disk space issues
-            docker image prune -a -f
-
             # Load the new image
             docker load < /tmp/nirby-web.tar.gz
             docker tag nirby-web:${{ github.sha }} nirby-web:latest
@@ -605,6 +604,9 @@ jobs:
             # Restart web container
             cd /opt/nirby/prod
             docker-compose up -d --force-recreate web
+
+            # Prune unused Docker images to prevent disk space issues
+            docker image prune -a -f
 
             # Cleanup
             rm -f /tmp/nirby-web.tar.gz

@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 
 import { MapPanelsProvider, MapPanels } from "@/app/(app)/_components";
 import { useAuth } from "@/features/auth";
-import { BrowseContent } from "@/features/browse";
+import { BrowseContent, SearchHereButton } from "@/features/browse";
 import {
   GeolocationButton,
   MapboxMap,
@@ -51,6 +51,19 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           }}
         >
           <ZoomControls />
+        </div>
+
+        <div
+          className="fixed z-10"
+          style={{
+            right: "50%",
+            top: isMobile
+              ? "calc(2rem + env(safe-area-inset-bottom))"
+              : "calc(1rem + env(safe-area-inset-bottom))",
+            transform: "translateX(50%)",
+          }}
+        >
+          <SearchHereButton />
         </div>
 
         <MapPanelsProvider>

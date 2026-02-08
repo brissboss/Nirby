@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useLocale } from "next-intl";
 
 import { searchGooglePlaces } from "@/lib/api";
 import type { SearchGooglePlacesResponse } from "@/lib/api";
@@ -8,20 +9,20 @@ import { queryKeys } from "@/lib/api/query-keys";
 
 export type SearchPlacesVariables = {
   searchQuery: string;
-  language?: "fr" | "en";
   lat?: number;
   lng?: number;
 };
 
 export function useSearchPlace() {
   const queryClient = useQueryClient();
+  const locale = useLocale();
 
   const mutation = useMutation<SearchGooglePlacesResponse, Error, SearchPlacesVariables>({
     mutationFn: async (variables) => {
       const response = await searchGooglePlaces({
         body: {
           searchQuery: variables.searchQuery,
-          language: variables.language,
+          language: locale ?? "en",
           lat: variables.lat,
           lng: variables.lng,
         },
@@ -33,6 +34,16 @@ export function useSearchPlace() {
       queryClient.setQueryData(queryKeys.places.search(variables.searchQuery), data);
       queryClient.setQueryData(queryKeys.places.lastSearch, data);
       queryClient.setQueryData(queryKeys.places.lastSearchQuery, variables.searchQuery);
+      const places = data.places?.filter((p) => p.latitude != null && p.longitude != null);
+      if (places?.length) {
+        const centroid = {
+          lat: places.reduce((sum, p) => sum + p.latitude!, 0) / places.length,
+          lng: places.reduce((sum, p) => sum + p.longitude!, 0) / places.length,
+        };
+        queryClient.setQueryData(queryKeys.places.lastSearchLocation, centroid);
+      } else {
+        queryClient.setQueryData(queryKeys.places.lastSearchLocation, null);
+      }
     },
   });
 
@@ -54,6 +65,12 @@ export function useSearchPlace() {
     queryClient.setQueryData(queryKeys.places.lastSearchQuery, text);
   };
 
+  const lastSearchLocation = useQuery<{ lat: number; lng: number } | null>({
+    queryKey: queryKeys.places.lastSearchLocation,
+    queryFn: () => null,
+    staleTime: Infinity,
+  });
+
   const clearResults = () => {
     queryClient.setQueryData(queryKeys.places.lastSearch, { places: [] });
     queryClient.setQueryData(queryKeys.places.lastSearchQuery, "");
@@ -63,6 +80,7 @@ export function useSearchPlace() {
   return {
     ...mutation,
     data: query.data,
+    lastSearchLocation: lastSearchLocation.data,
     lastSearchQueryText: lastSearchQuery.data,
     setLastSearchQueryText,
     clearResults,
