@@ -1,32 +1,18 @@
 "use client";
 
-import { useState, useEffect } from "react";
-
 import { useMapPanels } from "@/app/(app)/_components";
 import { Card, CardContent, CardHeader, Drawer, DrawerContent, DrawerTitle } from "@/components/ui";
 import { useMediaQuery } from "@/hooks/use-media-query";
 
-interface MapPannelsProps {
+interface MapPanelsProps {
   isDetailRoute: boolean;
   browseContent: React.ReactNode;
   children: React.ReactNode;
 }
 
-const snapPoints = ["190px", 1];
-
-export function MapPannels({ isDetailRoute, browseContent, children }: MapPannelsProps) {
+export function MapPanels({ isDetailRoute, browseContent, children }: MapPanelsProps) {
   const isMobile = useMediaQuery("(max-width: 768px)");
-  const { setIsDrawerExpanded } = useMapPanels();
-
-  const [snap, setSnap] = useState<number | string | null>(snapPoints[0]);
-
-  useEffect(() => {
-    if (snap === 1) {
-      setIsDrawerExpanded(true);
-    } else {
-      setIsDrawerExpanded(false);
-    }
-  }, [snap, setIsDrawerExpanded]);
+  const { snap, setSnap, snapPoints } = useMapPanels();
 
   if (isMobile) {
     return (
@@ -39,11 +25,12 @@ export function MapPannels({ isDetailRoute, browseContent, children }: MapPannel
           modal={false}
           open={true}
           dismissible={false}
+          repositionInputs={false}
         >
           <DrawerContent
-            className="h-full"
+            className="h-full overflow-hidden flex flex-col"
             style={{
-              maxHeight: "90dvh",
+              maxHeight: "90vh",
               paddingBottom: "max(env(safe-area-inset-bottom), 0px)",
             }}
           >
@@ -67,7 +54,7 @@ export function MapPannels({ isDetailRoute, browseContent, children }: MapPannel
     >
       <Card className="w-[50px] md:w-[380px] h-full bg-background border border-border rounded-xl shadow-lg overflow-hidden z-10 block p-0">
         <CardHeader className="hidden" />
-        <CardContent className="p-0">{browseContent}</CardContent>
+        <CardContent className="p-0 h-full">{browseContent}</CardContent>
       </Card>
 
       {isDetailRoute ? (

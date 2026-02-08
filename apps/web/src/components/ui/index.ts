@@ -16,3 +16,4 @@ export * from "./skeleton";
 export * from "./sonner";
 export * from "./tabs";
 export * from "./toaster-wrapper";
+export * from "./item";
