@@ -3,6 +3,7 @@ import multer from "multer";
 
 import { requireAuth } from "../auth/middleware";
 import { prisma } from "../db";
+import { canEditPoi } from "../poi/poi-policy";
 import { ErrorCodes } from "../utils/error-codes";
 import { formatError } from "../utils/errors";
 
@@ -240,7 +241,7 @@ uploadRouter.post("/poi-photo", requireAuth, upload.single("file"), async (req, 
         return res.status(404).json(formatError(ErrorCodes.POI_NOT_FOUND, "POI not found"));
       }
 
-      if (poi.createdBy !== req.user!.id) {
+      if (!canEditPoi(poi, req.user!.id)) {
         return res
           .status(403)
           .json(formatError(ErrorCodes.POI_ACCESS_DENIED, "Access denied to this POI"));

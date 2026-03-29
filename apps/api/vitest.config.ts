@@ -4,7 +4,7 @@ export default defineConfig({
   test: {
     globals: true,
     environment: "node",
-    include: ["__test__/**/*.test.ts"],
+    include: ["__test__/**/*.test.ts", "src/**/*.test.ts"],
     fileParallelism: false,
     env: {
       DATABASE_URL: "postgresql://nirby:nirby@localhost:5432/nirby_test",
@@ -24,7 +24,7 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       reporter: ["text", "json", "html"],
-      exclude: ["node_modules/", "dist/", "__test__/", "prisma/"],
+      exclude: ["node_modules/", "dist/", "__test__/", "prisma/", "src/**/*.test.ts"],
       thresholds: {
         lines: 70,
         functions: 70,

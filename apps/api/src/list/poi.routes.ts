@@ -7,6 +7,7 @@ import { getOrFetchPlace } from "../google-place/service";
 import { ErrorCodes } from "../utils/error-codes";
 import { formatError, handleZodError } from "../utils/errors";
 
+import { canUpdateList, canQueryNearbyListPois, hasListAccess } from "./list-policy";
 import { checkListAccess } from "./utils";
 
 export const listPoiRouter = Router();
@@ -114,11 +115,11 @@ listPoiRouter.post("/:listId/poi", requireAuth, async (req, res) => {
 
     const role = await checkListAccess(list, req.user!.id);
 
-    if (!role) {
+    if (!hasListAccess(role)) {
       return res.status(404).json(formatError(ErrorCodes.LIST_NOT_FOUND, "List not found"));
     }
 
-    if (!["EDITOR", "ADMIN", "OWNER"].includes(role)) {
+    if (!canUpdateList(role)) {
       return res.status(403).json(formatError(ErrorCodes.LIST_ACCESS_DENIED, "Access denied"));
     }
 
@@ -244,7 +245,7 @@ listPoiRouter.get("/:listId/pois", requireAuth, async (req, res) => {
 
     const role = await checkListAccess(list, req.user!.id);
 
-    if (!role) {
+    if (!hasListAccess(role)) {
       return res.status(404).json(formatError(ErrorCodes.LIST_NOT_FOUND, "List not found"));
     }
 
@@ -356,11 +357,11 @@ listPoiRouter.get("/:listId/poi/nearby", requireAuth, async (req, res) => {
 
     const role = await checkListAccess(list, req.user!.id);
 
-    if (!role) {
+    if (!hasListAccess(role)) {
       return res.status(404).json(formatError(ErrorCodes.LIST_NOT_FOUND, "List not found"));
     }
 
-    if (!["EDITOR", "ADMIN", "OWNER", "VIEWER"].includes(role)) {
+    if (!canQueryNearbyListPois(role)) {
       return res.status(403).json(formatError(ErrorCodes.LIST_ACCESS_DENIED, "Access denied"));
     }
 
@@ -482,11 +483,11 @@ listPoiRouter.delete("/:listId/poi/:savedPoiId", requireAuth, async (req, res) =
 
     const role = await checkListAccess(list, req.user!.id);
 
-    if (!role) {
+    if (!hasListAccess(role)) {
       return res.status(404).json(formatError(ErrorCodes.LIST_NOT_FOUND, "List not found"));
     }
 
-    if (!["EDITOR", "ADMIN", "OWNER"].includes(role)) {
+    if (!canUpdateList(role)) {
       return res.status(403).json(formatError(ErrorCodes.LIST_ACCESS_DENIED, "Access denied"));
     }
 

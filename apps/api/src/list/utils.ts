@@ -2,14 +2,16 @@ import { PoiList } from "@prisma/client";
 
 import { prisma } from "../db";
 
+import type { ListMemberRole } from "./list-policy";
+
 /**
  * Check user access to a list and return their role
- * @returns "OWNER" | "EDITOR" | "VIEWER" | "ADMIN" | null
+ * @returns ListMemberRole | null
  */
 export async function checkListAccess(
   list: PoiList,
   userId: string
-): Promise<"OWNER" | "EDITOR" | "VIEWER" | "ADMIN" | null> {
+): Promise<ListMemberRole | null> {
   // Owner always has access
   if (list.createdBy === userId) {
     return "OWNER";

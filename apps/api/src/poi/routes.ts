@@ -7,6 +7,8 @@ import { POI_CATEGORIES, SUPPORTED_LANGUAGES } from "../types";
 import { ErrorCodes } from "../utils/error-codes";
 import { formatError, handleZodError } from "../utils/errors";
 
+import { canDeletePoi, canEditPoi, canReadPoi } from "./poi-policy";
+
 export const poiRouter = Router();
 
 const openingHoursPeriodSchema = z.object({
@@ -545,7 +547,7 @@ poiRouter.get("/:id", requireAuth, async (req, res) => {
       return res.status(404).json(formatError(ErrorCodes.POI_NOT_FOUND, "POI not found"));
     }
 
-    if (poi.createdBy !== req.user!.id && poi.visibility !== "PUBLIC") {
+    if (!canReadPoi(poi, req.user!.id)) {
       return res.status(403).json(formatError(ErrorCodes.POI_ACCESS_DENIED, "Access denied"));
     }
 
@@ -698,7 +700,7 @@ poiRouter.put("/:id", requireAuth, async (req, res) => {
       return res.status(404).json(formatError(ErrorCodes.POI_NOT_FOUND, "POI not found"));
     }
 
-    if (poi.createdBy !== req.user!.id) {
+    if (!canEditPoi(poi, req.user!.id)) {
       return res.status(403).json(formatError(ErrorCodes.POI_ACCESS_DENIED, "Access denied"));
     }
 
@@ -788,7 +790,7 @@ poiRouter.delete("/:id", requireAuth, async (req, res) => {
       return res.status(404).json(formatError(ErrorCodes.POI_NOT_FOUND, "POI not found"));
     }
 
-    if (poi.createdBy !== req.user!.id) {
+    if (!canDeletePoi(poi, req.user!.id)) {
       return res.status(403).json(formatError(ErrorCodes.POI_ACCESS_DENIED, "Access denied"));
     }
 
