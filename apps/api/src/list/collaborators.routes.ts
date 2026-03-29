@@ -11,6 +11,7 @@ import { SUPPORTED_LANGUAGES } from "../types";
 import { ErrorCodes } from "../utils/error-codes";
 import { formatError, handleZodError } from "../utils/errors";
 
+import { canManageCollaborators, hasListAccess, isListOwner, isListOwnerRole } from "./list-policy";
 import { checkListAccess } from "./utils";
 
 export const listCollaboratorsRouter = Router();
@@ -100,7 +101,7 @@ listCollaboratorsRouter.get("/:listId/collaborators", requireAuth, async (req, r
     }
 
     const role = await checkListAccess(list, req.user!.id);
-    if (!role) {
+    if (!hasListAccess(role)) {
       return res.status(404).json(formatError(ErrorCodes.LIST_NOT_FOUND, "List not found"));
     }
 
@@ -194,11 +195,11 @@ listCollaboratorsRouter.delete("/:listId/collaborators/me", requireAuth, async (
     }
 
     const role = await checkListAccess(list, req.user!.id);
-    if (!role) {
+    if (!hasListAccess(role)) {
       return res.status(404).json(formatError(ErrorCodes.LIST_NOT_FOUND, "List not found"));
     }
 
-    if (role === "OWNER") {
+    if (isListOwnerRole(role)) {
       return res
         .status(400)
         .json(formatError(ErrorCodes.LIST_OWNER_CANNOT_LEAVE, "Owner cannot leave the list"));
@@ -295,11 +296,11 @@ listCollaboratorsRouter.put(
       }
 
       const userRole = await checkListAccess(list, req.user!.id);
-      if (!userRole) {
+      if (!hasListAccess(userRole)) {
         return res.status(404).json(formatError(ErrorCodes.LIST_NOT_FOUND, "List not found"));
       }
 
-      if (!["ADMIN", "OWNER"].includes(userRole)) {
+      if (!canManageCollaborators(userRole)) {
         return res.status(403).json(formatError(ErrorCodes.LIST_ACCESS_DENIED, "Access denied"));
       }
 
@@ -396,11 +397,11 @@ listCollaboratorsRouter.delete(
       }
 
       const role = await checkListAccess(list, req.user!.id);
-      if (!role) {
+      if (!hasListAccess(role)) {
         return res.status(404).json(formatError(ErrorCodes.LIST_NOT_FOUND, "List not found"));
       }
 
-      if (!["ADMIN", "OWNER"].includes(role)) {
+      if (!canManageCollaborators(role)) {
         return res.status(403).json(formatError(ErrorCodes.LIST_ACCESS_DENIED, "Access denied"));
       }
 
@@ -508,11 +509,11 @@ listCollaboratorsRouter.post("/:listId/collaborators/invite", requireAuth, async
     }
 
     const ownerRole = await checkListAccess(list, req.user!.id);
-    if (!ownerRole) {
+    if (!hasListAccess(ownerRole)) {
       return res.status(404).json(formatError(ErrorCodes.LIST_NOT_FOUND, "List not found"));
     }
 
-    if (!["ADMIN", "OWNER"].includes(ownerRole)) {
+    if (!canManageCollaborators(ownerRole)) {
       return res.status(403).json(formatError(ErrorCodes.LIST_ACCESS_DENIED, "Access denied"));
     }
 
@@ -667,7 +668,7 @@ listCollaboratorsRouter.post("/:listId/collaborators/join", requireAuth, async (
       return res.status(400).json(formatError(ErrorCodes.SHARE_TOKEN_INVALID, "Invalid token"));
     }
 
-    if (list.createdBy === req.user!.id) {
+    if (isListOwner(list.createdBy, req.user!.id)) {
       return res
         .status(400)
         .json(

@@ -8,6 +8,7 @@ import { env } from "../env";
 import { ErrorCodes } from "../utils/error-codes";
 import { formatError } from "../utils/errors";
 
+import { canManageShareAndEditLinks, hasListAccess, isListOwner } from "./list-policy";
 import { checkListAccess } from "./utils";
 
 export const listShareRouter = Router();
@@ -76,11 +77,11 @@ listShareRouter.post("/:listId/share", requireAuth, async (req, res) => {
 
     const role = await checkListAccess(list, req.user!.id);
 
-    if (!role) {
+    if (!hasListAccess(role)) {
       return res.status(404).json(formatError(ErrorCodes.LIST_NOT_FOUND, "List not found"));
     }
 
-    if (!["ADMIN", "OWNER"].includes(role)) {
+    if (!canManageShareAndEditLinks(role)) {
       return res.status(403).json(formatError(ErrorCodes.LIST_ACCESS_DENIED, "Access denied"));
     }
 
@@ -161,11 +162,11 @@ listShareRouter.delete("/:listId/share", requireAuth, async (req, res) => {
 
     const role = await checkListAccess(list, req.user!.id);
 
-    if (!role) {
+    if (!hasListAccess(role)) {
       return res.status(404).json(formatError(ErrorCodes.LIST_NOT_FOUND, "List not found"));
     }
 
-    if (!["ADMIN", "OWNER"].includes(role)) {
+    if (!canManageShareAndEditLinks(role)) {
       return res.status(403).json(formatError(ErrorCodes.LIST_ACCESS_DENIED, "Access denied"));
     }
 
@@ -245,11 +246,11 @@ listShareRouter.post("/:listId/edit-link", requireAuth, async (req, res) => {
 
     const role = await checkListAccess(list, req.user!.id);
 
-    if (!role) {
+    if (!hasListAccess(role)) {
       return res.status(404).json(formatError(ErrorCodes.LIST_NOT_FOUND, "List not found"));
     }
 
-    if (!["ADMIN", "OWNER"].includes(role)) {
+    if (!canManageShareAndEditLinks(role)) {
       return res.status(403).json(formatError(ErrorCodes.LIST_ACCESS_DENIED, "Access denied"));
     }
 
@@ -327,11 +328,11 @@ listShareRouter.delete("/:listId/edit-link", requireAuth, async (req, res) => {
 
     const role = await checkListAccess(list, req.user!.id);
 
-    if (!role) {
+    if (!hasListAccess(role)) {
       return res.status(404).json(formatError(ErrorCodes.LIST_NOT_FOUND, "List not found"));
     }
 
-    if (!["ADMIN", "OWNER"].includes(role)) {
+    if (!canManageShareAndEditLinks(role)) {
       return res.status(403).json(formatError(ErrorCodes.LIST_ACCESS_DENIED, "Access denied"));
     }
 
@@ -422,7 +423,7 @@ listShareRouter.post("/join", requireAuth, async (req, res) => {
         .json(formatError(ErrorCodes.LIST_EDIT_TOKEN_EXPIRED, "Edit token expired"));
     }
 
-    if (list.createdBy === req.user!.id) {
+    if (isListOwner(list.createdBy, req.user!.id)) {
       return res.json({
         message: "You are the owner of this list.",
         list,

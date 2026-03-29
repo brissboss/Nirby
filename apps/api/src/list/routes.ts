@@ -7,6 +7,7 @@ import { prisma } from "../db";
 import { ErrorCodes } from "../utils/error-codes";
 import { formatError, handleZodError } from "../utils/errors";
 
+import { canDeleteList, canUpdateList, hasListAccess } from "./list-policy";
 import { checkListAccess } from "./utils";
 
 export const listRouter = Router();
@@ -371,8 +372,7 @@ listRouter.get("/:listId", requireAuth, async (req, res) => {
     }
 
     const role = await checkListAccess(list, req.user!.id);
-
-    if (!role) {
+    if (!hasListAccess(role)) {
       return res.status(404).json(formatError(ErrorCodes.LIST_NOT_FOUND, "List not found"));
     }
 
@@ -463,12 +463,11 @@ listRouter.put("/:listId", requireAuth, async (req, res) => {
     }
 
     const role = await checkListAccess(list, req.user!.id);
-
-    if (!role) {
+    if (!hasListAccess(role)) {
       return res.status(404).json(formatError(ErrorCodes.LIST_NOT_FOUND, "List not found"));
     }
 
-    if (!["EDITOR", "ADMIN", "OWNER"].includes(role)) {
+    if (!canUpdateList(role)) {
       return res.status(403).json(formatError(ErrorCodes.LIST_ACCESS_DENIED, "Access denied"));
     }
 
@@ -549,12 +548,11 @@ listRouter.delete("/:listId", requireAuth, async (req, res) => {
     }
 
     const role = await checkListAccess(list, req.user!.id);
-
-    if (!role) {
+    if (!hasListAccess(role)) {
       return res.status(404).json(formatError(ErrorCodes.LIST_NOT_FOUND, "List not found"));
     }
 
-    if (!["ADMIN", "OWNER"].includes(role)) {
+    if (!canDeleteList(role)) {
       return res.status(403).json(formatError(ErrorCodes.LIST_ACCESS_DENIED, "Access denied"));
     }
 
