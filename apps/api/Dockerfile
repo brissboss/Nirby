@@ -23,6 +23,7 @@ WORKDIR /repo
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
 COPY apps/api/package.json ./apps/api/
 COPY apps/api/prisma ./apps/api/prisma
+COPY apps/api/prisma.config.ts ./apps/api/prisma.config.ts
 RUN pnpm install --frozen-lockfile --prod --ignore-scripts
 RUN pnpm -C apps/api exec prisma generate
 
@@ -41,6 +42,7 @@ COPY --from=prod-deps /repo/apps/api/package.json ./package.json
 COPY --from=prod-deps /repo/apps/api/node_modules ./node_modules
 COPY --from=build /repo/apps/api/dist ./dist
 COPY --from=build /repo/apps/api/prisma ./prisma
+COPY --from=prod-deps /repo/apps/api/prisma.config.ts ./prisma.config.ts
 
 EXPOSE 4000
 CMD ["node", "dist/index.js"]

@@ -351,6 +351,7 @@ jobs:
             cd /opt/nirby/staging
             export JWT_SECRET="${{ secrets.JWT_SECRET }}"
             export DB_PASSWORD="${{ secrets.DB_PASSWORD }}"
+            export DB_APP_PASSWORD="${{ secrets.DB_APP_PASSWORD }}"
             export RESEND_API_KEY="${{ secrets.RESEND_API_KEY }}"
             export GOOGLE_PLACES_API_KEY="${{ secrets.GOOGLE_PLACES_API_KEY }}"
             export FRONTEND_URL="${{ vars.FRONTEND_URL }}"
@@ -513,6 +514,7 @@ jobs:
             cd /opt/nirby/prod
             export JWT_SECRET="${{ secrets.JWT_SECRET }}"
             export DB_PASSWORD="${{ secrets.DB_PASSWORD }}"
+            export DB_APP_PASSWORD="${{ secrets.DB_APP_PASSWORD }}"
             export RESEND_API_KEY="${{ secrets.RESEND_API_KEY }}"
             export GOOGLE_PLACES_API_KEY="${{ secrets.GOOGLE_PLACES_API_KEY }}"
             export FRONTEND_URL="${{ vars.FRONTEND_URL }}"
