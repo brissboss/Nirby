@@ -48,7 +48,7 @@ cp apps/api/.env.example apps/api/.env
 
 Renseignez au minimum :
 
-- **Base de données et Redis** : `DATABASE_URL="postgresql://nirby:nirby@localhost:5432/nirby"`, `REDIS_URL="redis://localhost:6379"`
+- **Base de données et Redis** : `DATABASE_URL="postgresql://nirby:nirby@localhost:5432/nirby"`, `REDIS_URL="redis://localhost:6379"`. Pour la Prisma CLI (migrations), voir [Base de données (Prisma)](#base-de-données-prisma) — en dev, une seule `DATABASE_URL` suffit en général.
 - **Serveur** : `PORT=4000`, `LOG_LEVEL=info`
 - **Auth** : `JWT_SECRET=` (générez avec `openssl rand -base64 64`)
 - **Stockage (Minio)** : `S3_BUCKET=nirby-uploads-dev`, `S3_REGION=eu-west-3`, `S3_ACCESS_KEY_ID=nirbyadmin`, `S3_SECRET_ACCESS_KEY=nirbyadmin123`, `S3_ENDPOINT=http://localhost:9000`, `S3_PUBLIC_URL=http://localhost:9000/nirby-uploads-dev`
@@ -70,10 +70,6 @@ Puis `docker-compose up --build`. Sans cette variable, le front se build et tour
 ---
 
 ## 4. Lancer l’application
-
-Deux options pour faire tourner l’app **sur ta machine** : **mode dev** (pnpm + Docker pour l’infra) ou **mode tout en Docker** (tout en conteneurs, sans pnpm).
-
----
 
 ### Mode dev — API et front avec pnpm, le reste en Docker
 
@@ -106,10 +102,6 @@ pnpm dev
 - **Front** : http://localhost:3000
 - **API** : http://localhost:4000
 
-Ouvrez http://localhost:3000 dans le navigateur.
-
----
-
 ### Mode local — tout en Docker (API et front inclus)
 
 Tous les services tournent dans Docker sur ta machine : DB, Redis, Minio, API et front. Aucun `pnpm` ni `.env` dans `apps/api` n’est nécessaire pour faire tourner l’appli. Utile pour une démo ou tester la stack complète sans lancer Node en local.
@@ -121,7 +113,7 @@ cd infra
 docker-compose up -d --build
 ```
 
-Cela lance : PostgreSQL (PostGIS), Redis, Minio, mc-init, Adminer, **l’API** (migrations appliquées au démarrage) et le **front**. Le premier `--build` peut prendre quelques minutes (build des images API et web).
+Cela lance notamment : PostgreSQL (PostGIS), Redis, Minio, mc-init, Adminer, **l’API** (migrations au démarrage) et le **front**. Le premier `--build` peut prendre quelques minutes.
 
 2. **Accéder à l’application** :
 
@@ -130,7 +122,7 @@ Cela lance : PostgreSQL (PostGIS), Redis, Minio, mc-init, Adminer, **l’API** (
 
 Pour reconstruire après des changements de code : `docker-compose up -d --build`.
 
-**Variables d’environnement** : Docker Compose charge automatiquement un fichier `infra/.env` s’il existe. Sans ce fichier, des valeurs par défaut permettent de lancer l’appli (JWT et Resend factices, Minio en local). Pour configurer les vrais services (Google Places, Resend, S3, etc.) :
+**Variables d’environnement** : Docker Compose charge automatiquement un fichier `infra/.env` s’il existe. Sans ce fichier, des valeurs par défaut permettent de lancer l’appli (JWT et Resend factices, Minio en local). Pour configurer les vrais services :
 
 1. Copiez le modèle : `cp infra/.env.example infra/.env`
 2. Éditez `infra/.env` et renseignez au moins `JWT_SECRET` et, si besoin, `RESEND_API_KEY`, `GOOGLE_PLACES_API_KEY`, `FRONTEND_URL`, etc.
@@ -164,17 +156,36 @@ Le build du front peut utiliser `NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN` (et optionnell
 
 ## Déploiement (staging / production)
 
-Le déploiement en **staging** et en **production** est géré par la **CI/CD** (voir [.github/workflows/ci-cd.yaml](.github/workflows/ci-cd.yaml)). Un push sur la branche `staging` ou `main` déclenche le build des images Docker, leur envoi sur le serveur, puis l’exécution de **`infra/staging/docker-compose.yaml`** ou **`infra/prod/docker-compose.yaml`** sur le serveur. Les variables d’environnement (secrets, URLs, etc.) sont injectées par GitHub Actions.
+Le déploiement est géré par la **CI/CD** ([.github/workflows/ci-cd.yaml](.github/workflows/ci-cd.yaml)) : build des images, copie sur le serveur, puis **`infra/staging/docker-compose.yaml`** ou **`infra/prod/docker-compose.yaml`**.
 
-Le fichier **`infra/docker-compose.yaml`** à la racine de `infra/` sert uniquement au **lancement local** (mode « tout en Docker » ci-dessus) ; il n’est pas utilisé par la CI pour le déploiement réel.
+**Secrets GitHub utiles pour PostgreSQL** (staging / prod) :
+
+- **`DB_PASSWORD`** — mot de passe de l’utilisateur `nirby` (migrations Prisma, rôle « complet » côté base).
+- **`DB_APP_PASSWORD`** — mot de passe du rôle applicatif **`nirby_app`** (connexion de l’API : `DATABASE_URL` dans le compose).
+
+Au **premier** démarrage avec un **volume PostgreSQL vide**, les scripts dans `infra/staging/db-init/` et `infra/prod/db-init/` (montés en `docker-entrypoint-initdb.d`) créent `nirby_app` et configurent les privilèges par défaut. Si une base a été créée **avant** cette logique, il faut soit **recréer le volume** (`docker compose down -v`, perte des données), soit exécuter une fois l’équivalent SQL sur le serveur.
+
+**Fichier local** : `infra/docker-compose.yaml` sert **uniquement** au lancement **sur ta machine** ; il n’est pas le fichier utilisé par la CI pour staging/prod.
 
 ---
 
 ## Base de données (Prisma)
 
-- **Créer une migration** : `cd apps/api && pnpm prisma:migrate`
+Le projet utilise **Prisma ORM 7** :
+
+- **`apps/api/prisma/schema.prisma`** — modèle de données ; le bloc `datasource` n’y contient **pas** l’URL de connexion.
+- **`apps/api/prisma.config.ts`** — URL pour la CLI : `MIGRATE_DATABASE_URL`, ou à défaut **`DATABASE_URL`**.
+- **`apps/api/src/db.ts`** — client runtime avec **`@prisma/adapter-pg`** et **`DATABASE_URL`**.
+
+**En développement local**, un seul utilisateur `nirby` et une seule `DATABASE_URL` dans `apps/api/.env` suffisent habituellement.
+
+**En staging / production**, le compose distingue **`MIGRATE_DATABASE_URL`** (utilisateur `nirby`) et **`DATABASE_URL`** (utilisateur `nirby_app`) pour appliquer le principe de moindre privilège côté PostgreSQL.
+
+Commandes usuelles :
+
+- **Créer / appliquer des migrations** : `cd apps/api && pnpm prisma:migrate`
 - **Régénérer le client** : `cd apps/api && pnpm prisma:generate`
-- **Ouvrir Prisma Studio** : `cd apps/api && npx prisma studio`
+- **Prisma Studio** : `cd apps/api && npx prisma studio`
 
 ---
 
@@ -183,16 +194,17 @@ Le fichier **`infra/docker-compose.yaml`** à la racine de `infra/` sert uniquem
 ```
 .
 ├── apps/
-│   ├── api/          # API Express (TypeScript, Prisma)
-│   │   ├── prisma/   # Schéma et migrations
-│   │   └── src/      # Code source
-│   └── web/          # Front Next.js (React, Tailwind, shadcn/ui)
+│   ├── api/              # API Express (TypeScript, Prisma)
+│   │   ├── prisma/       # Schéma et migrations
+│   │   ├── prisma.config.ts
+│   │   └── src/
+│   └── web/              # Front Next.js
 ├── infra/
-│   ├── docker-compose.yaml   # Lancement local tout en Docker (DB, Redis, Minio, API, Web)
-│   ├── staging/              # Utilisé par la CI pour le déploiement staging
-│   └── prod/                 # Utilisé par la CI pour le déploiement production
+│   ├── docker-compose.yaml   # Local « tout en Docker »
+│   ├── staging/              # Déploiement staging (CI)
+│   └── prod/                 # Déploiement production (CI)
 ├── docs/
-└── pnpm-workspace.yaml      # Monorepo (pnpm + Turborepo)
+└── pnpm-workspace.yaml
 ```
 
 ---
@@ -202,19 +214,19 @@ Le fichier **`infra/docker-compose.yaml`** à la racine de `infra/` sert uniquem
 **À la racine :**
 
 - `pnpm build` — Build de tous les packages
-- `pnpm dev` — Lance l’API et le front en mode développement
+- `pnpm dev` — API + front en développement
 - `pnpm lint` — Lint
 - `pnpm test` — Tests
 
 **API (`apps/api`) :**
 
-- `pnpm dev` — API en mode développement (hot-reload)
-- `pnpm prisma:migrate` — Créer / appliquer les migrations
-- `pnpm prisma:generate` — Générer le client Prisma
+- `pnpm dev` — API en hot-reload
+- `pnpm prisma:migrate` — Migrations
+- `pnpm prisma:generate` — Client Prisma
 
 **Web (`apps/web`) :**
 
-- `pnpm dev` — Lancer uniquement le front (Next.js)
+- `pnpm dev` — Front Next.js seul
 
 ---
 
