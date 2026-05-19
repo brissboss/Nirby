@@ -8,9 +8,8 @@ describe("avatarFileSchema", () => {
       type: "image/jpeg",
     });
 
-    // Mock file.size to be less than 2MB
     Object.defineProperty(file, "size", {
-      value: 1024 * 1024, // 1MB
+      value: 1024 * 1024,
       writable: false,
     });
     const result = avatarFileSchema.safeParse(file);
@@ -23,7 +22,7 @@ describe("avatarFileSchema", () => {
     });
 
     Object.defineProperty(file, "size", {
-      value: 1024 * 1024, // 1MB
+      value: 1024 * 1024,
       writable: false,
     });
     const result = avatarFileSchema.safeParse(file);
@@ -36,7 +35,7 @@ describe("avatarFileSchema", () => {
     });
 
     Object.defineProperty(file, "size", {
-      value: 1024 * 1024, // 1MB
+      value: 1024 * 1024,
       writable: false,
     });
     const result = avatarFileSchema.safeParse(file);
@@ -49,7 +48,7 @@ describe("avatarFileSchema", () => {
     });
 
     Object.defineProperty(file, "size", {
-      value: 2 * 1024 * 1024 + 1, // 2MB + 1 byte
+      value: 2 * 1024 * 1024 + 1,
       writable: false,
     });
     const result = avatarFileSchema.safeParse(file);
@@ -81,7 +80,7 @@ describe("avatarFileSchema", () => {
     });
 
     Object.defineProperty(file, "size", {
-      value: 1024 * 1024, // 1MB
+      value: 1024 * 1024,
       writable: false,
     });
     const result = avatarFileSchema.safeParse(file);
