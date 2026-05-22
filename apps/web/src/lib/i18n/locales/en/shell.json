@@ -1,0 +1,19 @@
+{
+  "header": {
+    "tagline": "Your places, organized on the map.",
+    "badge": "Base UI"
+  },
+  "search": {
+    "placeholder": "Search for a place, a list...",
+    "hint": "Cafés, museums, restaurants",
+    "filtersAriaLabel": "Filters"
+  },
+  "mapMode": {
+    "showMap": "View map"
+  },
+  "tabs": {
+    "explore": "Explore",
+    "lists": "Lists",
+    "profile": "Profile"
+  }
+}

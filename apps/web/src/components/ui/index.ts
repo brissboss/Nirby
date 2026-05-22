@@ -15,5 +15,6 @@ export * from "./sheet";
 export * from "./skeleton";
 export * from "./sonner";
 export * from "./tabs";
+export * from "./textarea";
 export * from "./toaster-wrapper";
 export * from "./item";
