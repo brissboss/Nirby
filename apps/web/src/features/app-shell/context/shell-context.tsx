@@ -25,10 +25,12 @@ export function ShellProvider({ children }: { children: ReactNode }) {
 
   const setViewAndExitMapMode = useCallback(
     (next: ShellView) => {
+      if (mapMode) {
+        setMapModeState(false);
+      }
       setView(next);
-      setMapMode(false);
     },
-    [setView, setMapMode]
+    [mapMode, setView]
   );
 
   const value = useMemo(
