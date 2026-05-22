@@ -1,3 +1,5 @@
+"use client";
+
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { Eye, EyeOff } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -18,8 +20,16 @@ import {
 } from "@/components/ui";
 import { useAuth, type ChangePasswordFormData, createChangePasswordSchema } from "@/features/auth";
 import { useErrorMessage } from "@/hooks/use-error-message";
+import { cn } from "@/lib/utils";
 
-export function ChangePasswordContent({ closeDialog }: { closeDialog: () => void }) {
+export function ChangePasswordContent({
+  closeDialog,
+  embedded = false,
+}: {
+  closeDialog: () => void;
+  embedded?: boolean;
+}) {
+  const tProfile = useTranslations("profile");
   const t = useTranslations();
   const getErrorMessage = useErrorMessage();
   const { changePassword } = useAuth();
@@ -49,18 +59,23 @@ export function ChangePasswordContent({ closeDialog }: { closeDialog: () => void
   async function onSubmit(values: ChangePasswordFormData) {
     try {
       await changePassword(values.oldPassword, values.newPassword);
-      toast.success(t("auth.profile.changePassword.success"));
+      toast.success(tProfile("changePassword.success"));
       closeDialog();
     } catch (error) {
-      toast.error(t("auth.profile.changePassword.error"), {
+      toast.error(tProfile("changePassword.error"), {
         description: getErrorMessage(error),
       });
     }
   }
 
   return (
-    <div className="pt-4">
-      <div className="grid gap-6 py-4 md:py-0 mb-[env(safe-area-inset-bottom,0.5rem)]">
+    <div className={cn(!embedded && "pt-4")}>
+      <div
+        className={cn(
+          "grid gap-6",
+          !embedded && "py-4 md:py-0 mb-[env(safe-area-inset-bottom,0.5rem)]"
+        )}
+      >
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4">
             <FormField
@@ -69,7 +84,7 @@ export function ChangePasswordContent({ closeDialog }: { closeDialog: () => void
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-md lg:text-sm">
-                    {t("auth.profile.changePassword.oldPassword")}
+                    {tProfile("changePassword.oldPassword")}
                   </FormLabel>
                   <FormControl>
                     <div className="relative">
@@ -77,7 +92,7 @@ export function ChangePasswordContent({ closeDialog }: { closeDialog: () => void
                         type={showPassword ? "text" : "password"}
                         placeholder="••••••••"
                         {...field}
-                        className="px-4 lg:px-3 pr-12 lg:pr-10"
+                        className="pr-12 lg:pr-10"
                       />
                       <Button
                         type="button"
@@ -109,7 +124,7 @@ export function ChangePasswordContent({ closeDialog }: { closeDialog: () => void
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-md lg:text-sm">
-                    {t("auth.profile.changePassword.newPassword")}
+                    {tProfile("changePassword.newPassword")}
                   </FormLabel>
                   <FormControl>
                     <div className="relative">
@@ -117,7 +132,7 @@ export function ChangePasswordContent({ closeDialog }: { closeDialog: () => void
                         type={showPassword ? "text" : "password"}
                         placeholder="••••••••"
                         {...field}
-                        className="px-4 lg:px-3 pr-12 lg:pr-10"
+                        className="pr-12 lg:pr-10"
                       />
                       <Button
                         type="button"
@@ -144,24 +159,26 @@ export function ChangePasswordContent({ closeDialog }: { closeDialog: () => void
               )}
             />
 
-            <Separator className="my-4 md:my-2" />
+            {!embedded && <Separator className="my-4 md:my-2" />}
 
-            <div className="flex flex-col md:flex-row justify-end gap-2">
-              <Button
-                variant="outline"
-                type="button"
-                onClick={closeDialog}
-                className="font-semibold"
-              >
-                {t("common.buttons.cancel")}
-              </Button>
+            <div
+              className={cn(
+                "flex gap-2",
+                embedded ? "flex-col" : "flex-col md:flex-row justify-end"
+              )}
+            >
+              {!embedded && (
+                <Button variant="outline" type="button" onClick={closeDialog}>
+                  {t("common.buttons.cancel")}
+                </Button>
+              )}
               <Button
                 type="submit"
                 disabled={form.formState.isSubmitting}
                 loading={form.formState.isSubmitting}
-                className="font-semibold"
+                className={cn(embedded && "w-full")}
               >
-                {t("auth.profile.changePassword.save")}
+                {tProfile("changePassword.save")}
               </Button>
             </div>
           </form>

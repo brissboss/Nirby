@@ -1,0 +1,56 @@
+{
+  "hub": {
+    "title": "Your Nirby space",
+    "subtitle": "Profile, preferences and activity."
+  },
+  "fields": {
+    "name": "Name",
+    "description": "Description",
+    "save": "Save"
+  },
+  "sections": {
+    "info": "My information",
+    "preferences": "Preferences",
+    "privacy": "Privacy"
+  },
+  "update": {
+    "success": "Profile updated successfully",
+    "error": "Error when updating profile"
+  },
+  "avatar": {
+    "title": "Profile photo",
+    "hint": "Tap to change your photo",
+    "formats": "JPEG, PNG or WebP · max. 2 MB",
+    "uploadSuccess": "Avatar uploaded successfully",
+    "uploadError": "Error when uploading avatar"
+  },
+  "info": {
+    "title": "My information",
+    "description": "Edit your name, description and avatar."
+  },
+  "preferences": {
+    "title": "Preferences",
+    "description": "Display theme and app language."
+  },
+  "privacy": {
+    "title": "Privacy",
+    "description": "Manage your session and sensitive settings.",
+    "comingSoon": "More privacy options are coming soon."
+  },
+  "changePassword": {
+    "title": "Change password",
+    "description": "Enter your current password and your new password",
+    "oldPassword": "Current password",
+    "newPassword": "New password",
+    "save": "Save",
+    "success": "Password changed successfully",
+    "error": "Error when changing password"
+  },
+  "deleteAccount": {
+    "title": "Delete account",
+    "description": "Enter your current password to delete your account",
+    "success": "Account deleted successfully",
+    "error": "Error when deleting account",
+    "delete": "Delete account"
+  }
+}

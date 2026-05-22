@@ -1,39 +1,27 @@
 "use client";
 
-import { useAuth } from "@/features/auth";
-import { GeolocationButton, MapboxMap, UserMenu, ZoomControls, MapProvider } from "@/features/map";
+import { shellViewComponents } from "./shell-view";
+
+import { AppShell } from "@/features/app-shell";
+import { GeolocationButton, MapboxMap, ZoomControls, MapProvider } from "@/features/map";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth();
-
   return (
     <MapProvider>
       <div className="fixed inset-0 z-0">
         <MapboxMap />
       </div>
 
-      <div
-        className="fixed z-10 flex flex-col gap-3"
-        style={{
-          right: "calc(1rem + env(safe-area-inset-right))",
-          top: "calc(1rem + env(safe-area-inset-top))",
-        }}
-      >
-        {user && <UserMenu />}
+      <div className="fixed right-[calc(1rem+env(safe-area-inset-right))] top-[calc(5.75rem+env(safe-area-inset-top))] z-30 flex flex-col gap-3 md:top-[calc(1rem+env(safe-area-inset-top))]">
         <GeolocationButton />
       </div>
 
-      <div
-        className="fixed z-10"
-        style={{
-          right: "calc(1rem + env(safe-area-inset-right))",
-          bottom: "calc(2rem + env(safe-area-inset-bottom))",
-        }}
-      >
+      <div className="fixed right-[calc(1rem+env(safe-area-inset-right))] bottom-[var(--shell-mobile-chrome-bottom,calc(80dvh+env(safe-area-inset-bottom)))] z-30 max-md:transition-[bottom] max-md:duration-300 md:bottom-[calc(2rem+env(safe-area-inset-bottom))]">
         <ZoomControls />
       </div>
 
       {children}
+      <AppShell viewComponents={shellViewComponents} />
     </MapProvider>
   );
 }

@@ -1,0 +1,56 @@
+{
+  "hub": {
+    "title": "Ton espace Nirby",
+    "subtitle": "Profil, préférences et activité."
+  },
+  "fields": {
+    "name": "Nom",
+    "description": "Description",
+    "save": "Enregistrer"
+  },
+  "sections": {
+    "info": "Mes informations",
+    "preferences": "Préférences",
+    "privacy": "Confidentialité"
+  },
+  "update": {
+    "success": "Profil mis à jour avec succès",
+    "error": "Erreur lors de la mise à jour du profil"
+  },
+  "avatar": {
+    "title": "Photo de profil",
+    "hint": "Appuie pour changer ta photo",
+    "formats": "JPEG, PNG ou WebP · max. 2 Mo",
+    "uploadSuccess": "Avatar téléchargé avec succès",
+    "uploadError": "Erreur lors du téléchargement de l'avatar"
+  },
+  "info": {
+    "title": "Mes informations",
+    "description": "Modifie ton nom, ta description et ton avatar."
+  },
+  "preferences": {
+    "title": "Préférences",
+    "description": "Thème d'affichage et langue de l'application."
+  },
+  "privacy": {
+    "title": "Confidentialité",
+    "description": "Gère ta session et les paramètres sensibles.",
+    "comingSoon": "Plus d'options de confidentialité arrivent bientôt."
+  },
+  "changePassword": {
+    "title": "Changer mon mot de passe",
+    "description": "Entrez votre mot de passe actuel et votre nouveau mot de passe",
+    "oldPassword": "Mot de passe actuel",
+    "newPassword": "Nouveau mot de passe",
+    "save": "Enregistrer",
+    "success": "Mot de passe changé avec succès",
+    "error": "Erreur lors du changement de mot de passe"
+  },
+  "deleteAccount": {
+    "title": "Supprimer mon compte",
+    "description": "Entrez votre mot de passe actuel pour supprimer votre compte",
+    "success": "Compte supprimé avec succès",
+    "error": "Erreur lors de la suppression du compte",
+    "delete": "Supprimer mon compte"
+  }
+}

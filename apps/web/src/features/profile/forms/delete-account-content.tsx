@@ -1,3 +1,5 @@
+"use client";
+
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { Eye, EyeOff } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -18,8 +20,16 @@ import {
 } from "@/components/ui";
 import { useAuth, type DeleteAccountFormData, createDeleteAccountSchema } from "@/features/auth";
 import { useErrorMessage } from "@/hooks/use-error-message";
+import { cn } from "@/lib/utils";
 
-export function DeleteAccountContent({ closeDialog }: { closeDialog: () => void }) {
+export function DeleteAccountContent({
+  closeDialog,
+  embedded = false,
+}: {
+  closeDialog: () => void;
+  embedded?: boolean;
+}) {
+  const tProfile = useTranslations("profile");
   const t = useTranslations();
   const getErrorMessage = useErrorMessage();
   const { deleteAccount } = useAuth();
@@ -44,18 +54,23 @@ export function DeleteAccountContent({ closeDialog }: { closeDialog: () => void 
   async function onSubmit(values: DeleteAccountFormData) {
     try {
       await deleteAccount(values.password);
-      toast.success(t("auth.profile.deleteAccount.success"));
+      toast.success(tProfile("deleteAccount.success"));
       closeDialog();
     } catch (error) {
-      toast.error(t("auth.profile.deleteAccount.error"), {
+      toast.error(tProfile("deleteAccount.error"), {
         description: getErrorMessage(error),
       });
     }
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="grid gap-6 py-4 md:py-0 mb-[env(safe-area-inset-bottom,0.5rem)]">
+    <div className={cn("flex flex-col gap-4", !embedded && "")}>
+      <div
+        className={cn(
+          "grid gap-6",
+          !embedded && "py-4 md:py-0 mb-[env(safe-area-inset-bottom,0.5rem)]"
+        )}
+      >
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <FormField
@@ -71,7 +86,7 @@ export function DeleteAccountContent({ closeDialog }: { closeDialog: () => void 
                         type={showPassword ? "text" : "password"}
                         placeholder="••••••••"
                         {...field}
-                        className="px-4 lg:px-3 pr-12 lg:pr-10"
+                        className="pr-12 lg:pr-10"
                       />
                       <Button
                         type="button"
@@ -93,19 +108,27 @@ export function DeleteAccountContent({ closeDialog }: { closeDialog: () => void 
               )}
             />
 
-            <Separator className="my-4 md:hidden" />
+            {!embedded && <Separator className="my-4 md:hidden" />}
 
-            <div className="flex flex-col md:flex-row justify-end gap-2">
+            <div
+              className={cn(
+                "flex gap-2",
+                embedded ? "flex-col" : "flex-col md:flex-row justify-end"
+              )}
+            >
+              {!embedded && (
+                <Button type="button" variant="outline" onClick={closeDialog}>
+                  {t("common.buttons.cancel")}
+                </Button>
+              )}
               <Button
-                type="button"
-                variant="outline"
-                onClick={closeDialog}
-                className="font-semibold"
+                type="submit"
+                variant="destructive"
+                disabled={form.formState.isSubmitting}
+                loading={form.formState.isSubmitting}
+                className={cn(embedded && "w-full")}
               >
-                {t("common.buttons.cancel")}
-              </Button>
-              <Button type="submit" variant="destructive" className="font-semibold">
-                {t("auth.profile.deleteAccount.delete")}
+                {tProfile("deleteAccount.delete")}
               </Button>
             </div>
           </form>
