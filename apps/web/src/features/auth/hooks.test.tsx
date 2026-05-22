@@ -2,7 +2,8 @@ import { renderHook } from "@testing-library/react";
 import { useContext } from "react";
 import { describe, it, expect, vi } from "vitest";
 
-import { AuthContext, useAuth, type AuthContextType } from "@/features/auth";
+import { AuthContext, type AuthContextType } from "@/features/auth/context";
+import { useAuth } from "@/features/auth/hooks";
 
 vi.mock("react", async () => {
   const actual = await vi.importActual("react");
