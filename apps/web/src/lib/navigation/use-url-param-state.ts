@@ -86,12 +86,17 @@ export function useUrlParamState<T>({
 
   const setValueAndPush = useCallback(
     (next: T) => {
-      setValue(next);
       if (isSyncingFromUrl.current) {
         isSyncingFromUrl.current = false;
+        setValue(next);
         return;
       }
 
+      if (Object.is(next, valueRef.current)) {
+        return;
+      }
+
+      setValue(next);
       const qs = buildHref(searchParams, next);
       router.push(`${pathname}${qs}`, { scroll: false });
     },
