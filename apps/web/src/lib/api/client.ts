@@ -38,6 +38,8 @@ apiClient.interceptors.response.use(async (response, request, options) => {
   const authRoutes = [
     "/auth/login",
     "/auth/signup",
+    "/auth/logout",
+    "/auth/refresh",
     "/auth/forgot-password",
     "/auth/reset-password",
     "/auth/verify-email",
