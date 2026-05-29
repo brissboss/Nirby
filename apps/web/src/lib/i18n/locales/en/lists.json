@@ -1,0 +1,62 @@
+{
+  "index": {
+    "title": "Lists",
+    "create": "Create a list",
+    "empty": {
+      "title": "No lists yet",
+      "description": "",
+      "cta": "Create a list"
+    },
+    "search": {
+      "placeholder": "Search lists…",
+      "minLengthHint": ""
+    }
+  },
+  "create": {
+    "title": "New list",
+    "submit": "Create"
+  },
+  "detail": {
+    "title": "List",
+    "back": "Back to lists",
+    "poisComingSoon": "Places coming soon"
+  },
+  "edit": {
+    "title": "Edit list",
+    "readOnly": "You can only view this list",
+    "submit": "Save"
+  },
+  "delete": {
+    "title": "Delete list",
+    "confirm": "Delete this list?",
+    "submit": "Delete"
+  },
+  "fields": {
+    "name": "Name",
+    "description": "Description",
+    "visibility": "Visibility"
+  },
+  "visibility": {
+    "PRIVATE": { "label": "Private" },
+    "SHARED": { "label": "Shared" },
+    "PUBLIC": { "label": "Public" }
+  },
+  "role": {
+    "OWNER": "Owner",
+    "EDITOR": "Editor",
+    "VIEWER": "Viewer",
+    "ADMIN": "Admin"
+  },
+  "createList": {
+    "success": "",
+    "error": ""
+  },
+  "updateList": {
+    "success": "",
+    "error": ""
+  },
+  "deleteList": {
+    "success": "",
+    "error": ""
+  }
+}
