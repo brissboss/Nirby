@@ -1,0 +1,62 @@
+{
+  "index": {
+    "title": "Listes",
+    "create": "Créer une liste",
+    "empty": {
+      "title": "Aucune liste pour l'instant",
+      "description": "",
+      "cta": "Créer une liste"
+    },
+    "search": {
+      "placeholder": "Rechercher une liste…",
+      "minLengthHint": ""
+    }
+  },
+  "create": {
+    "title": "Nouvelle liste",
+    "submit": "Créer"
+  },
+  "detail": {
+    "title": "Liste",
+    "back": "Retour aux listes",
+    "poisComingSoon": "Lieux à venir"
+  },
+  "edit": {
+    "title": "Modifier la liste",
+    "readOnly": "Tu peux seulement consulter cette liste",
+    "submit": "Enregistrer"
+  },
+  "delete": {
+    "title": "Supprimer la liste",
+    "confirm": "Supprimer cette liste ?",
+    "submit": "Supprimer"
+  },
+  "fields": {
+    "name": "Nom",
+    "description": "Description",
+    "visibility": "Visibilité"
+  },
+  "visibility": {
+    "PRIVATE": { "label": "Privée" },
+    "SHARED": { "label": "Partagée" },
+    "PUBLIC": { "label": "Publique" }
+  },
+  "role": {
+    "OWNER": "Propriétaire",
+    "EDITOR": "Éditeur",
+    "VIEWER": "Lecteur",
+    "ADMIN": "Administrateur"
+  },
+  "createList": {
+    "success": "",
+    "error": ""
+  },
+  "updateList": {
+    "success": "",
+    "error": ""
+  },
+  "deleteList": {
+    "success": "",
+    "error": ""
+  }
+}
