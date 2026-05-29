@@ -38,7 +38,7 @@
     "LIST_NOT_FOUND": "La liste n'a pas été trouvée",
     "LIST_NAME_REQUIRED": "Le nom de la liste est requis",
     "LIST_NAME_TOO_LONG": "Le nom de la liste ne peut pas contenir plus de 255 caractères",
-    "LIST_DESCRIPTION_TOO_LONG": "La description de la liste ne peut pas contenir plus de 255 caractères",
+    "LIST_DESCRIPTION_TOO_LONG": "La description de la liste ne peut pas contenir plus de 1000 caractères",
     "LIST_ACCESS_DENIED": "Vous n'avez pas accès à cette liste",
     "LIST_EDIT_TOKEN_INVALID": "Le token d'édition de la liste est invalide",
     "LIST_EDIT_TOKEN_EXPIRED": "Le token d'édition de la liste a expiré",

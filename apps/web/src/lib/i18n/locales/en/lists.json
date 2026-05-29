@@ -48,8 +48,8 @@
     "ADMIN": "Admin"
   },
   "createList": {
-    "success": "",
-    "error": ""
+    "success": "List created successfully",
+    "error": "Could not create the list"
   },
   "updateList": {
     "success": "",
@@ -58,5 +58,10 @@
   "deleteList": {
     "success": "",
     "error": ""
+  },
+  "validation": {
+    "requiredName": "List name is required",
+    "nameTooLong": "List name cannot be longer than 255 characters",
+    "descriptionTooLong": "Description cannot be longer than 1000 characters"
   }
 }
