@@ -32,7 +32,7 @@ export function ProfilePrivacyView({ onBack }: ProfilePrivacyViewProps) {
           type="button"
           variant="destructive"
           className="w-full justify-start"
-          onClick={() => logout()}
+          onClick={() => void logout()}
         >
           <LogOut className="mr-2 size-4" />
           {tCommon("common.buttons.logout")}
