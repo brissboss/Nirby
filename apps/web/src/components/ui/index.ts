@@ -11,6 +11,7 @@ export * from "./input";
 export * from "./label";
 export * from "./language-selector";
 export * from "./separator";
+export * from "./select";
 export * from "./sheet";
 export * from "./skeleton";
 export * from "./sonner";

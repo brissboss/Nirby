@@ -39,7 +39,7 @@
     "LIST_NOT_FOUND": "List not found",
     "LIST_NAME_REQUIRED": "List name is required",
     "LIST_NAME_TOO_LONG": "List name cannot contain more than 255 characters",
-    "LIST_DESCRIPTION_TOO_LONG": "List description cannot contain more than 255 characters",
+    "LIST_DESCRIPTION_TOO_LONG": "List description cannot contain more than 1000 characters",
     "LIST_ACCESS_DENIED": "You are not authorized to access this list",
     "LIST_EDIT_TOKEN_INVALID": "List edit token is invalid",
     "LIST_EDIT_TOKEN_EXPIRED": "List edit token has expired",
