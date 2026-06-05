@@ -1,0 +1,36 @@
+{
+  "idle": {
+    "title": "Trouver des lieux",
+    "description": "Recherche des cafés, musées, restaurants et plus encore."
+  },
+  "search": {
+    "placeholder": "Rechercher un lieu…",
+    "hint": "Cafés, musées, restaurants",
+    "minLengthHint": "Saisis au moins 2 caractères pour lancer la recherche",
+    "loading": "Recherche en cours…"
+  },
+  "results": {
+    "title": "Résultats",
+    "empty": {
+      "title": "Aucun lieu trouvé",
+      "description": "Essaie un autre nom ou une autre adresse."
+    },
+    "error": {
+      "title": "La recherche a échoué",
+      "retry": "Réessayer"
+    }
+  },
+  "addToList": {
+    "action": "Ajouter à une liste",
+    "picker": {
+      "title": "Ajouter à une liste",
+      "description": "Choisis une liste pour « {placeName} »",
+      "empty": "Aucune liste que tu peux modifier",
+      "submit": "Ajouter"
+    },
+    "success": "Ajouté à {listName}",
+    "error": "Impossible d'ajouter le lieu",
+    "alreadySaved": "Ce lieu est déjà dans la liste",
+    "viewList": "Voir la liste"
+  }
+}

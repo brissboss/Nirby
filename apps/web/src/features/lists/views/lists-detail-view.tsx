@@ -66,7 +66,7 @@ export function ListsDetailView({ listId, onBack, onEdit, onDelete }: ListsDetai
               />
             )}
             <div className="border-t border-border pt-6">
-              <p className="text-sm text-muted-foreground">{tLists("detail.poisComingSoon")}</p>
+              <p className="text-sm text-muted-foreground">{tLists("pois.section.title")}</p>
             </div>
           </div>
         )}

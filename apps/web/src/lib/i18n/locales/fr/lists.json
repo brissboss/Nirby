@@ -28,8 +28,7 @@
     "back": "Retour aux listes",
     "loading": "Chargement de la liste…",
     "notFound": "Liste introuvable",
-    "createdAt": "Créée le {date}",
-    "poisComingSoon": "Lieux à venir"
+    "createdAt": "Créée le {date}"
   },
   "edit": {
     "title": "Modifier la liste",
@@ -79,5 +78,37 @@
   "row": {
     "poiCount": "{count, plural, =0 {Aucun lieu enregistré} one {# lieu enregistré} other {# lieux enregistrés}}",
     "collaboratorCount": "{count, plural, one {# collaborateur} other {# collaborateurs}}"
+  },
+  "pois": {
+    "section": {
+      "title": "Lieux",
+      "total": "{total, plural, =0 {Aucun lieu} one {# lieu} other {# lieux}}"
+    },
+    "empty": {
+      "title": "Aucun lieu pour l'instant",
+      "description": "Recherche des lieux dans Explorer pour les ajouter ici."
+    },
+    "loading": "Chargement des lieux…",
+    "loadingMore": "Chargement…",
+    "error": {
+      "title": "Impossible de charger les lieux",
+      "retry": "Réessayer"
+    }
+  },
+  "poi": {
+    "source": {
+      "custom": "Lieu personnalisé",
+      "google": "Google"
+    },
+    "addressUnknown": "Aucune adresse",
+    "categoryUnknown": "Lieu"
+  },
+  "removePoi": {
+    "action": "Retirer",
+    "title": "Retirer le lieu",
+    "description": "« {placeName} » sera retiré de cette liste.",
+    "confirmSubmit": "Retirer",
+    "success": "Lieu retiré de la liste",
+    "error": "Impossible de retirer le lieu"
   }
 }
