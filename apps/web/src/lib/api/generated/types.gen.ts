@@ -267,7 +267,7 @@ export type CreateListResponse = {
 };
 
 export type GetListResponse = {
-  list: List;
+  list: ListWithRole;
 };
 
 export type UpdateListResponse = {

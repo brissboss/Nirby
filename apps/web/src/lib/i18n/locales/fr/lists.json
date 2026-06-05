@@ -26,11 +26,14 @@
   "detail": {
     "title": "Liste",
     "back": "Retour aux listes",
-    "poisComingSoon": "Lieux à venir",
-    "loading": "Chargement de la liste…"
+    "loading": "Chargement de la liste…",
+    "notFound": "Liste introuvable",
+    "createdAt": "Créée le {date}",
+    "poisComingSoon": "Lieux à venir"
   },
   "edit": {
     "title": "Modifier la liste",
+    "action": "Modifier",
     "readOnly": "Tu peux seulement consulter cette liste",
     "submit": "Enregistrer"
   },
@@ -60,8 +63,8 @@
     "error": "Impossible de créer la liste"
   },
   "updateList": {
-    "success": "",
-    "error": ""
+    "success": "Liste mise à jour avec succès",
+    "error": "Impossible de mettre à jour la liste"
   },
   "deleteList": {
     "success": "",

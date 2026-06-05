@@ -26,11 +26,14 @@
   "detail": {
     "title": "List",
     "back": "Back to lists",
-    "poisComingSoon": "Places coming soon",
-    "loading": "Loading list…"
+    "loading": "Loading list…",
+    "notFound": "List not found",
+    "createdAt": "Created at {date}",
+    "poisComingSoon": "Places coming soon"
   },
   "edit": {
     "title": "Edit list",
+    "action": "Edit",
     "readOnly": "You can only view this list",
     "submit": "Save"
   },
@@ -60,8 +63,8 @@
     "error": "Could not create the list"
   },
   "updateList": {
-    "success": "",
-    "error": ""
+    "success": "List updated successfully",
+    "error": "Could not update the list"
   },
   "deleteList": {
     "success": "",
