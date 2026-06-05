@@ -26,7 +26,8 @@
   "detail": {
     "title": "Liste",
     "back": "Retour aux listes",
-    "poisComingSoon": "Lieux à venir"
+    "poisComingSoon": "Lieux à venir",
+    "loading": "Chargement de la liste…"
   },
   "edit": {
     "title": "Modifier la liste",
