@@ -1,12 +1,14 @@
 "use client";
 
-import { PencilIcon } from "lucide-react";
+import { PencilIcon, Trash2Icon } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { useState } from "react";
 
+import { DeleteListDialog } from "../components/delete-list-dialog";
 import { ListsDetailMetadata } from "../components/lists-detail-metadata";
 import { ListsListQueryBoundary } from "../components/lists-list-query-boundary";
 import { ListsSectionLayout } from "../components/lists-section-layout";
-import { canEditList } from "../constants/lists.constants";
+import { canDeleteList, canEditList } from "../constants/lists.constants";
 import { useList } from "../hooks/use-list";
 
 import { Button } from "@/components/ui";
@@ -15,11 +17,13 @@ type ListsDetailViewProps = {
   listId: string;
   onBack: () => void;
   onEdit: () => void;
+  onDelete: () => void;
 };
 
-export function ListsDetailView({ listId, onBack, onEdit }: ListsDetailViewProps) {
+export function ListsDetailView({ listId, onBack, onEdit, onDelete }: ListsDetailViewProps) {
   const tLists = useTranslations("lists");
   const { data } = useList(listId);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const list = data?.list;
 
   return (
@@ -32,14 +36,35 @@ export function ListsDetailView({ listId, onBack, onEdit }: ListsDetailViewProps
         {(loadedList) => (
           <div className="grid gap-6">
             <ListsDetailMetadata list={loadedList} />
-
-            {canEditList(loadedList.role) && (
-              <Button type="button" variant="outline" size="sm" className="w-fit" onClick={onEdit}>
-                <PencilIcon className="size-4" />
-                {tLists("edit.action")}
-              </Button>
+            {(canEditList(loadedList.role) || canDeleteList(loadedList.role)) && (
+              <div className="flex flex-wrap gap-2">
+                {canEditList(loadedList.role) && (
+                  <Button type="button" variant="outline" size="sm" onClick={onEdit}>
+                    <PencilIcon className="size-4" />
+                    {tLists("edit.action")}
+                  </Button>
+                )}
+                {canDeleteList(loadedList.role) && (
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => setDeleteDialogOpen(true)}
+                  >
+                    <Trash2Icon className="size-4" />
+                    {tLists("delete.submit")}
+                  </Button>
+                )}
+              </div>
             )}
-
+            {canDeleteList(loadedList.role) && (
+              <DeleteListDialog
+                listId={listId}
+                open={deleteDialogOpen}
+                onOpenChange={setDeleteDialogOpen}
+                onDeleted={onDelete}
+              />
+            )}
             <div className="border-t border-border pt-6">
               <p className="text-sm text-muted-foreground">{tLists("detail.poisComingSoon")}</p>
             </div>

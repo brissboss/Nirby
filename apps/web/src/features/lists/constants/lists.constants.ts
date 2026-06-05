@@ -13,7 +13,21 @@ export const DEFAULT_LIST_VISIBILITY: ListVisibility = "PRIVATE";
 /** Collaborator / owner roles that may edit list metadata (mirrors API `canUpdateList`). */
 export const EDITABLE_LIST_ROLES = ["OWNER", "ADMIN", "EDITOR"] as const;
 
+/** Collaborator / owner roles that may delete a list (mirrors API `canDeleteList`). */
+export const DELETABLE_LIST_ROLES = ["OWNER", "ADMIN"] as const;
+
 export type ListRole = (typeof EDITABLE_LIST_ROLES)[number] | "VIEWER";
+
+/**
+ * Whether the current user may delete the list.
+ * EDITOR, VIEWER and missing role → no delete.
+ */
+export function canDeleteList(role?: ListRole): boolean {
+  return (
+    role !== undefined &&
+    DELETABLE_LIST_ROLES.includes(role as (typeof DELETABLE_LIST_ROLES)[number])
+  );
+}
 
 /**
  * Whether the current user may edit list fields (name, description, visibility).

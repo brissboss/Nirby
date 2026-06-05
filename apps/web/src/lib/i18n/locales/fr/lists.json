@@ -39,8 +39,9 @@
   },
   "delete": {
     "title": "Supprimer la liste",
-    "confirm": "Supprimer cette liste ?",
-    "submit": "Supprimer"
+    "description": "Cette action est irréversible. Tous les lieux de cette liste seront supprimés.",
+    "submit": "Supprimer",
+    "confirmSubmit": "Supprimer définitivement"
   },
   "fields": {
     "name": "Nom",
@@ -67,8 +68,8 @@
     "error": "Impossible de mettre à jour la liste"
   },
   "deleteList": {
-    "success": "",
-    "error": ""
+    "success": "Liste supprimée avec succès",
+    "error": "Impossible de supprimer la liste"
   },
   "validation": {
     "requiredName": "Le nom de la liste est requis",

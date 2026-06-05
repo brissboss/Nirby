@@ -1,7 +1,9 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { toast } from "sonner";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { useDeleteList } from "../hooks/use-delete-list";
 import { useList } from "../hooks/use-list";
 
 import { ListsDetailView } from "./lists-detail-view";
@@ -19,6 +21,17 @@ vi.mock("@/hooks/use-error-message", () => ({
 
 vi.mock("@/lib/api/errors", () => ({
   getErrorCode: vi.fn(),
+}));
+
+vi.mock("../hooks/use-delete-list", () => ({
+  useDeleteList: vi.fn(),
+}));
+
+vi.mock("sonner", () => ({
+  toast: {
+    success: vi.fn(),
+    error: vi.fn(),
+  },
 }));
 
 const mockList: ListWithRole = {
@@ -53,16 +66,23 @@ function mockListQuery(overrides: Partial<ReturnType<typeof useList>> = {}) {
 describe("ListsDetailView", () => {
   const onBack = vi.fn();
   const onEdit = vi.fn();
+  const onDelete = vi.fn();
+  const mutateAsync = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(getErrorCode).mockReturnValue(null);
+    mutateAsync.mockResolvedValue({ message: "List deleted successfully" });
+    vi.mocked(useDeleteList).mockReturnValue({
+      mutateAsync,
+      isPending: false,
+    } as unknown as ReturnType<typeof useDeleteList>);
   });
 
   it("shows loading state", () => {
     mockListQuery({ data: undefined, isPending: true });
 
-    render(<ListsDetailView listId="list-1" onBack={onBack} onEdit={onEdit} />);
+    render(<ListsDetailView listId="list-1" onBack={onBack} onEdit={onEdit} onDelete={onDelete} />);
 
     expect(screen.getByText("detail.loading")).toBeInTheDocument();
   });
@@ -75,7 +95,7 @@ describe("ListsDetailView", () => {
       error: new Error("LIST_NOT_FOUND"),
     });
 
-    render(<ListsDetailView listId="list-1" onBack={onBack} onEdit={onEdit} />);
+    render(<ListsDetailView listId="list-1" onBack={onBack} onEdit={onEdit} onDelete={onDelete} />);
 
     expect(screen.getByText("detail.notFound")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "index.error.retry" })).not.toBeInTheDocument();
@@ -91,7 +111,7 @@ describe("ListsDetailView", () => {
       refetch,
     });
 
-    render(<ListsDetailView listId="list-1" onBack={onBack} onEdit={onEdit} />);
+    render(<ListsDetailView listId="list-1" onBack={onBack} onEdit={onEdit} onDelete={onDelete} />);
 
     expect(screen.getByText("API error message")).toBeInTheDocument();
 
@@ -103,7 +123,7 @@ describe("ListsDetailView", () => {
   it("renders list content and POI placeholder for OWNER", () => {
     mockListQuery();
 
-    render(<ListsDetailView listId="list-1" onBack={onBack} onEdit={onEdit} />);
+    render(<ListsDetailView listId="list-1" onBack={onBack} onEdit={onEdit} onDelete={onDelete} />);
 
     expect(screen.getByRole("heading", { name: "Paris spots" })).toBeInTheDocument();
     expect(screen.getByText("My favorite places")).toBeInTheDocument();
@@ -116,7 +136,7 @@ describe("ListsDetailView", () => {
     const user = userEvent.setup();
     mockListQuery();
 
-    render(<ListsDetailView listId="list-1" onBack={onBack} onEdit={onEdit} />);
+    render(<ListsDetailView listId="list-1" onBack={onBack} onEdit={onEdit} onDelete={onDelete} />);
 
     const editButton = screen.getByRole("button", { name: "edit.action" });
     expect(editButton).toBeInTheDocument();
@@ -131,9 +151,52 @@ describe("ListsDetailView", () => {
       data: { list: { ...mockList, role: "VIEWER" } },
     });
 
-    render(<ListsDetailView listId="list-1" onBack={onBack} onEdit={onEdit} />);
+    render(<ListsDetailView listId="list-1" onBack={onBack} onEdit={onEdit} onDelete={onDelete} />);
 
     expect(screen.queryByRole("button", { name: "edit.action" })).not.toBeInTheDocument();
     expect(screen.queryByText("edit.readOnly")).not.toBeInTheDocument();
+  });
+
+  it("hides delete button for VIEWER", () => {
+    mockListQuery({
+      data: { list: { ...mockList, role: "VIEWER" } },
+    });
+
+    render(<ListsDetailView listId="list-1" onBack={onBack} onEdit={onEdit} onDelete={onDelete} />);
+
+    expect(screen.queryByRole("button", { name: "delete.submit" })).not.toBeInTheDocument();
+  });
+
+  it("hides delete button for EDITOR", () => {
+    mockListQuery({
+      data: { list: { ...mockList, role: "EDITOR" } },
+    });
+
+    render(<ListsDetailView listId="list-1" onBack={onBack} onEdit={onEdit} onDelete={onDelete} />);
+
+    expect(screen.getByRole("button", { name: "edit.action" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "delete.submit" })).not.toBeInTheDocument();
+  });
+
+  it("shows delete button for OWNER", () => {
+    mockListQuery();
+
+    render(<ListsDetailView listId="list-1" onBack={onBack} onEdit={onEdit} onDelete={onDelete} />);
+
+    expect(screen.getByRole("button", { name: "delete.submit" })).toBeInTheDocument();
+  });
+
+  it("confirms deletion and calls onDelete", async () => {
+    const user = userEvent.setup();
+    mockListQuery();
+
+    render(<ListsDetailView listId="list-1" onBack={onBack} onEdit={onEdit} onDelete={onDelete} />);
+
+    await user.click(screen.getByRole("button", { name: "delete.submit" }));
+    await user.click(screen.getByRole("button", { name: "delete.confirmSubmit" }));
+
+    expect(mutateAsync).toHaveBeenCalledWith("list-1");
+    expect(toast.success).toHaveBeenCalledWith("deleteList.success");
+    expect(onDelete).toHaveBeenCalledTimes(1);
   });
 });

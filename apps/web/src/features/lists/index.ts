@@ -10,7 +10,9 @@ export {
   LIST_VISIBILITY_VALUES,
   DEFAULT_LIST_VISIBILITY,
   EDITABLE_LIST_ROLES,
+  DELETABLE_LIST_ROLES,
   canEditList,
+  canDeleteList,
 } from "./constants/lists.constants";
 export { ListsShellView } from "./navigation/lists-shell-view";
 export { CreateListForm } from "./forms/create-list-form";
