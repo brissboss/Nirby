@@ -4,6 +4,7 @@ export { useList } from "./hooks/use-list";
 export { useCreateList } from "./hooks/use-create-list";
 export { useUpdateList } from "./hooks/use-update-list";
 export { useDeleteList } from "./hooks/use-delete-list";
+export { useListSectionUrl } from "./hooks/use-list-section-url";
 export { createListFormSchema } from "./schemas/lists.schema";
 export {
   listConstraints,
@@ -24,3 +25,4 @@ export type { CreateListInput } from "./hooks/use-create-list";
 export type { UpdateListInput } from "./hooks/use-update-list";
 export type { CreateListFormMessages, CreateListFormData } from "./schemas/lists.schema";
 export type { ListVisibility, ListRole } from "./constants/lists.constants";
+export type { ListsSection } from "./types/lists-section.types";

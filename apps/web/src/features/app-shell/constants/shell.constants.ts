@@ -3,6 +3,7 @@ import { Compass, ListChecks, User } from "lucide-react";
 import type { ShellView, ShellViewConfig } from "../types/shell.types";
 
 import {
+  LIST_ID_PARAM,
   PROFILE_SECTION_PARAM,
   SHELL_MAP_MODE_PARAM,
   SHELL_VIEW_PARAM,
@@ -62,6 +63,10 @@ export function buildShellViewSearchParams(current: URLSearchParams, view: Shell
 
   if (view !== "profile") {
     next.delete(PROFILE_SECTION_PARAM);
+  }
+
+  if (view !== "lists") {
+    next.delete(LIST_ID_PARAM);
   }
 
   next.delete(SHELL_MAP_MODE_PARAM);

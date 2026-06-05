@@ -1,6 +1,7 @@
 import type { ProfileSection } from "../types/profile-section.types";
 
 import {
+  LIST_ID_PARAM,
   PROFILE_SECTION_PARAM,
   SHELL_MAP_MODE_PARAM,
   SHELL_VIEW_PARAM,
@@ -42,6 +43,7 @@ export function buildProfileSectionSearchParams(
     next.set(PROFILE_SECTION_PARAM, section);
   }
 
+  next.delete(LIST_ID_PARAM);
   next.delete(SHELL_MAP_MODE_PARAM);
 
   const qs = next.toString();
