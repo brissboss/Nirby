@@ -1,7 +1,8 @@
 {
   "index": {
     "title": "Lists",
-    "create": "Create a list",
+    "total": "{total, plural, =0 {No lists} one {# list} other {# lists}}",
+    "create": "New list",
     "empty": {
       "title": "No lists yet",
       "description": "",
@@ -10,7 +11,13 @@
     "search": {
       "placeholder": "Search lists…",
       "minLengthHint": ""
-    }
+    },
+    "error": {
+      "title": "Could not load lists",
+      "retry": "Retry"
+    },
+    "refreshing": "Refreshing…",
+    "loadingMore": "Loading more…"
   },
   "create": {
     "title": "New list",
@@ -19,17 +26,22 @@
   "detail": {
     "title": "List",
     "back": "Back to lists",
+    "loading": "Loading list…",
+    "notFound": "List not found",
+    "createdAt": "Created at {date}",
     "poisComingSoon": "Places coming soon"
   },
   "edit": {
     "title": "Edit list",
+    "action": "Edit",
     "readOnly": "You can only view this list",
     "submit": "Save"
   },
   "delete": {
     "title": "Delete list",
-    "confirm": "Delete this list?",
-    "submit": "Delete"
+    "description": "This action cannot be undone. All places in this list will be removed.",
+    "submit": "Delete",
+    "confirmSubmit": "Delete permanently"
   },
   "fields": {
     "name": "Name",
@@ -48,15 +60,24 @@
     "ADMIN": "Admin"
   },
   "createList": {
-    "success": "",
-    "error": ""
+    "success": "List created successfully",
+    "error": "Could not create the list"
   },
   "updateList": {
-    "success": "",
-    "error": ""
+    "success": "List updated successfully",
+    "error": "Could not update the list"
   },
   "deleteList": {
-    "success": "",
-    "error": ""
+    "success": "List deleted successfully",
+    "error": "Could not delete the list"
+  },
+  "validation": {
+    "requiredName": "List name is required",
+    "nameTooLong": "List name cannot be longer than 255 characters",
+    "descriptionTooLong": "Description cannot be longer than 1000 characters"
+  },
+  "row": {
+    "poiCount": "{count, plural, =0 {No places saved} one {# place saved} other {# places saved}}",
+    "collaboratorCount": "{count, plural, one {# collaborator} other {# collaborators}}"
   }
 }

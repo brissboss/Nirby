@@ -249,6 +249,8 @@ export type List = {
    * The date and time the edit token expires
    */
   editTokenExpiresAt: string | null;
+  poiCount?: number;
+  collaboratorCount?: number;
 };
 
 export type ListWithRole = List & {
@@ -265,7 +267,7 @@ export type CreateListResponse = {
 };
 
 export type GetListResponse = {
-  list: List;
+  list: ListWithRole;
 };
 
 export type UpdateListResponse = {

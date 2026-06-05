@@ -1,7 +1,8 @@
 {
   "index": {
     "title": "Listes",
-    "create": "Créer une liste",
+    "total": "{total, plural, =0 {Aucune liste} one {# liste} other {# listes}}",
+    "create": "Nouvelle liste",
     "empty": {
       "title": "Aucune liste pour l'instant",
       "description": "",
@@ -10,7 +11,13 @@
     "search": {
       "placeholder": "Rechercher une liste…",
       "minLengthHint": ""
-    }
+    },
+    "error": {
+      "title": "Impossible de charger les listes",
+      "retry": "Réessayer"
+    },
+    "refreshing": "Mise à jour…",
+    "loadingMore": "Chargement…"
   },
   "create": {
     "title": "Nouvelle liste",
@@ -19,17 +26,22 @@
   "detail": {
     "title": "Liste",
     "back": "Retour aux listes",
+    "loading": "Chargement de la liste…",
+    "notFound": "Liste introuvable",
+    "createdAt": "Créée le {date}",
     "poisComingSoon": "Lieux à venir"
   },
   "edit": {
     "title": "Modifier la liste",
+    "action": "Modifier",
     "readOnly": "Tu peux seulement consulter cette liste",
     "submit": "Enregistrer"
   },
   "delete": {
     "title": "Supprimer la liste",
-    "confirm": "Supprimer cette liste ?",
-    "submit": "Supprimer"
+    "description": "Cette action est irréversible. Tous les lieux de cette liste seront supprimés.",
+    "submit": "Supprimer",
+    "confirmSubmit": "Supprimer définitivement"
   },
   "fields": {
     "name": "Nom",
@@ -48,15 +60,24 @@
     "ADMIN": "Administrateur"
   },
   "createList": {
-    "success": "",
-    "error": ""
+    "success": "Liste créée avec succès",
+    "error": "Impossible de créer la liste"
   },
   "updateList": {
-    "success": "",
-    "error": ""
+    "success": "Liste mise à jour avec succès",
+    "error": "Impossible de mettre à jour la liste"
   },
   "deleteList": {
-    "success": "",
-    "error": ""
+    "success": "Liste supprimée avec succès",
+    "error": "Impossible de supprimer la liste"
+  },
+  "validation": {
+    "requiredName": "Le nom de la liste est requis",
+    "nameTooLong": "Le nom ne peut pas dépasser 255 caractères",
+    "descriptionTooLong": "La description ne peut pas dépasser 1000 caractères"
+  },
+  "row": {
+    "poiCount": "{count, plural, =0 {Aucun lieu enregistré} one {# lieu enregistré} other {# lieux enregistrés}}",
+    "collaboratorCount": "{count, plural, one {# collaborateur} other {# collaborateurs}}"
   }
 }

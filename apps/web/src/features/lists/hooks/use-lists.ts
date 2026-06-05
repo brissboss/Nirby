@@ -2,6 +2,7 @@
 
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
+import { useAuth } from "@/features/auth";
 import { getLists } from "@/lib/api";
 import type { GetListsData } from "@/lib/api";
 import { queryKeys } from "@/lib/api/query-keys";
@@ -16,8 +17,11 @@ export type ListFilters = GetListsData["query"];
  * Uses `keepPreviousData` to avoid empty UI flashes when paginating.
  */
 export function useLists(filters?: ListFilters) {
+  const { user } = useAuth();
+
   return useQuery({
     queryKey: queryKeys.lists.list(filters),
+    enabled: Boolean(user),
     queryFn: async () => {
       const response = await getLists({ query: filters });
 
