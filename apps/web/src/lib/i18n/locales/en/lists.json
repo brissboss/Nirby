@@ -39,8 +39,9 @@
   },
   "delete": {
     "title": "Delete list",
-    "confirm": "Delete this list?",
-    "submit": "Delete"
+    "description": "This action cannot be undone. All places in this list will be removed.",
+    "submit": "Delete",
+    "confirmSubmit": "Delete permanently"
   },
   "fields": {
     "name": "Name",
@@ -67,8 +68,8 @@
     "error": "Could not update the list"
   },
   "deleteList": {
-    "success": "",
-    "error": ""
+    "success": "List deleted successfully",
+    "error": "Could not delete the list"
   },
   "validation": {
     "requiredName": "List name is required",

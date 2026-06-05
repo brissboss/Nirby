@@ -29,7 +29,14 @@ export function ListsShellView() {
   switch (section) {
     case "detail":
       if (!selectedListId) return <ListsIndexView onCreate={goCreate} onSelectList={goDetail} />;
-      return <ListsDetailView listId={selectedListId} onBack={goIndex} onEdit={goEdit} />;
+      return (
+        <ListsDetailView
+          listId={selectedListId}
+          onBack={goIndex}
+          onEdit={goEdit}
+          onDelete={goIndex}
+        />
+      );
     case "edit":
       if (!selectedListId) {
         return <ListsIndexView onCreate={goCreate} onSelectList={goDetail} />;
