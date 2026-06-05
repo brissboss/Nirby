@@ -129,7 +129,7 @@ describe("ListsDetailView", () => {
     expect(screen.getByText("My favorite places")).toBeInTheDocument();
     expect(screen.getByText("role.OWNER")).toBeInTheDocument();
     expect(screen.getByText("detail.createdAt")).toBeInTheDocument();
-    expect(screen.getByText("detail.poisComingSoon")).toBeInTheDocument();
+    expect(screen.getByText("pois.section.title")).toBeInTheDocument();
   });
 
   it("shows edit button for OWNER and calls onEdit", async () => {
