@@ -28,8 +28,7 @@
     "back": "Back to lists",
     "loading": "Loading list…",
     "notFound": "List not found",
-    "createdAt": "Created at {date}",
-    "poisComingSoon": "Places coming soon"
+    "createdAt": "Created at {date}"
   },
   "edit": {
     "title": "Edit list",
@@ -79,5 +78,37 @@
   "row": {
     "poiCount": "{count, plural, =0 {No places saved} one {# place saved} other {# places saved}}",
     "collaboratorCount": "{count, plural, one {# collaborator} other {# collaborators}}"
+  },
+  "pois": {
+    "section": {
+      "title": "Places",
+      "total": "{total, plural, =0 {No places} one {# place} other {# places}}"
+    },
+    "empty": {
+      "title": "No places yet",
+      "description": "Search for places in Explore to add them here."
+    },
+    "loading": "Loading places…",
+    "loadingMore": "Loading more…",
+    "error": {
+      "title": "Could not load places",
+      "retry": "Retry"
+    }
+  },
+  "poi": {
+    "source": {
+      "custom": "Custom place",
+      "google": "Google"
+    },
+    "addressUnknown": "No address",
+    "categoryUnknown": "Place"
+  },
+  "removePoi": {
+    "action": "Remove",
+    "title": "Remove place",
+    "description": "\"{placeName}\" will be removed from this list.",
+    "confirmSubmit": "Remove",
+    "success": "Place removed from list",
+    "error": "Could not remove the place"
   }
 }
