@@ -269,6 +269,12 @@ listRouter.get("/", requireAuth, async (req, res) => {
             where: { userId },
             select: { role: true },
           },
+          _count: {
+            select: {
+              savedPois: true,
+              collaborators: true,
+            },
+          },
         },
         orderBy: { createdAt: "desc" },
         skip,
@@ -286,11 +292,13 @@ listRouter.get("/", requireAuth, async (req, res) => {
     ]);
 
     const listsWithRole = lists.map((list) => {
-      const { collaborators, ...rest } = list;
+      const { collaborators, _count, ...rest } = list;
 
       return {
         ...rest,
         role: list.createdBy === userId ? "OWNER" : collaborators[0]?.role,
+        poiCount: _count.savedPois,
+        collaboratorCount: _count.collaborators,
       };
     });
 

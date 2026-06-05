@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 
+import { useAuth } from "@/features/auth";
 import { getListById } from "@/lib/api";
 import { queryKeys } from "@/lib/api/query-keys";
 
@@ -12,9 +13,11 @@ import { queryKeys } from "@/lib/api/query-keys";
  * API errors are thrown so they can be handled with {@link useErrorMessage}.
  */
 export function useList(listId: string | undefined) {
+  const { user } = useAuth();
+
   return useQuery({
     queryKey: queryKeys.lists.detail(listId ?? ""),
-    enabled: Boolean(listId),
+    enabled: Boolean(listId && user),
     queryFn: async () => {
       if (!listId) {
         throw new Error("listID is required");

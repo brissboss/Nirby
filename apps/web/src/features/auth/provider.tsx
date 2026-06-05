@@ -1,5 +1,6 @@
 "use client";
 
+import { useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect, useCallback } from "react";
 
 import { AuthContext, type AuthContextType } from "@/features/auth";
@@ -21,6 +22,7 @@ import { setAccessToken, setRefreshTokenFn } from "@/lib/api/client";
 import type { User } from "@/lib/api/generated";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const queryClient = useQueryClient();
   const [user, setUser] = useState<User | null>(null);
   const [accessToken, setAccessTokenState] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -209,8 +211,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       updateToken(null);
       setUser(null);
+      queryClient.clear();
     }
-  }, [updateToken]);
+  }, [updateToken, queryClient]);
 
   useEffect(() => {
     const init = async () => {

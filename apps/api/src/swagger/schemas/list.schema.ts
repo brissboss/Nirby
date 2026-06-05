@@ -24,6 +24,8 @@ export const listSchemas = {
         nullable: true,
         description: "The date and time the edit token expires",
       },
+      poiCount: { type: "number" },
+      collaboratorCount: { type: "number" },
     },
     required: [
       "id",
