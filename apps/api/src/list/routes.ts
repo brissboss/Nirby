@@ -384,7 +384,7 @@ listRouter.get("/:listId", requireAuth, async (req, res) => {
       return res.status(404).json(formatError(ErrorCodes.LIST_NOT_FOUND, "List not found"));
     }
 
-    res.json({ list });
+    res.json({ list: { ...list, role } });
   } catch (err) {
     req.log?.error({ err }, "Failed to get list");
     return res.status(500).json(formatError(ErrorCodes.INTERNAL_ERROR, "Internal server error"));

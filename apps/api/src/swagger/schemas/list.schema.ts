@@ -86,7 +86,7 @@ export const listSchemas = {
   GetListResponse: {
     type: "object",
     properties: {
-      list: { $ref: "#/components/schemas/List" },
+      list: { $ref: "#/components/schemas/ListWithRole" },
     },
     required: ["list"],
   },

@@ -1,7 +1,8 @@
-import { GlobeIcon, LockIcon, MapPinIcon, UsersIcon } from "lucide-react";
+import { MapPinIcon, UsersIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 
-import { Badge } from "@/components";
+import { ListVisibilityBadge } from "./list-visibility-badge";
+
 import { ListWithRole } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
@@ -12,7 +13,6 @@ type ListRowProps = {
 
 export function ListRow({ list, onClick }: ListRowProps) {
   const tRow = useTranslations("lists.row");
-  const tLists = useTranslations("lists");
 
   const poiCount = list.poiCount ?? 0;
   const collaboratorCount = list.collaboratorCount ?? 0;
@@ -53,12 +53,7 @@ export function ListRow({ list, onClick }: ListRowProps) {
             </span>
           )}
         </div>
-        <Badge variant="outline" className="shrink-0 text-muted-foreground">
-          {list.visibility === "PRIVATE" && <LockIcon />}
-          {list.visibility === "SHARED" && <UsersIcon />}
-          {list.visibility === "PUBLIC" && <GlobeIcon />}
-          {tLists(`visibility.${list.visibility}.label`)}
-        </Badge>
+        <ListVisibilityBadge visibility={list.visibility} />
       </div>
     </button>
   );

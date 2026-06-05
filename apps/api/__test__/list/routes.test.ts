@@ -118,6 +118,32 @@ describe("List Routes", () => {
 
       expect(res.status).toBe(200);
       expect(res.body.list.name).toBe("Test List");
+      expect(res.body.list.role).toBe("OWNER"); // ← ajouter
+    });
+
+    it("should return role VIEWER for a viewer collaborator", async () => {
+      const owner = await prisma.user.create({
+        data: {
+          email: "owner-get-detail@example.com",
+          passwordHash: await hashPassword("password123"),
+          emailVerified: true,
+        },
+      });
+
+      const list = await prisma.poiList.create({
+        data: { name: "Shared List", createdBy: owner.id },
+      });
+
+      await prisma.listCollaborator.create({
+        data: { listId: list.id, userId, role: "VIEWER" },
+      });
+
+      const res = await request(app)
+        .get(`/list/${list.id}`)
+        .set("Authorization", `Bearer ${accessToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.list.role).toBe("VIEWER");
     });
 
     it("should return 404 for non-existent list", async () => {
