@@ -1,7 +1,8 @@
 {
   "index": {
     "title": "Lists",
-    "create": "Create a list",
+    "total": "{total, plural, =0 {No lists} one {# list} other {# lists}}",
+    "create": "New list",
     "empty": {
       "title": "No lists yet",
       "description": "",
@@ -10,7 +11,13 @@
     "search": {
       "placeholder": "Search lists…",
       "minLengthHint": ""
-    }
+    },
+    "error": {
+      "title": "Could not load lists",
+      "retry": "Retry"
+    },
+    "refreshing": "Refreshing…",
+    "loadingMore": "Loading more…"
   },
   "create": {
     "title": "New list",
@@ -19,7 +26,8 @@
   "detail": {
     "title": "List",
     "back": "Back to lists",
-    "poisComingSoon": "Places coming soon"
+    "poisComingSoon": "Places coming soon",
+    "loading": "Loading list…"
   },
   "edit": {
     "title": "Edit list",
@@ -63,5 +71,9 @@
     "requiredName": "List name is required",
     "nameTooLong": "List name cannot be longer than 255 characters",
     "descriptionTooLong": "Description cannot be longer than 1000 characters"
+  },
+  "row": {
+    "poiCount": "{count, plural, =0 {No places saved} one {# place saved} other {# places saved}}",
+    "collaboratorCount": "{count, plural, one {# collaborator} other {# collaborators}}"
   }
 }
