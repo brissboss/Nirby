@@ -1,3 +1,48 @@
+import { ListsSection } from "../types/lists-section.types";
+
+import {
+  LIST_ID_PARAM,
+  SHELL_MAP_MODE_PARAM,
+  SHELL_VIEW_PARAM,
+} from "@/lib/navigation/search-params";
+
+/** Re-export for hooks/views that import from lists.constants. */
+export { LIST_ID_PARAM } from "@/lib/navigation/search-params";
+
+export const DEFAULT_LISTS_SECTION: ListsSection = "index";
+/**
+ * Parses `listId` from the URL.
+ * Index is represented by `null` (param absent or empty).
+ */
+export function parseListId(raw: string | null): string | null {
+  if (raw === null || raw === "") {
+    return null;
+  }
+  return raw;
+}
+/**
+ * Builds the query string when navigating within the lists shell.
+ *
+ * - Always sets `view=lists`
+ * - Sets `listId` for detail, removes it for index
+ * - Clears `mapMode` (same as profile navigation)
+ */
+export function buildListsNavigationSearchParams(
+  current: URLSearchParams,
+  listId: string | null
+): string {
+  const next = new URLSearchParams(current.toString());
+  next.set(SHELL_VIEW_PARAM, "lists");
+  if (listId === null) {
+    next.delete(LIST_ID_PARAM);
+  } else {
+    next.set(LIST_ID_PARAM, listId);
+  }
+  next.delete(SHELL_MAP_MODE_PARAM);
+  const qs = next.toString();
+  return qs ? `?${qs}` : "";
+}
+
 /** Field limits for list create/update — mirrors POST/PUT /list validation. */
 export const listConstraints = {
   name: { min: 1, max: 255 },
