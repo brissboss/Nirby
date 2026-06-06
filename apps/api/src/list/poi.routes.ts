@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { requireAuth } from "../auth/middleware";
 import { prisma } from "../db";
+import { hydrateExpiredGooglePlaceCaches } from "../google-place/cache-utils";
 import { getOrFetchPlace } from "../google-place/service";
 import { ErrorCodes } from "../utils/error-codes";
 import { formatError, handleZodError } from "../utils/errors";
@@ -263,8 +264,10 @@ listPoiRouter.get("/:listId/pois", requireAuth, async (req, res) => {
       }),
     ]);
 
+    const savedPoisWithFreshGoogleCache = await hydrateExpiredGooglePlaceCaches(savedPois);
+
     res.json({
-      savedPois: savedPois,
+      savedPois: savedPoisWithFreshGoogleCache,
       pagination: {
         page,
         limit,

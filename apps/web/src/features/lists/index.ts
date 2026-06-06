@@ -8,6 +8,7 @@ export { useListPois, LIST_POIS_PAGE_SIZE } from "./hooks/use-list-pois";
 export { useAddPoiToList } from "./hooks/use-add-poi-to-list";
 export { useRemovePoiFromList } from "./hooks/use-remove-poi-from-list";
 export { useListSectionUrl } from "./hooks/use-list-section-url";
+export { useListPoisInfinite } from "./hooks/use-list-pois-infinite";
 export { createListFormSchema } from "./schemas/lists.schema";
 export {
   listConstraints,
@@ -29,6 +30,7 @@ export type { UpdateListInput } from "./hooks/use-update-list";
 export type { ListPoisFilters } from "./hooks/use-list-pois";
 export type { AddPoiToListInput } from "./hooks/use-add-poi-to-list";
 export type { RemovePoiFromListInput } from "./hooks/use-remove-poi-from-list";
+export type { ListPoisInfiniteFilters } from "./hooks/use-list-pois-infinite";
 export type { CreateListFormMessages, CreateListFormData } from "./schemas/lists.schema";
 export type { ListVisibility, ListRole } from "./constants/lists.constants";
 export type { ListsSection } from "./types/lists-section.types";

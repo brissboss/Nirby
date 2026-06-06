@@ -28,4 +28,22 @@ describe("queryKeys.lists", () => {
     expect(queryKeys.lists.infinite()[0]).toBe(queryKeys.lists.all[0]);
     expect(queryKeys.lists.detail("id")[0]).toBe(queryKeys.lists.all[0]);
   });
+
+  it("pois.infinite includes listId and filters", () => {
+    expect(queryKeys.lists.pois.infinite("list-1")).toEqual([
+      "lists",
+      "pois",
+      "list-1",
+      "infinite",
+      undefined,
+    ]);
+
+    expect(queryKeys.lists.pois.infinite("list-1", { limit: 10 })).toEqual([
+      "lists",
+      "pois",
+      "list-1",
+      "infinite",
+      { limit: 10 },
+    ]);
+  });
 });

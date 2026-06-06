@@ -27,6 +27,12 @@ vi.mock("../hooks/use-delete-list", () => ({
   useDeleteList: vi.fn(),
 }));
 
+vi.mock("../components/list-pois-section", () => ({
+  ListPoisSection: ({ listId }: { listId: string }) => (
+    <div data-testid="list-pois-section" data-list-id={listId} />
+  ),
+}));
+
 vi.mock("sonner", () => ({
   toast: {
     success: vi.fn(),
@@ -120,7 +126,7 @@ describe("ListsDetailView", () => {
     expect(refetch).toHaveBeenCalledTimes(1);
   });
 
-  it("renders list content and POI placeholder for OWNER", () => {
+  it("renders list content and ListPoisSection for OWNER", () => {
     mockListQuery();
 
     render(<ListsDetailView listId="list-1" onBack={onBack} onEdit={onEdit} onDelete={onDelete} />);
@@ -129,7 +135,10 @@ describe("ListsDetailView", () => {
     expect(screen.getByText("My favorite places")).toBeInTheDocument();
     expect(screen.getByText("role.OWNER")).toBeInTheDocument();
     expect(screen.getByText("detail.createdAt")).toBeInTheDocument();
-    expect(screen.getByText("pois.section.title")).toBeInTheDocument();
+
+    const poisSection = screen.getByTestId("list-pois-section");
+    expect(poisSection).toBeInTheDocument();
+    expect(poisSection).toHaveAttribute("data-list-id", "list-1");
   });
 
   it("shows edit button for OWNER and calls onEdit", async () => {
