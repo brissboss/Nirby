@@ -1,0 +1,14 @@
+{
+  "source": {
+    "custom": "Lieu personnalisé",
+    "google": "Google"
+  },
+  "addressUnknown": "Aucune adresse",
+  "openingHours": {
+    "openNow": "Ouvert maintenant",
+    "closedNow": "Fermé",
+    "opensAt": "Ouvre à {time}",
+    "opensTomorrowAt": "Ouvre demain à {time}",
+    "opensDayAt": "Ouvre {day} à {time}"
+  }
+}

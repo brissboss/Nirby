@@ -8,6 +8,8 @@ import { ErrorCodes } from "../../src/utils/error-codes";
 
 const app = createServer();
 
+const freshGooglePlaceCacheExpiresAt = () => new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
 describe("Shared Routes", () => {
   let ownerId: string;
   let listId: string;
@@ -183,6 +185,7 @@ describe("Shared Routes", () => {
           name: "Google Place",
           latitude: 48.8566,
           longitude: 2.3522,
+          expiresAt: freshGooglePlaceCacheExpiresAt(),
         },
       });
 
@@ -217,6 +220,7 @@ describe("Shared Routes", () => {
           name: "Google Place",
           latitude: 48.8566,
           longitude: 2.3522,
+          expiresAt: freshGooglePlaceCacheExpiresAt(),
         },
       });
 

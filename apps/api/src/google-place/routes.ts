@@ -7,7 +7,7 @@ import { SUPPORTED_LANGUAGES } from "../types";
 import { ErrorCode, ErrorCodes } from "../utils/error-codes";
 import { ApiError, formatError, handleZodError } from "../utils/errors";
 
-import { getOrFetchPlace, searchPlaces, getPhoto } from "./service";
+import { getOrFetchPlace, searchPlaces, getPhotoWithCacheRefresh } from "./service";
 
 export const googlePlaceRouter = Router();
 
@@ -190,10 +190,11 @@ googlePlaceRouter.get("/photo", requireAuth, photoRateLimiter, async (req, res) 
   try {
     const { ref, maxWidth } = getPhotoSchema.parse(req.query);
 
-    const photoBuffer = await getPhoto(ref, maxWidth);
+    const photoBuffer = await getPhotoWithCacheRefresh(ref, maxWidth);
 
     res.set("Content-Type", "image/jpeg");
-    res.set("Cache-Control", "public, max-age=86400");
+    res.set("Cache-Control", "private, no-cache, no-store, must-revalidate");
+    res.set("Pragma", "no-cache");
     res.send(photoBuffer);
   } catch (err) {
     if (err instanceof z.ZodError) {
