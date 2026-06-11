@@ -22,6 +22,7 @@
     "@prisma/adapter-pg": "^7.6.0",
     "@prisma/client": "^7.6.0",
     "@scalar/express-api-reference": "^0.8.25",
+    "@sentry/node": "^10.57.0",
     "@vitest/ui": "4.0.13",
     "bcrypt": "^6.0.0",
     "cookie-parser": "^1.4.7",

@@ -10,6 +10,7 @@ import { authRouter } from "./auth/routes";
 import { prisma } from "./db";
 import { env } from "./env";
 import { googlePlaceRouter } from "./google-place/routes";
+import { Sentry } from "./instrument";
 import { listRouter } from "./list";
 import { poiRouter } from "./poi/routes";
 import { sharedRouter } from "./shared/routes";
@@ -138,6 +139,10 @@ export function createServer() {
 
   app.use((err: unknown, req: Request, res: Response, _next: NextFunction) => {
     req.log?.error({ err }, "Unhandled error");
+
+    if (!(err instanceof ApiError)) {
+      Sentry.captureException(err);
+    }
 
     if (err instanceof ApiError) {
       return res
