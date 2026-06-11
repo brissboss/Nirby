@@ -1,11 +1,6 @@
 import { randomUUID } from "crypto";
 
-import {
-  S3Client,
-  PutObjectCommand,
-  DeleteObjectCommand,
-  HeadObjectCommand,
-} from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 
 import { env } from "../env";
 
@@ -28,22 +23,18 @@ export function isStorageConfigured(): boolean {
   return Boolean(env.S3_BUCKET && env.S3_ACCESS_KEY_ID && env.S3_SECRET_ACCESS_KEY);
 }
 
-function isS3NotFound(err: unknown): boolean {
-  if (typeof err !== "object" || err === null) {
-    return false;
-  }
-
-  const error = err as { name?: string; $metadata?: { httpStatusCode?: number } };
-  return error.name === "NotFound" || error.$metadata?.httpStatusCode === 404;
-}
-
 function formatS3Error(err: unknown): string {
-  if (err instanceof Error && err.message) {
-    return err.message;
-  }
-
-  if (typeof err === "object" && err !== null && "name" in err) {
-    return String((err as { name: string }).name);
+  if (typeof err === "object" && err !== null) {
+    const error = err as { name?: string; message?: string; Code?: string };
+    if (error.Code && error.message) {
+      return `${error.Code}: ${error.message}`;
+    }
+    if (error.message) {
+      return error.message;
+    }
+    if (error.name) {
+      return error.name;
+    }
   }
 
   return "Unknown S3 error";
@@ -56,16 +47,20 @@ export async function pingStorage(): Promise<void> {
 
   try {
     await s3.send(
-      new HeadObjectCommand({
+      new PutObjectCommand({
+        Bucket: env.S3_BUCKET,
+        Key: HEALTH_PROBE_KEY,
+        Body: Buffer.alloc(0),
+        ContentType: "application/octet-stream",
+      })
+    );
+    await s3.send(
+      new DeleteObjectCommand({
         Bucket: env.S3_BUCKET,
         Key: HEALTH_PROBE_KEY,
       })
     );
   } catch (err) {
-    if (isS3NotFound(err)) {
-      return;
-    }
-
     throw new Error(formatS3Error(err));
   }
 }
