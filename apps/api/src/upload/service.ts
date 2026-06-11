@@ -4,13 +4,16 @@ import {
   S3Client,
   PutObjectCommand,
   DeleteObjectCommand,
-  HeadBucketCommand,
+  HeadObjectCommand,
 } from "@aws-sdk/client-s3";
 
 import { env } from "../env";
 
+const HEALTH_PROBE_KEY = ".nirby-health-check-probe";
+
 const s3 = new S3Client({
   region: env.S3_REGION,
+  followRegionRedirects: true,
   credentials: {
     accessKeyId: env.S3_ACCESS_KEY_ID,
     secretAccessKey: env.S3_SECRET_ACCESS_KEY,
@@ -25,12 +28,46 @@ export function isStorageConfigured(): boolean {
   return Boolean(env.S3_BUCKET && env.S3_ACCESS_KEY_ID && env.S3_SECRET_ACCESS_KEY);
 }
 
+function isS3NotFound(err: unknown): boolean {
+  if (typeof err !== "object" || err === null) {
+    return false;
+  }
+
+  const error = err as { name?: string; $metadata?: { httpStatusCode?: number } };
+  return error.name === "NotFound" || error.$metadata?.httpStatusCode === 404;
+}
+
+function formatS3Error(err: unknown): string {
+  if (err instanceof Error && err.message) {
+    return err.message;
+  }
+
+  if (typeof err === "object" && err !== null && "name" in err) {
+    return String((err as { name: string }).name);
+  }
+
+  return "Unknown S3 error";
+}
+
 export async function pingStorage(): Promise<void> {
   if (!env.S3_BUCKET) {
     throw new Error("S3 bucket not configured");
   }
 
-  await s3.send(new HeadBucketCommand({ Bucket: env.S3_BUCKET }));
+  try {
+    await s3.send(
+      new HeadObjectCommand({
+        Bucket: env.S3_BUCKET,
+        Key: HEALTH_PROBE_KEY,
+      })
+    );
+  } catch (err) {
+    if (isS3NotFound(err)) {
+      return;
+    }
+
+    throw new Error(formatS3Error(err));
+  }
 }
 
 export const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"];
