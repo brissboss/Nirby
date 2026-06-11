@@ -382,8 +382,18 @@ jobs:
 
       - name: Health check
         run: |
-          sleep 10
-          curl -f https://staging.api.nirby.theobrissiaud.fr/health || echo "Warning: Health check failed"
+          URL="https://staging.api.nirby.theobrissiaud.fr"
+          echo "Waiting for staging API..."
+          for i in 1 2 3 4 5 6; do
+            if curl -fsS "$URL/health" && curl -fsS "$URL/db/health" | grep -q '"ok":true'; then
+              echo "Staging API is healthy"
+              exit 0
+            fi
+            echo "Attempt $i failed, retrying in 10s..."
+            sleep 10
+          done
+          echo "Staging API health check failed after 6 attempts"
+          exit 1
 
   deploy-staging-web:
     runs-on: ubuntu-latest
@@ -456,8 +466,18 @@ jobs:
 
       - name: Health check
         run: |
-          sleep 10
-          curl -f https://staging.nirby.theobrissiaud.fr || echo "Warning: Web health check failed"
+          URL="https://staging.nirby.theobrissiaud.fr"
+          echo "Waiting for staging web..."
+          for i in 1 2 3 4 5 6; do
+            if curl -fsS "$URL" > /dev/null; then
+              echo "Staging web is healthy"
+              exit 0
+            fi
+            echo "Attempt $i failed, retrying in 10s..."
+            sleep 10
+          done
+          echo "Staging web health check failed after 6 attempts"
+          exit 1
 
   deploy-production:
     runs-on: ubuntu-latest
@@ -545,8 +565,18 @@ jobs:
 
       - name: Health check
         run: |
-          sleep 10
-          curl -f https://api.nirby.theobrissiaud.fr/health || echo "Warning: Health check failed"
+          URL="https://api.nirby.theobrissiaud.fr"
+          echo "Waiting for production API..."
+          for i in 1 2 3 4 5 6; do
+            if curl -fsS "$URL/health" && curl -fsS "$URL/db/health" | grep -q '"ok":true'; then
+              echo "Production API is healthy"
+              exit 0
+            fi
+            echo "Attempt $i failed, retrying in 10s..."
+            sleep 10
+          done
+          echo "Production API health check failed after 6 attempts"
+          exit 1
 
   deploy-production-web:
     runs-on: ubuntu-latest
@@ -619,5 +649,15 @@ jobs:
 
       - name: Health check
         run: |
-          sleep 10
-          curl -f https://nirby.theobrissiaud.fr || echo "Warning: Web health check failed"
+          URL="https://nirby.theobrissiaud.fr"
+          echo "Waiting for production web..."
+          for i in 1 2 3 4 5 6; do
+            if curl -fsS "$URL" > /dev/null; then
+              echo "Production web is healthy"
+              exit 0
+            fi
+            echo "Attempt $i failed, retrying in 10s..."
+            sleep 10
+          done
+          echo "Production web health check failed after 6 attempts"
+          exit 1
