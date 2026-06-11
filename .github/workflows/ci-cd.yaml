@@ -386,7 +386,7 @@ jobs:
           URL="https://staging.api.nirby.theobrissiaud.fr"
           echo "Waiting for staging API..."
           for i in 1 2 3 4 5 6; do
-            if curl -fsS "$URL/health" && curl -fsS "$URL/db/health" | grep -q '"ok":true'; then
+            if curl -fsS "$URL/ready" | grep -q '"ok":true'; then
               echo "Staging API is healthy"
               exit 0
             fi
@@ -571,7 +571,7 @@ jobs:
           URL="https://api.nirby.theobrissiaud.fr"
           echo "Waiting for production API..."
           for i in 1 2 3 4 5 6; do
-            if curl -fsS "$URL/health" && curl -fsS "$URL/db/health" | grep -q '"ok":true'; then
+            if curl -fsS "$URL/ready" | grep -q '"ok":true'; then
               echo "Production API is healthy"
               exit 0
             fi

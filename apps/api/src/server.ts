@@ -7,9 +7,9 @@ import pino from "pino";
 import pinoHttp from "pino-http";
 
 import { authRouter } from "./auth/routes";
-import { prisma } from "./db";
 import { env } from "./env";
 import { googlePlaceRouter } from "./google-place/routes";
+import { runReadinessChecks } from "./health/run-readiness-checks";
 import { Sentry } from "./instrument";
 import { listRouter } from "./list";
 import { poiRouter } from "./poi/routes";
@@ -114,23 +114,30 @@ export function createServer() {
 
   /**
    * @openapi
-   * /db/health:
+   * /ready:
    *   get:
-   *     operationId: dbHealthCheck
-   *     summary: Database health check
+   *     operationId: readinessCheck
+   *     summary: Readiness check
+   *     description: Verifies database, Redis, and object storage dependencies.
    *     tags:
    *       - ❤️ Health
    *     responses:
    *       200:
-   *         description: Database is alive
+   *         description: All required dependencies are healthy
    *         content:
    *           application/json:
    *             schema:
-   *               $ref: '#/components/schemas/HealthDatabaseResponse'
+   *               $ref: '#/components/schemas/ReadinessResponse'
+   *       503:
+   *         description: One or more dependencies are unavailable
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ReadinessResponse'
    */
-  app.get("/db/health", async (_req, res) => {
-    const now = await prisma.$queryRaw`select now() as now`;
-    res.json({ ok: true, db: now });
+  app.get("/ready", async (_req, res) => {
+    const result = await runReadinessChecks();
+    res.status(result.ok ? 200 : 503).json(result);
   });
 
   app.use((req: Request, res: Response) => {

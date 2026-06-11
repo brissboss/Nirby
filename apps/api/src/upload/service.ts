@@ -1,6 +1,11 @@
 import { randomUUID } from "crypto";
 
-import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
+import {
+  S3Client,
+  PutObjectCommand,
+  DeleteObjectCommand,
+  HeadBucketCommand,
+} from "@aws-sdk/client-s3";
 
 import { env } from "../env";
 
@@ -15,6 +20,18 @@ const s3 = new S3Client({
     forcePathStyle: true, // Required for MinIO
   }),
 });
+
+export function isStorageConfigured(): boolean {
+  return Boolean(env.S3_BUCKET && env.S3_ACCESS_KEY_ID && env.S3_SECRET_ACCESS_KEY);
+}
+
+export async function pingStorage(): Promise<void> {
+  if (!env.S3_BUCKET) {
+    throw new Error("S3 bucket not configured");
+  }
+
+  await s3.send(new HeadBucketCommand({ Bucket: env.S3_BUCKET }));
+}
 
 export const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"];
 export const MAX_AVATAR_SIZE = 2 * 1024 * 1024; // 2 MB

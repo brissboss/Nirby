@@ -9,7 +9,7 @@ if (dsn && process.env.NODE_ENV !== "test") {
     tracesSampleRate: 0.1,
     beforeSend(event) {
       const url = event.request?.url ?? "";
-      if (url.includes("/health")) {
+      if (url.includes("/health") || url.includes("/ready")) {
         return null;
       }
       return event;

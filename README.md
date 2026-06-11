@@ -134,16 +134,16 @@ Le build du front peut utiliser `NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN` (et optionnell
 
 ## Récapitulatif des services en local
 
-| Service           | URL / Connexion              | Rôle                                   |
-| ----------------- | ---------------------------- | -------------------------------------- |
-| Front (Next.js)   | http://localhost:3000        | Interface utilisateur                  |
-| API (Express)     | http://localhost:4000        | Back-end (health: /health, /db/health) |
-| Documentation API | http://localhost:4000/docs   | Swagger / Scalar                       |
-| PostgreSQL        | localhost:5432 (nirby/nirby) | Base de données (PostGIS)              |
-| Redis             | localhost:6379               | Cache / sessions                       |
-| Minio             | http://localhost:9000        | Stockage S3-compatible (uploads)       |
-| Minio Console     | http://localhost:9001        | Interface d’administration Minio       |
-| Adminer           | http://localhost:8080        | Interface web BDD (si lancé)           |
+| Service           | URL / Connexion              | Rôle                               |
+| ----------------- | ---------------------------- | ---------------------------------- |
+| Front (Next.js)   | http://localhost:3000        | Interface utilisateur              |
+| API (Express)     | http://localhost:4000        | Back-end (health: /health, /ready) |
+| Documentation API | http://localhost:4000/docs   | Swagger / Scalar                   |
+| PostgreSQL        | localhost:5432 (nirby/nirby) | Base de données (PostGIS)          |
+| Redis             | localhost:6379               | Cache / sessions                   |
+| Minio             | http://localhost:9000        | Stockage S3-compatible (uploads)   |
+| Minio Console     | http://localhost:9001        | Interface d’administration Minio   |
+| Adminer           | http://localhost:8080        | Interface web BDD (si lancé)       |
 
 ---
 

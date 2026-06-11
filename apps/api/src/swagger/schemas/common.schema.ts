@@ -60,16 +60,44 @@ export const commonSchemas = {
       time: "2021-01-01T00:00:00.000Z",
     },
   },
-  HealthDatabaseResponse: {
+  DependencyCheckResult: {
     type: "object",
     properties: {
       ok: { type: "boolean" },
-      db: { type: "string", format: "date-time" },
+      latencyMs: { type: "number" },
+      skipped: { type: "boolean" },
+      error: { type: "string" },
     },
-    required: ["ok", "db"],
+    required: ["ok"],
     example: {
       ok: true,
-      db: "2021-01-01T00:00:00.000Z",
+      latencyMs: 12,
+    },
+  },
+  ReadinessResponse: {
+    type: "object",
+    properties: {
+      ok: { type: "boolean" },
+      time: { type: "string", format: "date-time" },
+      checks: {
+        type: "object",
+        properties: {
+          database: { $ref: "#/components/schemas/DependencyCheckResult" },
+          redis: { $ref: "#/components/schemas/DependencyCheckResult" },
+          storage: { $ref: "#/components/schemas/DependencyCheckResult" },
+        },
+        required: ["database", "redis", "storage"],
+      },
+    },
+    required: ["ok", "time", "checks"],
+    example: {
+      ok: true,
+      time: "2021-01-01T00:00:00.000Z",
+      checks: {
+        database: { ok: true, latencyMs: 12 },
+        redis: { ok: true, latencyMs: 3 },
+        storage: { ok: true, latencyMs: 45 },
+      },
     },
   },
   Error: {

@@ -65,9 +65,21 @@ export type HealthCheckResponse = {
   time: string;
 };
 
-export type HealthDatabaseResponse = {
+export type DependencyCheckResult = {
   ok: boolean;
-  db: string;
+  latencyMs?: number;
+  skipped?: boolean;
+  error?: string;
+};
+
+export type ReadinessResponse = {
+  ok: boolean;
+  time: string;
+  checks: {
+    database: DependencyCheckResult;
+    redis: DependencyCheckResult;
+    storage: DependencyCheckResult;
+  };
 };
 
 export type Error = {
@@ -2085,21 +2097,25 @@ export type HealthCheckResponses = {
 
 export type HealthCheckResponse2 = HealthCheckResponses[keyof HealthCheckResponses];
 
-export type DbHealthCheckData = {
+export type ReadinessCheckData = {
   body?: never;
   path?: never;
   query?: never;
-  url: "/db/health";
+  url: "/ready";
 };
 
-export type DbHealthCheckResponses = {
+export type ReadinessCheckResponses = {
   /**
-   * Database is alive
+   * All required dependencies are healthy
    */
-  200: HealthDatabaseResponse;
+  200: ReadinessResponse;
+  /**
+   * One or more dependencies are unavailable
+   */
+  503: ReadinessResponse;
 };
 
-export type DbHealthCheckResponse = DbHealthCheckResponses[keyof DbHealthCheckResponses];
+export type ReadinessCheckResponse = ReadinessCheckResponses[keyof ReadinessCheckResponses];
 
 export type GetSharedListData = {
   body?: never;
