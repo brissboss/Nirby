@@ -1,3 +1,5 @@
+import "./instrument";
+
 import { env } from "./env";
 import { redisClient } from "./redis";
 import { createServer } from "./server";

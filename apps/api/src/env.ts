@@ -29,6 +29,7 @@ const envSchema = z.object({
   S3_BUCKET: z.string().optional().default(""),
   S3_ENDPOINT: z.string().optional(), // For MinIO (dev)
   S3_PUBLIC_URL: z.string().optional(), // Public URL prefix for files (prod CDN)
+  SENTRY_DSN: z.preprocess((val) => (val === "" ? undefined : val), z.string().url().optional()),
 });
 
 export const env = envSchema.parse(process.env);

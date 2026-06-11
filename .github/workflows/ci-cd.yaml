@@ -368,6 +368,7 @@ jobs:
             export S3_ACCESS_KEY_ID="${{ secrets.S3_ACCESS_KEY_ID }}"
             export S3_SECRET_ACCESS_KEY="${{ secrets.S3_SECRET_ACCESS_KEY }}"
             export S3_PUBLIC_URL="${{ vars.S3_PUBLIC_URL }}"
+            export SENTRY_DSN="${{ secrets.SENTRY_DSN }}"
             docker-compose up -d --force-recreate
 
             # Prune unused Docker images to prevent disk space issues
@@ -410,6 +411,7 @@ jobs:
           docker build -t nirby-web:${{ github.sha }} \
             --build-arg NEXT_PUBLIC_API_URL=https://staging.api.nirby.theobrissiaud.fr \
             --build-arg NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN=${{ secrets.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN }} \
+            --build-arg NEXT_PUBLIC_SENTRY_DSN=${{ secrets.NEXT_PUBLIC_SENTRY_DSN }} \
             -f apps/web/Dockerfile .
 
       - name: Save Docker Image
@@ -551,6 +553,7 @@ jobs:
             export S3_ACCESS_KEY_ID="${{ secrets.S3_ACCESS_KEY_ID }}"
             export S3_SECRET_ACCESS_KEY="${{ secrets.S3_SECRET_ACCESS_KEY }}"
             export S3_PUBLIC_URL="${{ vars.S3_PUBLIC_URL }}"
+            export SENTRY_DSN="${{ secrets.SENTRY_DSN }}"
             docker-compose up -d --force-recreate
 
             # Prune unused Docker images to prevent disk space issues
@@ -593,6 +596,7 @@ jobs:
           docker build -t nirby-web:${{ github.sha }} \
             --build-arg NEXT_PUBLIC_API_URL=https://api.nirby.theobrissiaud.fr \
             --build-arg NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN=${{ secrets.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN }} \
+            --build-arg NEXT_PUBLIC_SENTRY_DSN=${{ secrets.NEXT_PUBLIC_SENTRY_DSN }} \
             -f apps/web/Dockerfile .
 
       - name: Save Docker Image
