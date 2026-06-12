@@ -76,7 +76,7 @@ jobs:
 
       - name: Copy API image to server
         if: inputs.service == 'api' || inputs.service == 'both'
-        uses: appleboy/scp-action@v0.1.7
+        uses: appleboy/scp-action@v1.0.0
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
@@ -86,7 +86,7 @@ jobs:
 
       - name: Copy Web image to server
         if: inputs.service == 'web' || inputs.service == 'both'
-        uses: appleboy/scp-action@v0.1.7
+        uses: appleboy/scp-action@v1.0.0
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
@@ -95,7 +95,7 @@ jobs:
           target: "/tmp/"
 
       - name: Copy deploy assets to server
-        uses: appleboy/scp-action@v0.1.7
+        uses: appleboy/scp-action@v1.0.0
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
