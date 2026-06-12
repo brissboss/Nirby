@@ -156,7 +156,36 @@ Le build du front peut utiliser `NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN` (et optionnell
 
 ## Déploiement (staging / production)
 
-Le déploiement est géré par la **CI/CD** ([.github/workflows/ci-cd.yaml](.github/workflows/ci-cd.yaml)) : build des images, copie sur le serveur, puis **`infra/staging/docker-compose.yaml`** ou **`infra/prod/docker-compose.yaml`**.
+Le déploiement est géré par la **CI/CD** ([.github/workflows/ci-cd.yaml](.github/workflows/ci-cd.yaml)) : build des images, copie sur le serveur, scripts dans **`infra/scripts/`**, puis **`infra/staging/docker-compose.yaml`** ou **`infra/prod/docker-compose.yaml`**.
+
+### Comportement au deploy (API)
+
+1. **Backup PostgreSQL** avant toute migration pending (`BACKUP_POLICY=always` par défaut).
+2. **`prisma migrate deploy`** dans un container éphémère (l’API en cours continue de tourner).
+3. Bascule vers la nouvelle image (SHA piné via `DEPLOY_API_SHA`).
+4. Health check `/ready` — en cas d’échec, **rollback automatique** vers le SHA précédent.
+5. Conservation des **5 dernières images** Docker (plus de `prune -a` agressif).
+
+### Rollback manuel
+
+Workflow GitHub **[Rollback](.github/workflows/rollback.yaml)** : Actions → Rollback → choisir environnement, service (`api` / `web` / `both`) et le **commit SHA** cible.
+
+Sur le serveur (SSH) :
+
+```bash
+# Voir la version déployée
+cat /opt/nirby/prod/.deployed-api-sha
+
+# Rollback API (image déjà présente sur le serveur)
+/opt/nirby/scripts/rollback-api.sh prod <SHA>
+
+# Restaurer la DB depuis un backup
+/opt/nirby/scripts/db-restore.sh prod /opt/nirby/backups/prod/nirby-prod-pre-migrate-XXXX.dump
+```
+
+### Setup VPS (une fois)
+
+Voir la section **« Setup VPS »** ci-dessous après merge de ces changements.
 
 **Secrets GitHub utiles pour PostgreSQL** (staging / prod) :
 
@@ -166,6 +195,18 @@ Le déploiement est géré par la **CI/CD** ([.github/workflows/ci-cd.yaml](.git
 Au **premier** démarrage avec un **volume PostgreSQL vide**, les scripts dans `infra/staging/db-init/` et `infra/prod/db-init/` (montés en `docker-entrypoint-initdb.d`) créent `nirby_app` et configurent les privilèges par défaut. Si une base a été créée **avant** cette logique, il faut soit **recréer le volume** (`docker compose down -v`, perte des données), soit exécuter une fois l’équivalent SQL sur le serveur.
 
 **Fichier local** : `infra/docker-compose.yaml` sert **uniquement** au lancement **sur ta machine** ; il n’est pas le fichier utilisé par la CI pour staging/prod.
+
+### Setup VPS (premier deploy après cette mise à jour)
+
+```bash
+ssh <user>@<vps>
+sudo mkdir -p /opt/nirby/{scripts,backups/prod,backups/staging,prod,prod/db-init,staging,staging/db-init}
+sudo chown -R $USER:$USER /opt/nirby
+```
+
+Ensuite : **merge + push** sur `staging` ou `main`. La CI copie les scripts, génère `/opt/nirby/<env>/.env`, et déploie.
+
+Templates manuels si besoin : `infra/prod/.env.example`, `infra/staging/.env.example`.
 
 ---
 
