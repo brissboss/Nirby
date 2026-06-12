@@ -20,8 +20,8 @@ import type {
   CreatePoiData,
   CreatePoiErrors,
   CreatePoiResponses,
-  DbHealthCheckData,
-  DbHealthCheckResponses,
+  ReadinessCheckData,
+  ReadinessCheckResponses,
   DeleteAccountData,
   DeleteAccountErrors,
   DeleteAccountResponses,
@@ -822,13 +822,13 @@ export const healthCheck = <ThrowOnError extends boolean = false>(
   });
 
 /**
- * Database health check
+ * Readiness check
  */
-export const dbHealthCheck = <ThrowOnError extends boolean = false>(
-  options?: Options<DbHealthCheckData, ThrowOnError>
+export const readinessCheck = <ThrowOnError extends boolean = false>(
+  options?: Options<ReadinessCheckData, ThrowOnError>
 ) =>
-  (options?.client ?? client).get<DbHealthCheckResponses, unknown, ThrowOnError>({
-    url: "/db/health",
+  (options?.client ?? client).get<ReadinessCheckResponses, unknown, ThrowOnError>({
+    url: "/ready",
     ...options,
   });
 

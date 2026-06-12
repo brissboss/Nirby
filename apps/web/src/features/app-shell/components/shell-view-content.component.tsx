@@ -1,0 +1,20 @@
+"use client";
+
+import { useShell } from "../context/shell-context";
+import { ShellView } from "../types/shell.types";
+
+import { AuthGate } from "@/features/auth";
+
+type ShellViewContentProps = {
+  viewComponents: Record<ShellView, React.ComponentType>;
+};
+
+export function ShellViewContent({ viewComponents }: ShellViewContentProps) {
+  const { view } = useShell();
+  const View = viewComponents[view] ?? viewComponents.explore;
+  return (
+    <AuthGate>
+      <View />
+    </AuthGate>
+  );
+}

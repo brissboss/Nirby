@@ -38,13 +38,18 @@ describe("Server routes", () => {
     });
   });
 
-  describe("GET /db/health", () => {
-    it("should return database health status", async () => {
-      const res = await request(app).get("/db/health");
+  describe("GET /ready", () => {
+    it("should return readiness status for dependencies", async () => {
+      const res = await request(app).get("/ready");
 
       expect(res.status).toBe(200);
       expect(res.body).toHaveProperty("ok", true);
-      expect(res.body).toHaveProperty("db");
+      expect(res.body).toHaveProperty("time");
+      expect(res.body.checks).toMatchObject({
+        database: { ok: true },
+        redis: { ok: true },
+        storage: { ok: true },
+      });
     });
   });
 

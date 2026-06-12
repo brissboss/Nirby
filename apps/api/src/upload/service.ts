@@ -4,8 +4,11 @@ import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client
 
 import { env } from "../env";
 
+const HEALTH_PROBE_KEY = ".nirby-health-check-probe";
+
 const s3 = new S3Client({
   region: env.S3_REGION,
+  followRegionRedirects: true,
   credentials: {
     accessKeyId: env.S3_ACCESS_KEY_ID,
     secretAccessKey: env.S3_SECRET_ACCESS_KEY,
@@ -15,6 +18,52 @@ const s3 = new S3Client({
     forcePathStyle: true, // Required for MinIO
   }),
 });
+
+export function isStorageConfigured(): boolean {
+  return Boolean(env.S3_BUCKET && env.S3_ACCESS_KEY_ID && env.S3_SECRET_ACCESS_KEY);
+}
+
+function formatS3Error(err: unknown): string {
+  if (typeof err === "object" && err !== null) {
+    const error = err as { name?: string; message?: string; Code?: string };
+    if (error.Code && error.message) {
+      return `${error.Code}: ${error.message}`;
+    }
+    if (error.message) {
+      return error.message;
+    }
+    if (error.name) {
+      return error.name;
+    }
+  }
+
+  return "Unknown S3 error";
+}
+
+export async function pingStorage(): Promise<void> {
+  if (!env.S3_BUCKET) {
+    throw new Error("S3 bucket not configured");
+  }
+
+  try {
+    await s3.send(
+      new PutObjectCommand({
+        Bucket: env.S3_BUCKET,
+        Key: HEALTH_PROBE_KEY,
+        Body: Buffer.alloc(0),
+        ContentType: "application/octet-stream",
+      })
+    );
+    await s3.send(
+      new DeleteObjectCommand({
+        Bucket: env.S3_BUCKET,
+        Key: HEALTH_PROBE_KEY,
+      })
+    );
+  } catch (err) {
+    throw new Error(formatS3Error(err));
+  }
+}
 
 export const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"];
 export const MAX_AVATAR_SIZE = 2 * 1024 * 1024; // 2 MB

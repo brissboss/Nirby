@@ -5,5 +5,4 @@ dist
 *.log
 .turbo
 coverage
-docs/*
 .cursor/*

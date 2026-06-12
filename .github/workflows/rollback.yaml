@@ -1,0 +1,194 @@
+name: Rollback
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Target environment
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+      service:
+        description: Service to roll back
+        required: true
+        type: choice
+        options:
+          - api
+          - web
+          - both
+      git_sha:
+        description: Git commit SHA to deploy (full or short)
+        required: true
+        type: string
+
+jobs:
+  rollback:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment == 'production' && 'production' || 'staging' }}
+
+    steps:
+      - name: Checkout target commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.git_sha }}
+
+      - name: Resolve full SHA
+        id: sha
+        run: echo "full=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+
+      - name: Set deploy env name
+        id: env
+        run: |
+          if [ "${{ inputs.environment }}" = "production" ]; then
+            echo "name=prod" >> $GITHUB_OUTPUT
+            echo "api_url=https://api.nirby.theobrissiaud.fr" >> $GITHUB_OUTPUT
+            echo "web_url=https://nirby.theobrissiaud.fr" >> $GITHUB_OUTPUT
+            echo "web_api_url=https://api.nirby.theobrissiaud.fr" >> $GITHUB_OUTPUT
+          else
+            echo "name=staging" >> $GITHUB_OUTPUT
+            echo "api_url=https://staging.api.nirby.theobrissiaud.fr" >> $GITHUB_OUTPUT
+            echo "web_url=https://staging.nirby.theobrissiaud.fr" >> $GITHUB_OUTPUT
+            echo "web_api_url=https://staging.api.nirby.theobrissiaud.fr" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build API image
+        if: inputs.service == 'api' || inputs.service == 'both'
+        run: docker build -t nirby-api:${{ steps.sha.outputs.full }} -f apps/api/Dockerfile .
+
+      - name: Save API image
+        if: inputs.service == 'api' || inputs.service == 'both'
+        run: docker save nirby-api:${{ steps.sha.outputs.full }} | gzip > nirby-api.tar.gz
+
+      - name: Build Web image
+        if: inputs.service == 'web' || inputs.service == 'both'
+        run: |
+          docker build -t nirby-web:${{ steps.sha.outputs.full }} \
+            --build-arg NEXT_PUBLIC_API_URL=${{ steps.env.outputs.web_api_url }} \
+            --build-arg NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN=${{ secrets.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN }} \
+            --build-arg NEXT_PUBLIC_SENTRY_DSN=${{ secrets.NEXT_PUBLIC_SENTRY_DSN }} \
+            -f apps/web/Dockerfile .
+
+      - name: Save Web image
+        if: inputs.service == 'web' || inputs.service == 'both'
+        run: docker save nirby-web:${{ steps.sha.outputs.full }} | gzip > nirby-web.tar.gz
+
+      - name: Copy API image to server
+        if: inputs.service == 'api' || inputs.service == 'both'
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "nirby-api.tar.gz"
+          target: "/tmp/"
+
+      - name: Copy Web image to server
+        if: inputs.service == 'web' || inputs.service == 'both'
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "nirby-web.tar.gz"
+          target: "/tmp/"
+
+      - name: Copy deploy assets to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "infra/"
+          target: "/tmp/"
+
+      - name: Roll back on server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+            ENV_NAME="${{ steps.env.outputs.name }}"
+            SHA="${{ steps.sha.outputs.full }}"
+
+            export DEPLOY_SHA="$SHA"
+            export DEPLOY_API_SHA="$SHA"
+            export DEPLOY_WEB_SHA="$SHA"
+            export BACKUP_POLICY=never
+            export KEEP_IMAGES=5
+            export JWT_SECRET="${{ secrets.JWT_SECRET }}"
+            export DB_PASSWORD="${{ secrets.DB_PASSWORD }}"
+            export DB_APP_PASSWORD="${{ secrets.DB_APP_PASSWORD }}"
+            export RESEND_API_KEY="${{ secrets.RESEND_API_KEY }}"
+            export GOOGLE_PLACES_API_KEY="${{ secrets.GOOGLE_PLACES_API_KEY }}"
+            export FRONTEND_URL="${{ vars.FRONTEND_URL }}"
+            export EMAIL_VERIFICATION_TEMPLATE_ID_EN="${{ vars.EMAIL_VERIFICATION_TEMPLATE_ID_EN }}"
+            export EMAIL_VERIFICATION_TEMPLATE_ID_FR="${{ vars.EMAIL_VERIFICATION_TEMPLATE_ID_FR }}"
+            export EMAIL_PASSWORD_RESET_TEMPLATE_ID_EN="${{ vars.EMAIL_PASSWORD_RESET_TEMPLATE_ID_EN }}"
+            export EMAIL_PASSWORD_RESET_TEMPLATE_ID_FR="${{ vars.EMAIL_PASSWORD_RESET_TEMPLATE_ID_FR }}"
+            export EMAIL_ACCOUNT_DELETED_TEMPLATE_ID_EN="${{ vars.EMAIL_ACCOUNT_DELETED_TEMPLATE_ID_EN }}"
+            export EMAIL_ACCOUNT_DELETED_TEMPLATE_ID_FR="${{ vars.EMAIL_ACCOUNT_DELETED_TEMPLATE_ID_FR }}"
+            export EMAIL_COLLABORATOR_INVITE_TEMPLATE_ID_EN="${{ vars.EMAIL_COLLABORATOR_INVITE_TEMPLATE_ID_EN }}"
+            export EMAIL_COLLABORATOR_INVITE_TEMPLATE_ID_FR="${{ vars.EMAIL_COLLABORATOR_INVITE_TEMPLATE_ID_FR }}"
+            export S3_BUCKET="${{ vars.S3_BUCKET }}"
+            export S3_REGION="${{ vars.S3_REGION }}"
+            export S3_ACCESS_KEY_ID="${{ secrets.S3_ACCESS_KEY_ID }}"
+            export S3_SECRET_ACCESS_KEY="${{ secrets.S3_SECRET_ACCESS_KEY }}"
+            export S3_PUBLIC_URL="${{ vars.S3_PUBLIC_URL }}"
+            export SENTRY_DSN="${{ secrets.SENTRY_DSN }}"
+
+            /tmp/infra/scripts/install-deploy-assets.sh "$ENV_NAME"
+            /opt/nirby/scripts/sync-env.sh "$ENV_NAME"
+
+            if [ -f /tmp/nirby-api.tar.gz ]; then
+              docker load < /tmp/nirby-api.tar.gz
+              docker tag "nirby-api:${SHA}" nirby-api:latest
+            fi
+            if [ -f /tmp/nirby-web.tar.gz ]; then
+              docker load < /tmp/nirby-web.tar.gz
+              docker tag "nirby-web:${SHA}" nirby-web:latest
+            fi
+
+            if [ "${{ inputs.service }}" = "api" ] || [ "${{ inputs.service }}" = "both" ]; then
+              /opt/nirby/scripts/rollback-api.sh "$ENV_NAME" "$SHA"
+            fi
+            if [ "${{ inputs.service }}" = "web" ] || [ "${{ inputs.service }}" = "both" ]; then
+              export DEPLOY_SHA="$SHA"
+              /opt/nirby/scripts/deploy-web.sh "$ENV_NAME"
+            fi
+
+            rm -f /tmp/nirby-api.tar.gz /tmp/nirby-web.tar.gz
+            rm -rf /tmp/infra
+
+      - name: API health check
+        if: inputs.service == 'api' || inputs.service == 'both'
+        run: |
+          URL="${{ steps.env.outputs.api_url }}"
+          for i in 1 2 3 4 5 6 7 8 9 10; do
+            RESPONSE=$(curl -sS "$URL/ready" || true)
+            echo "Attempt $i: $RESPONSE"
+            if echo "$RESPONSE" | jq -e '.ok == true' >/dev/null 2>&1; then
+              echo "API is healthy after rollback"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "API health check failed after rollback"
+          exit 1
+
+      - name: Web health check
+        if: inputs.service == 'web' || inputs.service == 'both'
+        run: |
+          URL="${{ steps.env.outputs.web_url }}"
+          for i in 1 2 3 4 5 6 7 8 9 10; do
+            if curl -fsS "$URL" > /dev/null; then
+              echo "Web is healthy after rollback"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "Web health check failed after rollback"
+          exit 1

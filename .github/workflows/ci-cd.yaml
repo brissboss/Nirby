@@ -268,6 +268,71 @@ jobs:
           sleep 10
           curl -f http://localhost:4000/health || (docker logs nirby-api-test && exit 1)
 
+      - name: OWASP ZAP Baseline Scan
+        uses: zaproxy/action-baseline@v0.14.0
+        continue-on-error: true
+        with:
+          target: "http://host.docker.internal:4000"
+          docker_options: "-u root --add-host=host.docker.internal:host-gateway"
+          allow_issue_writing: false
+
+      - name: Upload ZAP report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: zap-baseline-report
+          path: report_html.html
+
+      - name: Cleanup API container
+        if: always()
+        run: docker rm -f nirby-api-test || true
+
+  security-audit:
+    runs-on: ubuntu-latest
+    needs: [filter, setup]
+    if: needs.filter.outputs.run_api == 'true' || needs.filter.outputs.run_web == 'true'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Enable corepack
+        run: corepack enable
+
+      - name: Install pnpm
+        run: corepack prepare pnpm@10.14.0 --activate
+
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        run: echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Audit dependencies
+        run: pnpm audit --audit-level=high 2>&1 | tee audit-report.txt
+        continue-on-error: true
+
+      - name: Upload audit report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pnpm-audit-report
+          path: audit-report.txt
+
   web-docker:
     runs-on: ubuntu-latest
     needs: [ci-web]
@@ -321,13 +386,13 @@ jobs:
           source: "nirby-api.tar.gz"
           target: "/tmp/"
 
-      - name: Copy docker-compose to server
+      - name: Copy deploy assets to server
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: "infra/staging/docker-compose.yaml"
+          source: "infra/"
           target: "/tmp/"
 
       - name: Deploy on server
@@ -338,17 +403,10 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             set -e
-
-            # Load the new image
-            docker load < /tmp/nirby-api.tar.gz
-            docker tag nirby-api:${{ github.sha }} nirby-api:latest
-
-            # Copy docker-compose to deploy path
-            mkdir -p /opt/nirby/staging
-            cp /tmp/infra/staging/docker-compose.yaml /opt/nirby/staging/
-
-            # Deploy with all environment variables
-            cd /opt/nirby/staging
+            export DEPLOY_SHA="${{ github.sha }}"
+            export DEPLOY_API_SHA="${{ github.sha }}"
+            export BACKUP_POLICY=always
+            export KEEP_IMAGES=5
             export JWT_SECRET="${{ secrets.JWT_SECRET }}"
             export DB_PASSWORD="${{ secrets.DB_PASSWORD }}"
             export DB_APP_PASSWORD="${{ secrets.DB_APP_PASSWORD }}"
@@ -368,22 +426,37 @@ jobs:
             export S3_ACCESS_KEY_ID="${{ secrets.S3_ACCESS_KEY_ID }}"
             export S3_SECRET_ACCESS_KEY="${{ secrets.S3_SECRET_ACCESS_KEY }}"
             export S3_PUBLIC_URL="${{ vars.S3_PUBLIC_URL }}"
-            docker-compose up -d --force-recreate
+            export SENTRY_DSN="${{ secrets.SENTRY_DSN }}"
 
-            # Prune unused Docker images to prevent disk space issues
-            docker image prune -a -f
+            docker load < /tmp/nirby-api.tar.gz
+            docker tag nirby-api:${{ github.sha }} nirby-api:latest
 
-            # Cleanup
+            mkdir -p /opt/nirby/scripts
+            cp -r /tmp/infra/scripts/. /opt/nirby/scripts/
+            find /opt/nirby/scripts -name '*.sh' -exec chmod +x {} \;
+            /opt/nirby/scripts/install-deploy-assets.sh staging
+            /opt/nirby/scripts/sync-env.sh staging
+            /opt/nirby/scripts/deploy-api.sh staging
+
             rm -f /tmp/nirby-api.tar.gz
             rm -rf /tmp/infra
 
-            # Show logs
-            docker-compose logs --tail=50 api
-
       - name: Health check
         run: |
-          sleep 10
-          curl -f https://staging.api.nirby.theobrissiaud.fr/health || echo "Warning: Health check failed"
+          URL="https://staging.api.nirby.theobrissiaud.fr"
+          echo "Waiting for staging API (migrations + dependencies)..."
+          sleep 15
+          for i in 1 2 3 4 5 6 7 8 9 10; do
+            RESPONSE=$(curl -sS "$URL/ready" || true)
+            echo "Attempt $i: $RESPONSE"
+            if echo "$RESPONSE" | jq -e '.ok == true' >/dev/null 2>&1; then
+              echo "Staging API is healthy"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "Staging API health check failed after 10 attempts"
+          exit 1
 
   deploy-staging-web:
     runs-on: ubuntu-latest
@@ -400,6 +473,7 @@ jobs:
           docker build -t nirby-web:${{ github.sha }} \
             --build-arg NEXT_PUBLIC_API_URL=https://staging.api.nirby.theobrissiaud.fr \
             --build-arg NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN=${{ secrets.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN }} \
+            --build-arg NEXT_PUBLIC_SENTRY_DSN=${{ secrets.NEXT_PUBLIC_SENTRY_DSN }} \
             -f apps/web/Dockerfile .
 
       - name: Save Docker Image
@@ -414,13 +488,13 @@ jobs:
           source: "nirby-web.tar.gz"
           target: "/tmp/"
 
-      - name: Copy docker-compose to server
+      - name: Copy deploy assets to server
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: "infra/staging/docker-compose.yaml"
+          source: "infra/"
           target: "/tmp/"
 
       - name: Deploy on server
@@ -431,33 +505,58 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             set -e
+            export DEPLOY_SHA="${{ github.sha }}"
+            export DEPLOY_WEB_SHA="${{ github.sha }}"
+            export KEEP_IMAGES=5
+            export JWT_SECRET="${{ secrets.JWT_SECRET }}"
+            export DB_PASSWORD="${{ secrets.DB_PASSWORD }}"
+            export DB_APP_PASSWORD="${{ secrets.DB_APP_PASSWORD }}"
+            export RESEND_API_KEY="${{ secrets.RESEND_API_KEY }}"
+            export GOOGLE_PLACES_API_KEY="${{ secrets.GOOGLE_PLACES_API_KEY }}"
+            export FRONTEND_URL="${{ vars.FRONTEND_URL }}"
+            export EMAIL_VERIFICATION_TEMPLATE_ID_EN="${{ vars.EMAIL_VERIFICATION_TEMPLATE_ID_EN }}"
+            export EMAIL_VERIFICATION_TEMPLATE_ID_FR="${{ vars.EMAIL_VERIFICATION_TEMPLATE_ID_FR }}"
+            export EMAIL_PASSWORD_RESET_TEMPLATE_ID_EN="${{ vars.EMAIL_PASSWORD_RESET_TEMPLATE_ID_EN }}"
+            export EMAIL_PASSWORD_RESET_TEMPLATE_ID_FR="${{ vars.EMAIL_PASSWORD_RESET_TEMPLATE_ID_FR }}"
+            export EMAIL_ACCOUNT_DELETED_TEMPLATE_ID_EN="${{ vars.EMAIL_ACCOUNT_DELETED_TEMPLATE_ID_EN }}"
+            export EMAIL_ACCOUNT_DELETED_TEMPLATE_ID_FR="${{ vars.EMAIL_ACCOUNT_DELETED_TEMPLATE_ID_FR }}"
+            export EMAIL_COLLABORATOR_INVITE_TEMPLATE_ID_EN="${{ vars.EMAIL_COLLABORATOR_INVITE_TEMPLATE_ID_EN }}"
+            export EMAIL_COLLABORATOR_INVITE_TEMPLATE_ID_FR="${{ vars.EMAIL_COLLABORATOR_INVITE_TEMPLATE_ID_FR }}"
+            export S3_BUCKET="${{ vars.S3_BUCKET }}"
+            export S3_REGION="${{ vars.S3_REGION }}"
+            export S3_ACCESS_KEY_ID="${{ secrets.S3_ACCESS_KEY_ID }}"
+            export S3_SECRET_ACCESS_KEY="${{ secrets.S3_SECRET_ACCESS_KEY }}"
+            export S3_PUBLIC_URL="${{ vars.S3_PUBLIC_URL }}"
+            export SENTRY_DSN="${{ secrets.SENTRY_DSN }}"
 
-            # Load the new image
             docker load < /tmp/nirby-web.tar.gz
             docker tag nirby-web:${{ github.sha }} nirby-web:latest
 
-            # Update docker-compose
-            mkdir -p /opt/nirby/staging
-            cp /tmp/infra/staging/docker-compose.yaml /opt/nirby/staging/
+            mkdir -p /opt/nirby/scripts
+            cp -r /tmp/infra/scripts/. /opt/nirby/scripts/
+            find /opt/nirby/scripts -name '*.sh' -exec chmod +x {} \;
+            /opt/nirby/scripts/install-deploy-assets.sh staging
+            /opt/nirby/scripts/sync-env.sh staging
+            /opt/nirby/scripts/deploy-web.sh staging
 
-            # Restart web container
-            cd /opt/nirby/staging
-            docker-compose up -d --force-recreate web
-
-            # Prune unused Docker images to prevent disk space issues
-            docker image prune -a -f
-
-            # Cleanup
             rm -f /tmp/nirby-web.tar.gz
             rm -rf /tmp/infra
 
-            # Show logs
-            docker-compose logs --tail=20 web
-
       - name: Health check
         run: |
+          URL="https://staging.nirby.theobrissiaud.fr"
+          echo "Waiting for staging web..."
           sleep 10
-          curl -f https://staging.nirby.theobrissiaud.fr || echo "Warning: Web health check failed"
+          for i in 1 2 3 4 5 6 7 8 9 10; do
+            if curl -fsS "$URL" > /dev/null; then
+              echo "Staging web is healthy"
+              exit 0
+            fi
+            echo "Attempt $i failed, retrying in 10s..."
+            sleep 10
+          done
+          echo "Staging web health check failed after 10 attempts"
+          exit 1
 
   deploy-production:
     runs-on: ubuntu-latest
@@ -484,13 +583,13 @@ jobs:
           source: "nirby-api.tar.gz"
           target: "/tmp/"
 
-      - name: Copy docker-compose to server
+      - name: Copy deploy assets to server
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: "infra/prod/docker-compose.yaml"
+          source: "infra/"
           target: "/tmp/"
 
       - name: Deploy on server
@@ -501,17 +600,10 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             set -e
-
-            # Load the new image
-            docker load < /tmp/nirby-api.tar.gz
-            docker tag nirby-api:${{ github.sha }} nirby-api:latest
-
-            # Copy docker-compose to deploy path
-            mkdir -p /opt/nirby/prod
-            cp /tmp/infra/prod/docker-compose.yaml /opt/nirby/prod/
-
-            # Deploy with all environment variables
-            cd /opt/nirby/prod
+            export DEPLOY_SHA="${{ github.sha }}"
+            export DEPLOY_API_SHA="${{ github.sha }}"
+            export BACKUP_POLICY=always
+            export KEEP_IMAGES=5
             export JWT_SECRET="${{ secrets.JWT_SECRET }}"
             export DB_PASSWORD="${{ secrets.DB_PASSWORD }}"
             export DB_APP_PASSWORD="${{ secrets.DB_APP_PASSWORD }}"
@@ -531,22 +623,37 @@ jobs:
             export S3_ACCESS_KEY_ID="${{ secrets.S3_ACCESS_KEY_ID }}"
             export S3_SECRET_ACCESS_KEY="${{ secrets.S3_SECRET_ACCESS_KEY }}"
             export S3_PUBLIC_URL="${{ vars.S3_PUBLIC_URL }}"
-            docker-compose up -d --force-recreate
+            export SENTRY_DSN="${{ secrets.SENTRY_DSN }}"
 
-            # Prune unused Docker images to prevent disk space issues
-            docker image prune -a -f
+            docker load < /tmp/nirby-api.tar.gz
+            docker tag nirby-api:${{ github.sha }} nirby-api:latest
 
-            # Cleanup
+            mkdir -p /opt/nirby/scripts
+            cp -r /tmp/infra/scripts/. /opt/nirby/scripts/
+            find /opt/nirby/scripts -name '*.sh' -exec chmod +x {} \;
+            /opt/nirby/scripts/install-deploy-assets.sh prod
+            /opt/nirby/scripts/sync-env.sh prod
+            /opt/nirby/scripts/deploy-api.sh prod
+
             rm -f /tmp/nirby-api.tar.gz
             rm -rf /tmp/infra
 
-            # Show logs
-            docker-compose logs --tail=50 api
-
       - name: Health check
         run: |
-          sleep 10
-          curl -f https://api.nirby.theobrissiaud.fr/health || echo "Warning: Health check failed"
+          URL="https://api.nirby.theobrissiaud.fr"
+          echo "Waiting for production API (migrations + dependencies)..."
+          sleep 15
+          for i in 1 2 3 4 5 6 7 8 9 10; do
+            RESPONSE=$(curl -sS "$URL/ready" || true)
+            echo "Attempt $i: $RESPONSE"
+            if echo "$RESPONSE" | jq -e '.ok == true' >/dev/null 2>&1; then
+              echo "Production API is healthy"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "Production API health check failed after 10 attempts"
+          exit 1
 
   deploy-production-web:
     runs-on: ubuntu-latest
@@ -563,6 +670,7 @@ jobs:
           docker build -t nirby-web:${{ github.sha }} \
             --build-arg NEXT_PUBLIC_API_URL=https://api.nirby.theobrissiaud.fr \
             --build-arg NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN=${{ secrets.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN }} \
+            --build-arg NEXT_PUBLIC_SENTRY_DSN=${{ secrets.NEXT_PUBLIC_SENTRY_DSN }} \
             -f apps/web/Dockerfile .
 
       - name: Save Docker Image
@@ -577,13 +685,13 @@ jobs:
           source: "nirby-web.tar.gz"
           target: "/tmp/"
 
-      - name: Copy docker-compose to server
+      - name: Copy deploy assets to server
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: "infra/prod/docker-compose.yaml"
+          source: "infra/"
           target: "/tmp/"
 
       - name: Deploy on server
@@ -594,30 +702,55 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             set -e
+            export DEPLOY_SHA="${{ github.sha }}"
+            export DEPLOY_WEB_SHA="${{ github.sha }}"
+            export KEEP_IMAGES=5
+            export JWT_SECRET="${{ secrets.JWT_SECRET }}"
+            export DB_PASSWORD="${{ secrets.DB_PASSWORD }}"
+            export DB_APP_PASSWORD="${{ secrets.DB_APP_PASSWORD }}"
+            export RESEND_API_KEY="${{ secrets.RESEND_API_KEY }}"
+            export GOOGLE_PLACES_API_KEY="${{ secrets.GOOGLE_PLACES_API_KEY }}"
+            export FRONTEND_URL="${{ vars.FRONTEND_URL }}"
+            export EMAIL_VERIFICATION_TEMPLATE_ID_EN="${{ vars.EMAIL_VERIFICATION_TEMPLATE_ID_EN }}"
+            export EMAIL_VERIFICATION_TEMPLATE_ID_FR="${{ vars.EMAIL_VERIFICATION_TEMPLATE_ID_FR }}"
+            export EMAIL_PASSWORD_RESET_TEMPLATE_ID_EN="${{ vars.EMAIL_PASSWORD_RESET_TEMPLATE_ID_EN }}"
+            export EMAIL_PASSWORD_RESET_TEMPLATE_ID_FR="${{ vars.EMAIL_PASSWORD_RESET_TEMPLATE_ID_FR }}"
+            export EMAIL_ACCOUNT_DELETED_TEMPLATE_ID_EN="${{ vars.EMAIL_ACCOUNT_DELETED_TEMPLATE_ID_EN }}"
+            export EMAIL_ACCOUNT_DELETED_TEMPLATE_ID_FR="${{ vars.EMAIL_ACCOUNT_DELETED_TEMPLATE_ID_FR }}"
+            export EMAIL_COLLABORATOR_INVITE_TEMPLATE_ID_EN="${{ vars.EMAIL_COLLABORATOR_INVITE_TEMPLATE_ID_EN }}"
+            export EMAIL_COLLABORATOR_INVITE_TEMPLATE_ID_FR="${{ vars.EMAIL_COLLABORATOR_INVITE_TEMPLATE_ID_FR }}"
+            export S3_BUCKET="${{ vars.S3_BUCKET }}"
+            export S3_REGION="${{ vars.S3_REGION }}"
+            export S3_ACCESS_KEY_ID="${{ secrets.S3_ACCESS_KEY_ID }}"
+            export S3_SECRET_ACCESS_KEY="${{ secrets.S3_SECRET_ACCESS_KEY }}"
+            export S3_PUBLIC_URL="${{ vars.S3_PUBLIC_URL }}"
+            export SENTRY_DSN="${{ secrets.SENTRY_DSN }}"
 
-            # Load the new image
             docker load < /tmp/nirby-web.tar.gz
             docker tag nirby-web:${{ github.sha }} nirby-web:latest
 
-            # Update docker-compose
-            mkdir -p /opt/nirby/prod
-            cp /tmp/infra/prod/docker-compose.yaml /opt/nirby/prod/
+            mkdir -p /opt/nirby/scripts
+            cp -r /tmp/infra/scripts/. /opt/nirby/scripts/
+            find /opt/nirby/scripts -name '*.sh' -exec chmod +x {} \;
+            /opt/nirby/scripts/install-deploy-assets.sh prod
+            /opt/nirby/scripts/sync-env.sh prod
+            /opt/nirby/scripts/deploy-web.sh prod
 
-            # Restart web container
-            cd /opt/nirby/prod
-            docker-compose up -d --force-recreate web
-
-            # Prune unused Docker images to prevent disk space issues
-            docker image prune -a -f
-
-            # Cleanup
             rm -f /tmp/nirby-web.tar.gz
             rm -rf /tmp/infra
 
-            # Show logs
-            docker-compose logs --tail=20 web
-
       - name: Health check
         run: |
+          URL="https://nirby.theobrissiaud.fr"
+          echo "Waiting for production web..."
           sleep 10
-          curl -f https://nirby.theobrissiaud.fr || echo "Warning: Web health check failed"
+          for i in 1 2 3 4 5 6 7 8 9 10; do
+            if curl -fsS "$URL" > /dev/null; then
+              echo "Production web is healthy"
+              exit 0
+            fi
+            echo "Attempt $i failed, retrying in 10s..."
+            sleep 10
+          done
+          echo "Production web health check failed after 10 attempts"
+          exit 1

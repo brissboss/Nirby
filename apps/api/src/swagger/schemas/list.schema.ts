@@ -24,6 +24,8 @@ export const listSchemas = {
         nullable: true,
         description: "The date and time the edit token expires",
       },
+      poiCount: { type: "number" },
+      collaboratorCount: { type: "number" },
     },
     required: [
       "id",
@@ -84,7 +86,7 @@ export const listSchemas = {
   GetListResponse: {
     type: "object",
     properties: {
-      list: { $ref: "#/components/schemas/List" },
+      list: { $ref: "#/components/schemas/ListWithRole" },
     },
     required: ["list"],
   },

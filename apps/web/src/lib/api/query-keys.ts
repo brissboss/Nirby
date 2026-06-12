@@ -1,13 +1,13 @@
+import { GetListsData } from "./generated/types.gen";
+
+import type { ListsInfiniteFilters } from "@/features/lists/hooks/use-lists-infinite";
+
 export const queryKeys = {
   lists: {
-    all: ["lists"],
-    detail: (id: string) => ["list", id] as const,
-    pois: (listId: string) => ["list", listId, "pois"] as const,
-  },
-  places: {
-    search: (query: string) => ["places", "search", query] as const,
-    lastSearchQuery: ["places", "lastSearchQuery"] as const,
-    lastSearch: ["places", "lastSearch"] as const,
-    lastSearchLocation: ["places", "lastSearchLocation"] as const,
+    all: ["lists"] as const,
+    list: (filters?: GetListsData["query"]) => [...queryKeys.lists.all, "list", filters] as const,
+    infinite: (filters?: ListsInfiniteFilters) =>
+      [...queryKeys.lists.all, "infinite", filters] as const,
+    detail: (listId: string) => [...queryKeys.lists.all, "detail", listId] as const,
   },
 };

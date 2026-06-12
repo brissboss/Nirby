@@ -20,17 +20,11 @@
     "logout": "Logout",
     "profile": "Profile",
     "cancel": "Cancel",
-    "delete": "Delete",
-    "search": "Search",
-    "searchHere": "Search in area"
+    "delete": "Delete"
   },
   "labels": {
     "email": "Email",
     "emailPlaceholder": "example@email.com",
     "password": "Password"
-  },
-  "emptyState": {
-    "title": "No results",
-    "description": "No results found for \"{searchQuery}\""
   }
 }

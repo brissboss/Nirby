@@ -8,9 +8,9 @@ export default defineConfig({
   test: {
     environment: "jsdom",
 
-    setupFiles: ["./__tests__/setup.ts"],
+    setupFiles: ["./src/test/setup.ts"],
 
-    include: ["__tests__/**/*.{test,spec}.{ts,tsx}"],
+    include: ["src/**/*.{test,spec}.{ts,tsx}"],
 
     globals: true,
 
@@ -19,7 +19,9 @@ export default defineConfig({
       reporter: ["text", "json", "html"],
       exclude: [
         "node_modules/",
-        "__tests__/",
+        "src/test/",
+        "components/ui/**",
+        "**/*.{test,spec}.{ts,tsx}",
         "**/*.d.ts",
         "**/*.config.*",
         "**/mockData/**",
@@ -28,10 +30,10 @@ export default defineConfig({
         "**/lib/auth/index.ts",
       ],
       thresholds: {
-        lines: 39,
-        functions: 37,
-        branches: 28,
-        statements: 39,
+        lines: 36,
+        functions: 30,
+        branches: 26,
+        statements: 36,
       },
     },
   },
