@@ -22,6 +22,9 @@ Complète les slides Figma et sert de base si le jury demande les plans de tests
 | Intégration API          | Vitest + Supertest               | Routes Express, middleware auth, base PostgreSQL de test          | ✅ Implémenté            |
 | Composants / pages front | Vitest + Testing Library + jsdom | Vues listes, hooks, formulaires                                   | ✅ Implémenté            |
 | Smoke / health check     | Docker + `curl` (CI)             | Conteneurs API et web démarrent, `/health` et `/` répondent       | ✅ Implémenté            |
+| Sécurité (OWASP)         | Vitest + Supertest               | Injection, IDOR, XSS stocké, upload malveillant                   | ✅ Implémenté            |
+| Audit dépendances (SCA)  | `pnpm audit` + Dependabot        | CVE dans `pnpm-lock.yaml`, PRs de mise à jour hebdomadaires       | ✅ Implémenté            |
+| DAST                     | OWASP ZAP Baseline (CI)          | Scan passif/actif sur l’API Docker en CI                          | ✅ Implémenté            |
 | E2E                      | Playwright                       | Parcours utilisateur complets                                     | ⏳ Prévu, non implémenté |
 
 **Rapports de tests :**
@@ -45,7 +48,10 @@ Complète les slides Figma et sert de base si le jury demande les plans de tests
 - Déclenchement : **pull request** et **push** sur `main` / `staging`.
 - Job `ci-api` : PostGIS 16, base `nirby_test`, migrations Prisma, Redis, secrets factices (`JWT_SECRET`, `GOOGLE_PLACES_API_KEY`, …).
 - Job `ci-web` : tests + couverture + build de vérification.
-- Jobs `smoke-api` / `smoke-web` : images Docker, health checks HTTP.
+- Job `api-docker` : image API, health check, scan OWASP ZAP Baseline (rapport artifact).
+- Job `security-audit` : `pnpm audit --audit-level=high` (rapport artifact, non bloquant).
+- Job `web-docker` : image web, health check HTTP.
+- **Dependabot** : PRs hebdomadaires npm, Docker et GitHub Actions (`.github/dependabot.yml`).
 
 Chaque run CI recrée un environnement isolé ; les tests API nettoient les données (`deleteMany` en `beforeEach` / `afterAll`).
 
@@ -71,14 +77,14 @@ Chaque run CI recrée un environnement isolé ; les tests API nettoient les donn
 2. **Permissions listes** — rôles OWNER / EDITOR / VIEWER / ADMIN.
 3. **CRUD listes & POI** — routes API + isolation inter-utilisateurs.
 4. **Front critique** — affichage et actions selon le rôle sur les vues listes.
-5. **Sécurité** — hash mot de passe, rate limiting (Google Places).
+5. **Sécurité** — hash mot de passe, rate limiting, OWASP Top 10 (injection, IDOR, XSS, upload).
 
 ### Hors périmètre (assumé)
 
 - Intégration **Mapbox** / rendu carte (mock ou non testé en E2E).
 - **UI cosmétique** (design system shadcn, styles).
 - **E2E Playwright** (prévu, pas encore en place).
-- **Scan sécurité automatisé** (OWASP ZAP, Dependabot).
+- **Pentest manuel** complet (hors scope projet étudiant).
 
 ### Risque métier ciblé
 
@@ -152,13 +158,36 @@ Ci-dessous : **extraits représentatifs** au format attendu par la checklist (en
 | Rate limiters exportés              | import middleware                | fonctions définies           | ✅ Pass  | `apps/api/__test__/middleware/rate-limit.test.ts` |
 | Rate limit désactivé en test        | `NODE_ENV=test`                  | `next()` appelé sans blocage | ✅ Pass  | idem                                              |
 
+### 6.7 Sécurité — OWASP Top 10
+
+Fichier dédié : `apps/api/__test__/security/owasp.test.ts`.  
+Les scénarios ci-dessous couvrent les risques les plus pertinents pour Nirby (API Express + Prisma + JWT).
+
+| Scénario OWASP                     | Entrée                                        | Sortie attendue                      | Résultat | Fichier                                         |
+| ---------------------------------- | --------------------------------------------- | ------------------------------------ | -------- | ----------------------------------------------- |
+| A03 — Injection SQL (signup)       | email `'; DROP TABLE users; --@example.com`   | HTTP 400, table `User` intacte       | ✅ Pass  | `owasp.test.ts`                                 |
+| A03 — Injection SQL (nom de liste) | `name: "'; DROP TABLE users; --"`             | HTTP 201, texte stocké littéralement | ✅ Pass  | idem                                            |
+| A03 — Injection SQL (query params) | `latitude='; DROP TABLE...` sur `/poi/nearby` | HTTP 400 validation                  | ✅ Pass  | idem                                            |
+| A01 — IDOR liste privée            | `GET /list/:id` avec token d’un autre user    | HTTP 404                             | ✅ Pass  | idem                                            |
+| A01 — IDOR suppression liste       | `DELETE /list/:id` par non-propriétaire       | HTTP 404, liste intacte en BDD       | ✅ Pass  | idem                                            |
+| A01 — IDOR POI privé               | `GET /poi/:id` par non-créateur               | HTTP 403 `POI_ACCESS_DENIED`         | ✅ Pass  | idem                                            |
+| A07 — JWT altéré                   | Bearer token modifié                          | HTTP 401 `UNAUTHORIZED`              | ✅ Pass  | idem                                            |
+| A07 — JWT user supprimé            | token valide mais user absent en BDD          | HTTP 401                             | ✅ Pass  | idem                                            |
+| XSS stocké (liste)                 | `name: <script>alert("xss")</script>`         | stocké et renvoyé en texte JSON      | ✅ Pass  | idem (échappement côté React front)             |
+| XSS stocké (POI)                   | `description` avec balise script              | stocké et renvoyé en texte JSON      | ✅ Pass  | idem                                            |
+| A08 — Upload malveillant           | fichier `.exe` (`application/x-msdownload`)   | HTTP 400 `UPLOAD_INVALID_FILE_TYPE`  | ✅ Pass  | idem                                            |
+| A06 — Composants vulnérables       | `pnpm audit --audit-level=high`               | rapport CI + alertes Dependabot      | ✅ CI    | job `security-audit` + `.github/dependabot.yml` |
+| A05 — Headers / config             | scan OWASP ZAP Baseline sur API Docker        | rapport HTML artifact CI             | ✅ CI    | job `api-docker`                                |
+
+**Mitigations code associées :** Prisma (requêtes paramétrées), Zod (validation entrées), Helmet + CORS (`server.ts`), cookies `httpOnly` / `sameSite: strict`, rate limiting auth.
+
 ---
 
 ## 7. Résultats et couverture
 
 ### Volume
 
-- **34 fichiers de test** (`apps/api` + `apps/web`).
+- **35 fichiers de test** (`apps/api` + `apps/web`), dont `security/owasp.test.ts`.
 - **CI verte** requise pour merge (lint + tests + smoke Docker sur les chemins modifiés).
 
 ### Couverture (seuils Vitest)
@@ -186,13 +215,20 @@ _(Adapter la formulation à l’oral si le bug a été trouvé manuellement avan
 
 ## 8. Limites identifiées
 
-| Limite                             | Impact                               | Piste d’amélioration                                  |
-| ---------------------------------- | ------------------------------------ | ----------------------------------------------------- |
-| Pas d’E2E Playwright               | Parcours multi-pages non automatisés | Ajouter 2–3 scénarios critiques (login → créer liste) |
-| Pas de scan OWASP ZAP              | Pas d’audit sécurité automatisé      | Intégrer ZAP en CI staging                            |
-| Couverture API non bloquante en CI | Seuils 70 % seulement en local       | Activer `test:coverage` dans `ci-api`                 |
-| Monitoring prod                    | Health check CI uniquement           | Prometheus / alertes HTTP 5xx                         |
-| Mapbox / carte                     | Non couvert par tests automatisés    | Tests manuels ou E2E visuels                          |
+| Limite                                        | Impact                                                           | Piste d’amélioration                                           |
+| --------------------------------------------- | ---------------------------------------------------------------- | -------------------------------------------------------------- |
+| Pas d’E2E Playwright                          | Parcours multi-pages non automatisés                             | Ajouter 2–3 scénarios critiques (login → créer liste)          |
+| Tests sécurité limités à l’API                | XSS stocké testé en JSON, pas le rendu React / navigateur        | Tests composants ou E2E avec payload XSS sur le front          |
+| ZAP Baseline API uniquement                   | Le front Next.js n’est pas scanné en DAST                        | Étendre ZAP à `web-docker` ou scan staging périodique          |
+| ZAP / audit non bloquants en CI               | CVE et alertes DAST documentées sans empêcher le merge           | Corriger les CVE high, puis retirer `continue-on-error`        |
+| CVE dans dépendances transitives              | `pnpm audit` remonte des vulnérabilités (ex. `axios`)            | PRs Dependabot + overrides / mises à jour des packages parents |
+| Upload : validation MIME seulement            | Un binaire malveillant avec `Content-Type: image/jpeg` passerait | Ajouter une détection par magic bytes (ex. `file-type`)        |
+| Rate limiting non exercé en tests intégration | `NODE_ENV=test` désactive le blocage réel                        | Tests dédiés avec `NODE_ENV=production` ou tests de charge     |
+| CSRF / SSRF non couverts explicitement        | API stateless JWT ; proxy Google Places côté serveur             | Tests ciblés refresh cookie + validation stricte des URLs      |
+| Couverture API non bloquante en CI            | Seuils 70 % seulement en local                                   | Activer `test:coverage` dans `ci-api`                          |
+| Monitoring prod                               | Health check CI uniquement                                       | Prometheus / alertes HTTP 5xx                                  |
+| Mapbox / carte                                | Non couvert par tests automatisés                                | Tests manuels ou E2E visuels                                   |
+| Pentest manuel absent                         | Pas d’audit humain ni de fuzzing avancé                          | Audit externe avant mise en prod réelle                        |
 
 ---
 
@@ -205,11 +241,22 @@ pnpm test
 # API seule (verbose, comme en CI)
 pnpm -C apps/api test -- --reporter=verbose
 
+# Tests sécurité OWASP uniquement
+pnpm -C apps/api test -- security/owasp
+
+# Audit dépendances (SCA)
+pnpm audit --audit-level=high
+
 # Web avec couverture
 pnpm -C apps/web test:coverage
 ```
 
-**Rapport CI :** GitHub → onglet _Actions_ → workflow _CI/CD_ → job `ci-api` ou `ci-web` → logs de la step _Test_.
+**Rapports CI :** GitHub → onglet _Actions_ → workflow _CI/CD_ :
+
+- job `ci-api` / `ci-web` → logs de la step _Test_ ;
+- job `security-audit` → artifact `pnpm-audit-report` ;
+- job `api-docker` → artifact `zap-baseline-report` ;
+- onglet _Security_ → alertes **Dependabot**.
 
 **Couverture HTML (local) :** générée dans `apps/web/coverage/` après `test:coverage`.
 
@@ -217,10 +264,11 @@ pnpm -C apps/web test:coverage
 
 ## 10. Lien avec la présentation
 
-| Slide / oral                      | Section doc                    |
-| --------------------------------- | ------------------------------ |
-| Stratégie de tests (pyramide, CI) | §2, §3                         |
-| Plans & Résultats (domaines)      | §6                             |
-| Périmètre & risques               | §5                             |
-| Résultats & limites               | §7, §8                         |
-| Démo live                         | §9 + ouverture d’un fichier §6 |
+| Slide / oral                      | Section doc          |
+| --------------------------------- | -------------------- |
+| Stratégie de tests (pyramide, CI) | §2, §3               |
+| Plans & Résultats (domaines)      | §6                   |
+| Tests sécurité OWASP              | §6.7                 |
+| Périmètre & risques               | §5                   |
+| Résultats & limites               | §7, §8               |
+| Démo live                         | §9 + `owasp.test.ts` |
