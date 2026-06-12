@@ -321,13 +321,13 @@ jobs:
           source: "nirby-api.tar.gz"
           target: "/tmp/"
 
-      - name: Copy docker-compose to server
+      - name: Copy deploy assets to server
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: "infra/staging/docker-compose.yaml"
+          source: "infra/"
           target: "/tmp/"
 
       - name: Deploy on server
@@ -338,24 +338,10 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             set -e
-
-            # Load the new image
-            docker load < /tmp/nirby-api.tar.gz
-            docker tag nirby-api:${{ github.sha }} nirby-api:latest
-
-            # Copy docker-compose to deploy path
-            mkdir -p /opt/nirby/staging
-            if [ -f /tmp/docker-compose.yaml ]; then
-              cp /tmp/docker-compose.yaml /opt/nirby/staging/
-            elif [ -f /tmp/infra/staging/docker-compose.yaml ]; then
-              cp /tmp/infra/staging/docker-compose.yaml /opt/nirby/staging/
-            else
-              echo "ERROR: docker-compose.yaml not found in /tmp"
-              exit 1
-            fi
-
-            # Deploy with all environment variables
-            cd /opt/nirby/staging
+            export DEPLOY_SHA="${{ github.sha }}"
+            export DEPLOY_API_SHA="${{ github.sha }}"
+            export BACKUP_POLICY=always
+            export KEEP_IMAGES=5
             export JWT_SECRET="${{ secrets.JWT_SECRET }}"
             export DB_PASSWORD="${{ secrets.DB_PASSWORD }}"
             export DB_APP_PASSWORD="${{ secrets.DB_APP_PASSWORD }}"
@@ -376,17 +362,16 @@ jobs:
             export S3_SECRET_ACCESS_KEY="${{ secrets.S3_SECRET_ACCESS_KEY }}"
             export S3_PUBLIC_URL="${{ vars.S3_PUBLIC_URL }}"
             export SENTRY_DSN="${{ secrets.SENTRY_DSN }}"
-            docker-compose up -d --force-recreate
 
-            # Prune unused Docker images to prevent disk space issues
-            docker image prune -a -f
+            docker load < /tmp/nirby-api.tar.gz
+            docker tag nirby-api:${{ github.sha }} nirby-api:latest
 
-            # Cleanup
+            /tmp/infra/scripts/install-deploy-assets.sh staging
+            /opt/nirby/scripts/sync-env.sh staging
+            /opt/nirby/scripts/deploy-api.sh staging
+
             rm -f /tmp/nirby-api.tar.gz
             rm -rf /tmp/infra
-
-            # Show logs
-            docker-compose logs --tail=50 api
 
       - name: Health check
         run: |
@@ -435,13 +420,13 @@ jobs:
           source: "nirby-web.tar.gz"
           target: "/tmp/"
 
-      - name: Copy docker-compose to server
+      - name: Copy deploy assets to server
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: "infra/staging/docker-compose.yaml"
+          source: "infra/"
           target: "/tmp/"
 
       - name: Deploy on server
@@ -452,35 +437,39 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             set -e
+            export DEPLOY_SHA="${{ github.sha }}"
+            export DEPLOY_WEB_SHA="${{ github.sha }}"
+            export KEEP_IMAGES=5
+            export JWT_SECRET="${{ secrets.JWT_SECRET }}"
+            export DB_PASSWORD="${{ secrets.DB_PASSWORD }}"
+            export DB_APP_PASSWORD="${{ secrets.DB_APP_PASSWORD }}"
+            export RESEND_API_KEY="${{ secrets.RESEND_API_KEY }}"
+            export GOOGLE_PLACES_API_KEY="${{ secrets.GOOGLE_PLACES_API_KEY }}"
+            export FRONTEND_URL="${{ vars.FRONTEND_URL }}"
+            export EMAIL_VERIFICATION_TEMPLATE_ID_EN="${{ vars.EMAIL_VERIFICATION_TEMPLATE_ID_EN }}"
+            export EMAIL_VERIFICATION_TEMPLATE_ID_FR="${{ vars.EMAIL_VERIFICATION_TEMPLATE_ID_FR }}"
+            export EMAIL_PASSWORD_RESET_TEMPLATE_ID_EN="${{ vars.EMAIL_PASSWORD_RESET_TEMPLATE_ID_EN }}"
+            export EMAIL_PASSWORD_RESET_TEMPLATE_ID_FR="${{ vars.EMAIL_PASSWORD_RESET_TEMPLATE_ID_FR }}"
+            export EMAIL_ACCOUNT_DELETED_TEMPLATE_ID_EN="${{ vars.EMAIL_ACCOUNT_DELETED_TEMPLATE_ID_EN }}"
+            export EMAIL_ACCOUNT_DELETED_TEMPLATE_ID_FR="${{ vars.EMAIL_ACCOUNT_DELETED_TEMPLATE_ID_FR }}"
+            export EMAIL_COLLABORATOR_INVITE_TEMPLATE_ID_EN="${{ vars.EMAIL_COLLABORATOR_INVITE_TEMPLATE_ID_EN }}"
+            export EMAIL_COLLABORATOR_INVITE_TEMPLATE_ID_FR="${{ vars.EMAIL_COLLABORATOR_INVITE_TEMPLATE_ID_FR }}"
+            export S3_BUCKET="${{ vars.S3_BUCKET }}"
+            export S3_REGION="${{ vars.S3_REGION }}"
+            export S3_ACCESS_KEY_ID="${{ secrets.S3_ACCESS_KEY_ID }}"
+            export S3_SECRET_ACCESS_KEY="${{ secrets.S3_SECRET_ACCESS_KEY }}"
+            export S3_PUBLIC_URL="${{ vars.S3_PUBLIC_URL }}"
+            export SENTRY_DSN="${{ secrets.SENTRY_DSN }}"
 
-            # Load the new image
             docker load < /tmp/nirby-web.tar.gz
             docker tag nirby-web:${{ github.sha }} nirby-web:latest
 
-            # Update docker-compose when uploaded (web-only deploy may reuse existing file)
-            mkdir -p /opt/nirby/staging
-            if [ -f /tmp/docker-compose.yaml ]; then
-              cp /tmp/docker-compose.yaml /opt/nirby/staging/
-            elif [ -f /tmp/infra/staging/docker-compose.yaml ]; then
-              cp /tmp/infra/staging/docker-compose.yaml /opt/nirby/staging/
-            elif [ ! -f /opt/nirby/staging/docker-compose.yaml ]; then
-              echo "ERROR: docker-compose.yaml not found in /tmp or /opt/nirby/staging"
-              exit 1
-            fi
+            /tmp/infra/scripts/install-deploy-assets.sh staging
+            /opt/nirby/scripts/sync-env.sh staging
+            /opt/nirby/scripts/deploy-web.sh staging
 
-            # Restart web container
-            cd /opt/nirby/staging
-            docker-compose up -d --force-recreate web
-
-            # Prune unused Docker images to prevent disk space issues
-            docker image prune -a -f
-
-            # Cleanup
             rm -f /tmp/nirby-web.tar.gz
             rm -rf /tmp/infra
-
-            # Show logs
-            docker-compose logs --tail=20 web
 
       - name: Health check
         run: |
@@ -523,13 +512,13 @@ jobs:
           source: "nirby-api.tar.gz"
           target: "/tmp/"
 
-      - name: Copy docker-compose to server
+      - name: Copy deploy assets to server
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: "infra/prod/docker-compose.yaml"
+          source: "infra/"
           target: "/tmp/"
 
       - name: Deploy on server
@@ -540,24 +529,10 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             set -e
-
-            # Load the new image
-            docker load < /tmp/nirby-api.tar.gz
-            docker tag nirby-api:${{ github.sha }} nirby-api:latest
-
-            # Copy docker-compose to deploy path
-            mkdir -p /opt/nirby/prod
-            if [ -f /tmp/docker-compose.yaml ]; then
-              cp /tmp/docker-compose.yaml /opt/nirby/prod/
-            elif [ -f /tmp/infra/prod/docker-compose.yaml ]; then
-              cp /tmp/infra/prod/docker-compose.yaml /opt/nirby/prod/
-            else
-              echo "ERROR: docker-compose.yaml not found in /tmp"
-              exit 1
-            fi
-
-            # Deploy with all environment variables
-            cd /opt/nirby/prod
+            export DEPLOY_SHA="${{ github.sha }}"
+            export DEPLOY_API_SHA="${{ github.sha }}"
+            export BACKUP_POLICY=always
+            export KEEP_IMAGES=5
             export JWT_SECRET="${{ secrets.JWT_SECRET }}"
             export DB_PASSWORD="${{ secrets.DB_PASSWORD }}"
             export DB_APP_PASSWORD="${{ secrets.DB_APP_PASSWORD }}"
@@ -578,17 +553,16 @@ jobs:
             export S3_SECRET_ACCESS_KEY="${{ secrets.S3_SECRET_ACCESS_KEY }}"
             export S3_PUBLIC_URL="${{ vars.S3_PUBLIC_URL }}"
             export SENTRY_DSN="${{ secrets.SENTRY_DSN }}"
-            docker-compose up -d --force-recreate
 
-            # Prune unused Docker images to prevent disk space issues
-            docker image prune -a -f
+            docker load < /tmp/nirby-api.tar.gz
+            docker tag nirby-api:${{ github.sha }} nirby-api:latest
 
-            # Cleanup
+            /tmp/infra/scripts/install-deploy-assets.sh prod
+            /opt/nirby/scripts/sync-env.sh prod
+            /opt/nirby/scripts/deploy-api.sh prod
+
             rm -f /tmp/nirby-api.tar.gz
             rm -rf /tmp/infra
-
-            # Show logs
-            docker-compose logs --tail=50 api
 
       - name: Health check
         run: |
@@ -637,13 +611,13 @@ jobs:
           source: "nirby-web.tar.gz"
           target: "/tmp/"
 
-      - name: Copy docker-compose to server
+      - name: Copy deploy assets to server
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: "infra/prod/docker-compose.yaml"
+          source: "infra/"
           target: "/tmp/"
 
       - name: Deploy on server
@@ -654,35 +628,39 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             set -e
+            export DEPLOY_SHA="${{ github.sha }}"
+            export DEPLOY_WEB_SHA="${{ github.sha }}"
+            export KEEP_IMAGES=5
+            export JWT_SECRET="${{ secrets.JWT_SECRET }}"
+            export DB_PASSWORD="${{ secrets.DB_PASSWORD }}"
+            export DB_APP_PASSWORD="${{ secrets.DB_APP_PASSWORD }}"
+            export RESEND_API_KEY="${{ secrets.RESEND_API_KEY }}"
+            export GOOGLE_PLACES_API_KEY="${{ secrets.GOOGLE_PLACES_API_KEY }}"
+            export FRONTEND_URL="${{ vars.FRONTEND_URL }}"
+            export EMAIL_VERIFICATION_TEMPLATE_ID_EN="${{ vars.EMAIL_VERIFICATION_TEMPLATE_ID_EN }}"
+            export EMAIL_VERIFICATION_TEMPLATE_ID_FR="${{ vars.EMAIL_VERIFICATION_TEMPLATE_ID_FR }}"
+            export EMAIL_PASSWORD_RESET_TEMPLATE_ID_EN="${{ vars.EMAIL_PASSWORD_RESET_TEMPLATE_ID_EN }}"
+            export EMAIL_PASSWORD_RESET_TEMPLATE_ID_FR="${{ vars.EMAIL_PASSWORD_RESET_TEMPLATE_ID_FR }}"
+            export EMAIL_ACCOUNT_DELETED_TEMPLATE_ID_EN="${{ vars.EMAIL_ACCOUNT_DELETED_TEMPLATE_ID_EN }}"
+            export EMAIL_ACCOUNT_DELETED_TEMPLATE_ID_FR="${{ vars.EMAIL_ACCOUNT_DELETED_TEMPLATE_ID_FR }}"
+            export EMAIL_COLLABORATOR_INVITE_TEMPLATE_ID_EN="${{ vars.EMAIL_COLLABORATOR_INVITE_TEMPLATE_ID_EN }}"
+            export EMAIL_COLLABORATOR_INVITE_TEMPLATE_ID_FR="${{ vars.EMAIL_COLLABORATOR_INVITE_TEMPLATE_ID_FR }}"
+            export S3_BUCKET="${{ vars.S3_BUCKET }}"
+            export S3_REGION="${{ vars.S3_REGION }}"
+            export S3_ACCESS_KEY_ID="${{ secrets.S3_ACCESS_KEY_ID }}"
+            export S3_SECRET_ACCESS_KEY="${{ secrets.S3_SECRET_ACCESS_KEY }}"
+            export S3_PUBLIC_URL="${{ vars.S3_PUBLIC_URL }}"
+            export SENTRY_DSN="${{ secrets.SENTRY_DSN }}"
 
-            # Load the new image
             docker load < /tmp/nirby-web.tar.gz
             docker tag nirby-web:${{ github.sha }} nirby-web:latest
 
-            # Update docker-compose when uploaded (web-only deploy may reuse existing file)
-            mkdir -p /opt/nirby/prod
-            if [ -f /tmp/docker-compose.yaml ]; then
-              cp /tmp/docker-compose.yaml /opt/nirby/prod/
-            elif [ -f /tmp/infra/prod/docker-compose.yaml ]; then
-              cp /tmp/infra/prod/docker-compose.yaml /opt/nirby/prod/
-            elif [ ! -f /opt/nirby/prod/docker-compose.yaml ]; then
-              echo "ERROR: docker-compose.yaml not found in /tmp or /opt/nirby/prod"
-              exit 1
-            fi
+            /tmp/infra/scripts/install-deploy-assets.sh prod
+            /opt/nirby/scripts/sync-env.sh prod
+            /opt/nirby/scripts/deploy-web.sh prod
 
-            # Restart web container
-            cd /opt/nirby/prod
-            docker-compose up -d --force-recreate web
-
-            # Prune unused Docker images to prevent disk space issues
-            docker image prune -a -f
-
-            # Cleanup
             rm -f /tmp/nirby-web.tar.gz
             rm -rf /tmp/infra
-
-            # Show logs
-            docker-compose logs --tail=20 web
 
       - name: Health check
         run: |
