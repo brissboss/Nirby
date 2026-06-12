@@ -28,7 +28,30 @@ elif [[ -f "/tmp/infra/${ENV_NAME}/docker-compose.yaml" ]]; then
 fi
 
 if [[ -d "/tmp/infra/${ENV_NAME}/db-init" ]]; then
-  cp -r "/tmp/infra/${ENV_NAME}/db-init/"* "${DEPLOY_DIR}/db-init/"
+  mkdir -p "${DEPLOY_DIR}/db-init"
+  for src in "/tmp/infra/${ENV_NAME}/db-init/"*; do
+    [[ -e "$src" ]] || continue
+    name="$(basename "$src")"
+    dest="${DEPLOY_DIR}/db-init/${name}"
+
+    # Fix bad server state (e.g. file path created as a directory by a prior bad copy).
+    if [[ -e "$dest" ]]; then
+      if [[ -d "$dest" && -f "$src" ]]; then
+        log "Replacing directory with file: ${dest}"
+        rm -rf "$dest"
+      elif [[ -f "$dest" ]]; then
+        rm -f "$dest"
+      elif [[ -d "$dest" && -d "$src" ]]; then
+        rm -rf "$dest"
+      fi
+    fi
+
+    if [[ -f "$src" ]]; then
+      install -m 755 "$src" "$dest"
+    else
+      cp -a "$src" "$dest"
+    fi
+  done
 fi
 
 log "Deploy assets installed for ${ENV_NAME} at ${DEPLOY_DIR}"

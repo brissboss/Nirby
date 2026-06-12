@@ -366,7 +366,10 @@ jobs:
             docker load < /tmp/nirby-api.tar.gz
             docker tag nirby-api:${{ github.sha }} nirby-api:latest
 
-            /tmp/infra/scripts/install-deploy-assets.sh staging
+            mkdir -p /opt/nirby/scripts
+            cp -r /tmp/infra/scripts/. /opt/nirby/scripts/
+            find /opt/nirby/scripts -name '*.sh' -exec chmod +x {} \;
+            /opt/nirby/scripts/install-deploy-assets.sh staging
             /opt/nirby/scripts/sync-env.sh staging
             /opt/nirby/scripts/deploy-api.sh staging
 
@@ -464,7 +467,10 @@ jobs:
             docker load < /tmp/nirby-web.tar.gz
             docker tag nirby-web:${{ github.sha }} nirby-web:latest
 
-            /tmp/infra/scripts/install-deploy-assets.sh staging
+            mkdir -p /opt/nirby/scripts
+            cp -r /tmp/infra/scripts/. /opt/nirby/scripts/
+            find /opt/nirby/scripts -name '*.sh' -exec chmod +x {} \;
+            /opt/nirby/scripts/install-deploy-assets.sh staging
             /opt/nirby/scripts/sync-env.sh staging
             /opt/nirby/scripts/deploy-web.sh staging
 
@@ -557,7 +563,10 @@ jobs:
             docker load < /tmp/nirby-api.tar.gz
             docker tag nirby-api:${{ github.sha }} nirby-api:latest
 
-            /tmp/infra/scripts/install-deploy-assets.sh prod
+            mkdir -p /opt/nirby/scripts
+            cp -r /tmp/infra/scripts/. /opt/nirby/scripts/
+            find /opt/nirby/scripts -name '*.sh' -exec chmod +x {} \;
+            /opt/nirby/scripts/install-deploy-assets.sh prod
             /opt/nirby/scripts/sync-env.sh prod
             /opt/nirby/scripts/deploy-api.sh prod
 
@@ -655,7 +664,10 @@ jobs:
             docker load < /tmp/nirby-web.tar.gz
             docker tag nirby-web:${{ github.sha }} nirby-web:latest
 
-            /tmp/infra/scripts/install-deploy-assets.sh prod
+            mkdir -p /opt/nirby/scripts
+            cp -r /tmp/infra/scripts/. /opt/nirby/scripts/
+            find /opt/nirby/scripts -name '*.sh' -exec chmod +x {} \;
+            /opt/nirby/scripts/install-deploy-assets.sh prod
             /opt/nirby/scripts/sync-env.sh prod
             /opt/nirby/scripts/deploy-web.sh prod
 
