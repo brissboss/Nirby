@@ -27,7 +27,7 @@
     "@tanstack/react-query-devtools": "^5.91.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "lucide-react": "^0.562.0",
+    "lucide-react": "^1.17.0",
     "mapbox-gl": "^3.18.0",
     "next": "16.2.6",
     "next-intl": "^4.7.0",
