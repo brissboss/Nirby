@@ -41,6 +41,14 @@ the example file:
   `ACCESS_TOKEN_TTL="15m"`, which fails the Zod schema (`z.coerce.number()`) — use `900` / `604800`
   or omit them to take the defaults.
 
+### Web env (`apps/web/.env.local`, optional but recommended)
+
+The authenticated map/home view crashes ("Something went wrong") when
+`NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN` is unset. Create `apps/web/.env.local` with a token (a placeholder
+like `pk.test123456789` is enough to stop the crash and exercise lists/POIs; a real Mapbox token is
+needed for actual map tiles). `NEXT_PUBLIC_API_URL` defaults to `http://localhost:4000`. Restart the
+web dev server after creating this file. `.env.local` is gitignored.
+
 ### Database setup / migrations
 
 - Apply migrations with `pnpm --filter @nirby/api exec prisma migrate deploy` (non-destructive).
