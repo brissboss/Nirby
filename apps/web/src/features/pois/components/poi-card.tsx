@@ -18,17 +18,18 @@ export function PoiCard({ poi, actions }: PoiCardProps) {
   const tPoi = useTranslations("poi");
 
   return (
-    <article className="flex flex-col items-start rounded-md border border-border">
+    <article className="group flex flex-col items-start rounded-md border border-border">
       {poi.photo ? (
         <div className="overflow-hidden rounded-t-md h-[150px] w-full">
           <PoiPhoto photo={poi.photo} alt={poi.name} />
         </div>
       ) : null}
       <div className="px-4 py-2 flex flex-col gap-1 w-full">
-        <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="flex items-start justify-between gap-2">
           <h3 className="min-w-0 font-display text-base font-semibold tracking-tight">
             {poi.name}
           </h3>
+          {actions ? <div className="shrink-0">{actions}</div> : null}
         </div>
 
         <p className="flex min-w-0 items-center gap-1.5 text-sm text-muted-foreground">
@@ -43,8 +44,6 @@ export function PoiCard({ poi, actions }: PoiCardProps) {
           </div>
         ) : null}
       </div>
-
-      {actions ? <div className="shrink-0">{actions}</div> : null}
     </article>
   );
 }

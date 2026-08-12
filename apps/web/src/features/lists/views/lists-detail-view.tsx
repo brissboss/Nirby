@@ -66,7 +66,7 @@ export function ListsDetailView({ listId, onBack, onEdit, onDelete }: ListsDetai
                 onDeleted={onDelete}
               />
             )}
-            <ListPoisSection listId={listId} />
+            <ListPoisSection listId={listId} role={loadedList.role} />
           </div>
         )}
       </ListsListQueryBoundary>
