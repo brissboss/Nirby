@@ -28,8 +28,8 @@ vi.mock("../hooks/use-delete-list", () => ({
 }));
 
 vi.mock("../components/list-pois-section", () => ({
-  ListPoisSection: ({ listId }: { listId: string }) => (
-    <div data-testid="list-pois-section" data-list-id={listId} />
+  ListPoisSection: ({ listId, role }: { listId: string; role?: string }) => (
+    <div data-testid="list-pois-section" data-list-id={listId} data-role={role ?? ""} />
   ),
 }));
 
@@ -139,6 +139,7 @@ describe("ListsDetailView", () => {
     const poisSection = screen.getByTestId("list-pois-section");
     expect(poisSection).toBeInTheDocument();
     expect(poisSection).toHaveAttribute("data-list-id", "list-1");
+    expect(poisSection).toHaveAttribute("data-role", "OWNER");
   });
 
   it("shows edit button for OWNER and calls onEdit", async () => {

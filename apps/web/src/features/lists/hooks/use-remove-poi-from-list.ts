@@ -35,6 +35,7 @@ export function useRemovePoiFromList() {
     onSuccess: (_data, { listId }) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.lists.pois.all(listId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.lists.detail(listId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.lists.all });
     },
   });
 }

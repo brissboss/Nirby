@@ -4,6 +4,7 @@ import { Loader2Icon, MapPinOffIcon, OctagonXIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useCallback } from "react";
 
+import { canEditList, type ListRole } from "../constants/lists.constants";
 import { useInfiniteScroll } from "../hooks/use-infinite-scroll";
 import { useListPoisInfinite } from "../hooks/use-list-pois-infinite";
 
@@ -16,9 +17,11 @@ import { useErrorMessage } from "@/hooks/use-error-message";
 
 type ListPoisSectionProps = {
   listId: string;
+  role?: ListRole;
 };
 
-export function ListPoisSection({ listId }: ListPoisSectionProps) {
+export function ListPoisSection({ listId, role }: ListPoisSectionProps) {
+  const canRemove = canEditList(role);
   const tLists = useTranslations("lists");
   const getErrorMessage = useErrorMessage();
 
@@ -97,7 +100,7 @@ export function ListPoisSection({ listId }: ListPoisSectionProps) {
           <ul className="flex w-full min-w-0 flex-col gap-3">
             {items.map((savedPoi: SavedPoiListItem, index) => (
               <li key={savedPoi.id ?? `saved-poi-${index}`}>
-                <ListPoiRow savedPoi={savedPoi} />
+                <ListPoiRow savedPoi={savedPoi} listId={listId} canRemove={canRemove} />
               </li>
             ))}
           </ul>

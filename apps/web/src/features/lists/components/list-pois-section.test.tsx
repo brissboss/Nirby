@@ -20,6 +20,13 @@ vi.mock("@/hooks/use-error-message", () => ({
   useErrorMessage: () => () => "API error message",
 }));
 
+vi.mock("../hooks/use-remove-poi-from-list", () => ({
+  useRemovePoiFromList: () => ({
+    mutateAsync: vi.fn(),
+    isPending: false,
+  }),
+}));
+
 const customSavedPoi: SavedPoiListItem = {
   id: "sp-1",
   listId: "list-1",
@@ -151,5 +158,41 @@ describe("ListPoisSection", () => {
     expect(screen.getByText("16 rue de la Grange Batelière, Paris")).toBeInTheDocument();
     expect(screen.getByText("8 Quai du Louvre, Paris")).toBeInTheDocument();
     expect(screen.getByText("pois.section.total")).toBeInTheDocument();
+  });
+
+  it("hides remove action for VIEWER", () => {
+    mockListPoisInfiniteQuery({
+      data: {
+        pageParams: [1],
+        pages: [
+          {
+            savedPois: [customSavedPoi, googleSavedPoi],
+            pagination: { page: 1, limit: 20, total: 2, totalPages: 1 },
+          },
+        ],
+      },
+    });
+
+    render(<ListPoisSection listId="list-1" role="VIEWER" />);
+
+    expect(screen.queryByRole("button", { name: "removePoi.action" })).not.toBeInTheDocument();
+  });
+
+  it("shows remove action for EDITOR on each row", () => {
+    mockListPoisInfiniteQuery({
+      data: {
+        pageParams: [1],
+        pages: [
+          {
+            savedPois: [customSavedPoi, googleSavedPoi],
+            pagination: { page: 1, limit: 20, total: 2, totalPages: 1 },
+          },
+        ],
+      },
+    });
+
+    render(<ListPoisSection listId="list-1" role="EDITOR" />);
+
+    expect(screen.getAllByRole("button", { name: "removePoi.action" })).toHaveLength(2);
   });
 });
