@@ -52,6 +52,12 @@ const NEW_LISTS_KEYS = [
   "shared.title",
   "shared.notFound",
   "shared.expired",
+  "join.edit.title",
+  "join.edit.description",
+  "join.accept.title",
+  "join.accept.description",
+  "join.missingToken",
+  "join.joining",
 ] as const;
 
 const NEW_EXPLORE_KEYS = [

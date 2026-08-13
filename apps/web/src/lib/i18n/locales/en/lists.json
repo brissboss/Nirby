@@ -184,5 +184,17 @@
       "by": "By {name}",
       "unknown": "Shared list"
     }
+  },
+  "join": {
+    "edit": {
+      "title": "Join this list",
+      "description": "Sign in to join this list as an editor."
+    },
+    "accept": {
+      "title": "Accept invitation",
+      "description": "Sign in with the email address this invitation was sent to."
+    },
+    "missingToken": "This invite link is missing a token.",
+    "joining": "Joining the list…"
   }
 }

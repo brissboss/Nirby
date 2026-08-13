@@ -184,5 +184,17 @@
       "by": "Par {name}",
       "unknown": "Liste partagée"
     }
+  },
+  "join": {
+    "edit": {
+      "title": "Rejoindre cette liste",
+      "description": "Connecte-toi pour rejoindre cette liste en tant qu'éditeur."
+    },
+    "accept": {
+      "title": "Accepter l'invitation",
+      "description": "Connecte-toi avec l'adresse e-mail à laquelle cette invitation a été envoyée."
+    },
+    "missingToken": "Ce lien d'invitation n'a pas de jeton.",
+    "joining": "Rejoindre la liste…"
   }
 }

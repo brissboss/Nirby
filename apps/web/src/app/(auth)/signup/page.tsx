@@ -3,6 +3,7 @@
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { ArrowLeft, Eye, EyeOff, Mail } from "lucide-react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -20,14 +21,21 @@ import {
 import { Input } from "@/components/ui/input";
 import { useAuth, type LoginSignupFormData, createLoginSignupSchema } from "@/features/auth";
 import { useErrorMessage } from "@/hooks/use-error-message";
+import {
+  RETURN_URL_PARAM,
+  buildLoginHref,
+  getSafeReturnPath,
+} from "@/lib/navigation/auth-redirect";
 
 export default function SignupPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { signup, resendEmail } = useAuth();
+  const searchParams = useSearchParams();
   const t = useTranslations();
   const getErrorMessage = useErrorMessage();
+  const safeReturnPath = getSafeReturnPath(searchParams.get(RETURN_URL_PARAM));
 
   const signupSchema = useMemo(
     () =>
@@ -190,7 +198,10 @@ export default function SignupPage() {
 
             <div className="text-center text-base lg:text-sm pt-4">
               <span className="text-muted-foreground">{t("auth.signup.noAccount")} </span>
-              <Link href="/login" className="font-semibold text-primary hover:underline">
+              <Link
+                href={safeReturnPath ? buildLoginHref(safeReturnPath) : "/login"}
+                className="font-semibold text-primary hover:underline"
+              >
                 {t("auth.signup.login")}
               </Link>
             </div>
