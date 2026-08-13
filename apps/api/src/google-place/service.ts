@@ -70,6 +70,27 @@ export function mapGooglePlaceToCache(place: GooglePlaceResponse, language: stri
   };
 }
 
+async function upsertPlaceCache(placeId: string, language: string) {
+  const googleData = await fetchPlaceDetails(placeId, language);
+  const cacheData = mapGooglePlaceToCache(googleData, language);
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { placeId: _unused, ...updateData } = cacheData;
+
+  return prisma.googlePlaceCache.upsert({
+    where: { placeId },
+    create: cacheData,
+    update: updateData,
+  });
+}
+
+/**
+ * Force-fetch place details from Google and update the cache.
+ */
+export async function refreshPlaceCache(placeId: string, language?: string) {
+  return upsertPlaceCache(placeId, language ?? "en-US");
+}
+
 /**
  * Get a place from cache, or fetch from Google API and cache it
  */
@@ -84,20 +105,12 @@ export async function getOrFetchPlace(placeId: string, language?: string) {
     return cached;
   }
 
-  const googleData = await fetchPlaceDetails(placeId, lang);
+  return upsertPlaceCache(placeId, lang);
+}
 
-  const cacheData = mapGooglePlaceToCache(googleData, lang);
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { placeId: _unused, ...updateData } = cacheData;
-
-  const upserted = await prisma.googlePlaceCache.upsert({
-    where: { placeId },
-    create: cacheData,
-    update: updateData,
-  });
-
-  return upserted;
+export function extractPlaceIdFromPhotoRef(photoReference: string): string | null {
+  const match = photoReference.match(/^places\/([^/]+)\/photos\//);
+  return match?.[1] ?? null;
 }
 
 /**
@@ -261,29 +274,109 @@ export async function getPhoto(photoReference: string, maxWidth: number = 400): 
   }
 
   try {
-    const response = await fetch(
-      `https://places.googleapis.com/v1/${photoReference}/media?maxWidthPx=${maxWidth}&skipHttpRedirect=true&key=${env.GOOGLE_PLACES_API_KEY}`,
-      { method: "GET" }
+    const metaResponse = await fetch(
+      `https://places.googleapis.com/v1/${photoReference}/media?maxWidthPx=${maxWidth}&skipHttpRedirect=true`,
+      {
+        method: "GET",
+        headers: { "X-Goog-Api-Key": env.GOOGLE_PLACES_API_KEY },
+      }
     );
 
-    if (!response.ok) {
+    if (!metaResponse.ok) {
       throw new ApiError(
-        response.status,
+        metaResponse.status,
         ErrorCodes.GOOGLE_PLACE_PHOTO_ERROR,
-        "Failed to fetch photo"
+        "Failed to fetch photo metadata"
       );
     }
 
-    return Buffer.from(await response.arrayBuffer());
-  } catch (error) {
-    if (error instanceof ApiError) {
-      throw error;
+    const meta = (await metaResponse.json()) as { photoUri?: string };
+    if (!meta.photoUri) {
+      throw new ApiError(502, ErrorCodes.GOOGLE_PLACE_PHOTO_ERROR, "Missing photoUri");
     }
 
+    const imageResponse = await fetch(meta.photoUri);
+    if (!imageResponse.ok) {
+      throw new ApiError(
+        imageResponse.status,
+        ErrorCodes.GOOGLE_PLACE_PHOTO_ERROR,
+        "Failed to download photo"
+      );
+    }
+
+    const buffer = Buffer.from(await imageResponse.arrayBuffer());
+    const isJpeg =
+      buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff;
+
+    if (!isJpeg || buffer.length < 1000) {
+      throw new ApiError(
+        502,
+        ErrorCodes.GOOGLE_PLACE_PHOTO_ERROR,
+        "Invalid photo data received from Google"
+      );
+    }
+
+    return buffer;
+  } catch (error) {
+    if (error instanceof ApiError) throw error;
     throw new ApiError(
       500,
       ErrorCodes.GOOGLE_PLACE_PHOTO_ERROR,
       "Failed to fetch photo from Google Places API"
     );
   }
+}
+
+/**
+ * Fetch a photo, refreshing the place cache and trying alternate refs on failure.
+ */
+export async function getPhotoWithCacheRefresh(
+  photoReference: string,
+  maxWidth: number = 400
+): Promise<Buffer> {
+  try {
+    return await getPhoto(photoReference, maxWidth);
+  } catch (error) {
+    if (!(error instanceof ApiError) || error.code !== ErrorCodes.GOOGLE_PLACE_PHOTO_ERROR) {
+      throw error;
+    }
+  }
+
+  const placeId = extractPlaceIdFromPhotoRef(photoReference);
+  if (!placeId) {
+    throw new ApiError(400, ErrorCodes.GOOGLE_PLACE_PHOTO_ERROR, "Failed to fetch photo metadata");
+  }
+
+  const refreshed = await refreshPlaceCache(placeId);
+  const refsToTry = refreshed.photoReferences.filter(Boolean);
+
+  if (refsToTry.length === 0) {
+    throw new ApiError(
+      502,
+      ErrorCodes.GOOGLE_PLACE_PHOTO_ERROR,
+      "No photo references available for this place"
+    );
+  }
+
+  let lastError: ApiError | undefined;
+  for (const ref of refsToTry) {
+    try {
+      return await getPhoto(ref, maxWidth);
+    } catch (error) {
+      if (error instanceof ApiError && error.code === ErrorCodes.GOOGLE_PLACE_PHOTO_ERROR) {
+        lastError = error;
+        continue;
+      }
+      throw error;
+    }
+  }
+
+  throw (
+    lastError ??
+    new ApiError(
+      502,
+      ErrorCodes.GOOGLE_PLACE_PHOTO_ERROR,
+      "Failed to fetch photo from Google Places API"
+    )
+  );
 }

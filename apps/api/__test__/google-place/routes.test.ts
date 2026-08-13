@@ -12,6 +12,22 @@ const app = createServer();
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
 
+function mockValidPhotoFetch() {
+  const buffer = Buffer.alloc(2000, 0);
+  buffer[0] = 0xff;
+  buffer[1] = 0xd8;
+  buffer[2] = 0xff;
+
+  mockFetch.mockResolvedValueOnce({
+    ok: true,
+    json: async () => ({ photoUri: "https://example.com/photo.jpg" }),
+  });
+  mockFetch.mockResolvedValueOnce({
+    ok: true,
+    arrayBuffer: async () => buffer,
+  });
+}
+
 describe("Google Place Routes", () => {
   let accessToken: string;
   let userId: string;
@@ -444,12 +460,7 @@ describe("Google Place Routes", () => {
     });
 
     it("should return photo buffer with correct headers", async () => {
-      const mockPhotoBuffer = Buffer.from("fake-image-data");
-
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        arrayBuffer: async () => mockPhotoBuffer,
-      });
+      mockValidPhotoFetch();
 
       const response = await request(app)
         .get("/google-place/photo?ref=places/test/photos/abc123")
@@ -457,29 +468,23 @@ describe("Google Place Routes", () => {
 
       expect(response.status).toBe(200);
       expect(response.headers["content-type"]).toBe("image/jpeg");
-      expect(response.headers["cache-control"]).toBe("public, max-age=86400");
+      expect(response.headers["cache-control"]).toBe("private, max-age=86400, immutable");
     });
 
     it("should pass maxWidth to Google API", async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        arrayBuffer: async () => Buffer.from("fake-image"),
-      });
+      mockValidPhotoFetch();
 
       await request(app)
         .get("/google-place/photo?ref=places/test/photos/abc123&maxWidth=800")
         .set("Authorization", `Bearer ${accessToken}`);
 
-      expect(mockFetch).toHaveBeenCalledTimes(1);
+      expect(mockFetch).toHaveBeenCalledTimes(2);
       const url = mockFetch.mock.calls[0][0];
       expect(url).toContain("maxWidthPx=800");
     });
 
     it("should use default maxWidth of 400", async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        arrayBuffer: async () => Buffer.from("fake-image"),
-      });
+      mockValidPhotoFetch();
 
       await request(app)
         .get("/google-place/photo?ref=places/test/photos/abc123")
@@ -489,7 +494,7 @@ describe("Google Place Routes", () => {
       expect(url).toContain("maxWidthPx=400");
     });
 
-    it("should return error when Google API fails", async () => {
+    it("should return error when Google API fails for a non-place photo ref", async () => {
       mockFetch.mockResolvedValueOnce({
         ok: false,
         status: 404,
@@ -499,18 +504,38 @@ describe("Google Place Routes", () => {
         .get("/google-place/photo?ref=invalid-ref")
         .set("Authorization", `Bearer ${accessToken}`);
 
-      expect(response.status).toBe(404);
+      expect(response.status).toBe(400);
       expect(response.body.error.code).toBe("GOOGLE_PLACE_PHOTO_ERROR");
+    });
+
+    it("should refresh place cache when a place photo ref fails", async () => {
+      mockFetch.mockResolvedValueOnce({ ok: false, status: 404 }).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          id: "test",
+          displayName: { text: "Test Place", languageCode: "en" },
+          location: { latitude: 0, longitude: 0 },
+          photos: [],
+        }),
+      });
+
+      const response = await request(app)
+        .get("/google-place/photo?ref=places/test/photos/abc123")
+        .set("Authorization", `Bearer ${accessToken}`);
+
+      expect(response.status).toBe(502);
+      expect(response.body.error.code).toBe("GOOGLE_PLACE_PHOTO_ERROR");
+      expect(mockFetch).toHaveBeenCalledTimes(2);
     });
 
     it("should handle network errors in photo fetch", async () => {
       mockFetch.mockRejectedValueOnce(new TypeError("fetch failed"));
 
       const response = await request(app)
-        .get("/google-place/photo?ref=places/test/photos/abc123")
+        .get("/google-place/photo?ref=invalid-ref")
         .set("Authorization", `Bearer ${accessToken}`);
 
-      expect(response.status).toBe(500);
+      expect(response.status).toBe(400);
       expect(response.body.error.code).toBe("GOOGLE_PLACE_PHOTO_ERROR");
     });
   });
@@ -583,10 +608,7 @@ describe("Google Place Routes", () => {
     });
 
     it("should include RateLimit headers in photo response", async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        arrayBuffer: async () => Buffer.from("fake-image"),
-      });
+      mockValidPhotoFetch();
 
       const response = await request(app)
         .get("/google-place/photo?ref=places/test/photos/headers-test")

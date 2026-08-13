@@ -1,6 +1,7 @@
 import { Router } from "express";
 
 import { prisma } from "../db";
+import { hydrateExpiredGooglePlaceCaches } from "../google-place/cache-utils";
 import { ErrorCodes } from "../utils/error-codes";
 import { formatError } from "../utils/errors";
 
@@ -157,7 +158,9 @@ sharedRouter.get("/:shareToken/pois", async (req, res) => {
       }),
     ]);
 
-    const publicPois = savedPois
+    const savedPoisWithFreshGoogleCache = await hydrateExpiredGooglePlaceCaches(savedPois);
+
+    const publicPois = savedPoisWithFreshGoogleCache
       .map((savedPoi) => {
         if (savedPoi.googlePlaceCache) {
           return savedPoi.googlePlaceCache;
