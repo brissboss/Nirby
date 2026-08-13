@@ -1,6 +1,6 @@
 "use client";
 
-import { PencilIcon, Trash2Icon } from "lucide-react";
+import { PencilIcon, Share2Icon, Trash2Icon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 
@@ -9,7 +9,12 @@ import { ListPoisSection } from "../components/list-pois-section";
 import { ListsDetailMetadata } from "../components/lists-detail-metadata";
 import { ListsListQueryBoundary } from "../components/lists-list-query-boundary";
 import { ListsSectionLayout } from "../components/lists-section-layout";
-import { canDeleteList, canEditList } from "../constants/lists.constants";
+import { ShareListDialog } from "../components/share-list-dialog";
+import {
+  canDeleteList,
+  canEditList,
+  canManageShareAndEditLinks,
+} from "../constants/lists.constants";
 import { useList } from "../hooks/use-list";
 import { useListMapPois } from "../hooks/use-list-map-pois";
 
@@ -30,6 +35,7 @@ export function ListsDetailView({ listId, onBack, onEdit, onDelete }: ListsDetai
   const { data } = useList(listId);
   const mapPois = useListMapPois(listId);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const list = data?.list;
 
   return (
@@ -50,6 +56,17 @@ export function ListsDetailView({ listId, onBack, onEdit, onDelete }: ListsDetai
             <ListsDetailMetadata list={loadedList} />
             {(canEditList(loadedList.role) || canDeleteList(loadedList.role)) && (
               <div className="flex flex-wrap gap-2">
+                {canManageShareAndEditLinks(loadedList.role) && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShareDialogOpen(true)}
+                  >
+                    <Share2Icon className="size-4" />
+                    {tLists("share.action")}
+                  </Button>
+                )}
                 {canEditList(loadedList.role) && (
                   <Button type="button" variant="outline" size="sm" onClick={onEdit}>
                     <PencilIcon className="size-4" />
@@ -68,6 +85,15 @@ export function ListsDetailView({ listId, onBack, onEdit, onDelete }: ListsDetai
                   </Button>
                 )}
               </div>
+            )}
+            {canManageShareAndEditLinks(loadedList.role) && (
+              <ShareListDialog
+                listId={listId}
+                shareToken={loadedList.shareToken}
+                editToken={loadedList.editToken}
+                open={shareDialogOpen}
+                onOpenChange={setShareDialogOpen}
+              />
             )}
             {canDeleteList(loadedList.role) && (
               <DeleteListDialog

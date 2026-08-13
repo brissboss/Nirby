@@ -70,6 +70,11 @@ vi.mock("../components/list-pois-section", () => ({
   ),
 }));
 
+vi.mock("../components/share-list-dialog", () => ({
+  ShareListDialog: ({ open }: { open: boolean }) =>
+    open ? <div data-testid="share-list-dialog" /> : null,
+}));
+
 vi.mock("sonner", () => ({
   toast: {
     success: vi.fn(),
@@ -224,6 +229,52 @@ describe("ListsDetailView", () => {
 
     expect(screen.getByRole("button", { name: "edit.action" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "delete.submit" })).not.toBeInTheDocument();
+  });
+
+  it("shows share button for OWNER and opens the dialog", async () => {
+    const user = userEvent.setup();
+    mockListQuery();
+
+    render(<ListsDetailView listId="list-1" onBack={onBack} onEdit={onEdit} onDelete={onDelete} />);
+
+    const shareButton = screen.getByRole("button", { name: "share.action" });
+    expect(shareButton).toBeInTheDocument();
+    expect(screen.queryByTestId("share-list-dialog")).not.toBeInTheDocument();
+
+    await user.click(shareButton);
+
+    expect(screen.getByTestId("share-list-dialog")).toBeInTheDocument();
+  });
+
+  it("shows share button for ADMIN", () => {
+    mockListQuery({
+      data: { list: { ...mockList, role: "ADMIN" } },
+    });
+
+    render(<ListsDetailView listId="list-1" onBack={onBack} onEdit={onEdit} onDelete={onDelete} />);
+
+    expect(screen.getByRole("button", { name: "share.action" })).toBeInTheDocument();
+  });
+
+  it("hides share button for VIEWER", () => {
+    mockListQuery({
+      data: { list: { ...mockList, role: "VIEWER" } },
+    });
+
+    render(<ListsDetailView listId="list-1" onBack={onBack} onEdit={onEdit} onDelete={onDelete} />);
+
+    expect(screen.queryByRole("button", { name: "share.action" })).not.toBeInTheDocument();
+  });
+
+  it("hides share button for EDITOR", () => {
+    mockListQuery({
+      data: { list: { ...mockList, role: "EDITOR" } },
+    });
+
+    render(<ListsDetailView listId="list-1" onBack={onBack} onEdit={onEdit} onDelete={onDelete} />);
+
+    expect(screen.getByRole("button", { name: "edit.action" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "share.action" })).not.toBeInTheDocument();
   });
 
   it("shows delete button for OWNER", () => {

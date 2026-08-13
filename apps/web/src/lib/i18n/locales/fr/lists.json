@@ -110,5 +110,33 @@
     "confirmSubmit": "Retirer",
     "success": "Lieu retiré de la liste",
     "error": "Impossible de retirer le lieu"
+  },
+  "share": {
+    "action": "Partager",
+    "title": "Partager la liste",
+    "description": "Crée un lien de lecture ou un lien d'invitation à éditer pour cette liste.",
+    "readLink": {
+      "title": "Lien en lecture seule",
+      "description": "Toute personne avec ce lien peut consulter la liste.",
+      "generate": "Créer le lien",
+      "copy": "Copier",
+      "revoke": "Révoquer",
+      "revokeConfirm": "Révoquer le lien",
+      "empty": "Aucun lien pour l'instant"
+    },
+    "editLink": {
+      "title": "Lien d'invitation à éditer",
+      "description": "Toute personne avec ce lien peut rejoindre la liste en tant qu'éditeur.",
+      "generate": "Créer le lien",
+      "copy": "Copier",
+      "revoke": "Révoquer",
+      "revokeConfirm": "Révoquer le lien",
+      "empty": "Aucun lien pour l'instant"
+    },
+    "copySuccess": "Lien copié",
+    "copyError": "Impossible de copier le lien",
+    "generateError": "Impossible de créer le lien",
+    "revokeSuccess": "Lien révoqué",
+    "revokeError": "Impossible de révoquer le lien"
   }
 }
