@@ -28,11 +28,11 @@ export function createPoiFormSchema(messages: CreatePoiFormMessages) {
       .min(name.min, { message: messages.requiredName })
       .max(name.max, { message: messages.nameTooLong }),
     latitude: z
-      .number()
+      .number(messages.latitudeInvalid)
       .min(latitude.min, { message: messages.latitudeInvalid })
       .max(latitude.max, { message: messages.latitudeInvalid }),
     longitude: z
-      .number()
+      .number(messages.longitudeInvalid)
       .min(longitude.min, { message: messages.longitudeInvalid })
       .max(longitude.max, { message: messages.longitudeInvalid }),
     description: z

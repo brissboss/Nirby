@@ -73,6 +73,28 @@ describe("createPoiFormSchema", () => {
     }
   });
 
+  it("rejects missing latitude with invalid message", () => {
+    const result = schema().safeParse({
+      name: validInput.name,
+      longitude: validInput.longitude,
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues[0].message).toBe(messages.latitudeInvalid);
+    }
+  });
+
+  it("rejects missing longitude with invalid message", () => {
+    const result = schema().safeParse({
+      name: validInput.name,
+      latitude: validInput.latitude,
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues[0].message).toBe(messages.longitudeInvalid);
+    }
+  });
+
   it("rejects latitude below min", () => {
     const result = schema().safeParse({
       ...validInput,
