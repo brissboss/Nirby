@@ -86,7 +86,7 @@
     },
     "empty": {
       "title": "Aucun lieu pour l'instant",
-      "description": "Recherche des lieux dans Explorer pour les ajouter ici."
+      "description": "Recherche dans Explorer ou crée un lieu personnalisé pour l’ajouter ici."
     },
     "loading": "Chargement des lieux…",
     "loadingMore": "Chargement…",
