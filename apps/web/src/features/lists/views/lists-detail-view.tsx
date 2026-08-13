@@ -18,11 +18,8 @@ import {
 } from "../constants/lists.constants";
 import { useList } from "../hooks/use-list";
 import { useListMapPois } from "../hooks/use-list-map-pois";
-import { useListMapPois } from "../hooks/use-list-map-pois";
 
 import { Button } from "@/components/ui";
-import { useShell } from "@/features/app-shell";
-import { PoiMarkersLayer } from "@/features/map";
 import { useShell } from "@/features/app-shell";
 import { PoiMarkersLayer } from "@/features/map";
 
@@ -36,9 +33,7 @@ type ListsDetailViewProps = {
 export function ListsDetailView({ listId, onBack, onEdit, onDelete }: ListsDetailViewProps) {
   const tLists = useTranslations("lists");
   const { selectedPoiId, selectPoi, clearSelection } = useShell();
-  const { selectedPoiId, selectPoi, clearSelection } = useShell();
   const { data } = useList(listId);
-  const mapPois = useListMapPois(listId);
   const mapPois = useListMapPois(listId);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
@@ -50,12 +45,6 @@ export function ListsDetailView({ listId, onBack, onEdit, onDelete }: ListsDetai
       description={list?.description ?? undefined}
       onBack={onBack}
     >
-      <PoiMarkersLayer
-        pois={mapPois}
-        selectedPoiId={selectedPoiId}
-        onSelectPoi={selectPoi}
-        onDeselect={clearSelection}
-      />
       <PoiMarkersLayer
         pois={mapPois}
         selectedPoiId={selectedPoiId}
