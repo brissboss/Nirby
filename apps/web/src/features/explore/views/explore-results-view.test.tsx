@@ -6,7 +6,14 @@ import { useSearchGooglePlaces } from "../hooks/use-search-google-places";
 
 import { ExploreResultsView } from "./explore-results-view";
 
-const mockUseShell = vi.fn(() => ({ query: "café" }));
+const defaultShellState = {
+  query: "café",
+  selectedPoiId: null,
+  selectPoi: vi.fn(),
+  clearSelection: vi.fn(),
+};
+
+const mockUseShell = vi.fn(() => defaultShellState);
 
 vi.mock("../hooks/use-search-google-places", () => ({
   useSearchGooglePlaces: vi.fn(),
@@ -48,8 +55,24 @@ vi.mock("../components/add-to-list-picker", () => ({
 }));
 
 vi.mock("@/features/map", () => ({
-  PoiMarkersLayer: ({ pois }: { pois: { id: string }[] }) => (
-    <div data-testid="poi-markers-layer" data-ids={pois.map((poi) => poi.id).join(",")} />
+  PoiMarkersLayer: ({
+    pois,
+    selectedPoiId,
+    onSelectPoi,
+    onDeselect,
+  }: {
+    pois: { id: string }[];
+    selectedPoiId?: string | null;
+    onSelectPoi?: (id: string) => void;
+    onDeselect?: () => void;
+  }) => (
+    <div
+      data-testid="poi-markers-layer"
+      data-ids={pois.map((poi) => poi.id).join(",")}
+      data-selected={selectedPoiId ?? ""}
+      data-has-select={onSelectPoi ? "1" : "0"}
+      data-has-deselect={onDeselect ? "1" : "0"}
+    />
   ),
 }));
 
@@ -70,11 +93,11 @@ function mockSearch(overrides: Partial<Record<keyof SearchResult, unknown>>) {
 describe("ExploreResultsView", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockUseShell.mockReturnValue({ query: "café" });
+    mockUseShell.mockReturnValue({ ...defaultShellState, query: "café" });
   });
 
   it("shows the idle state when the query is too short", () => {
-    mockUseShell.mockReturnValue({ query: "c" });
+    mockUseShell.mockReturnValue({ ...defaultShellState, query: "c" });
     mockSearch({});
 
     render(<ExploreResultsView />);
@@ -181,7 +204,7 @@ describe("ExploreResultsView", () => {
   });
 
   it("does not mount the markers layer on the idle state", () => {
-    mockUseShell.mockReturnValue({ query: "c" });
+    mockUseShell.mockReturnValue({ ...defaultShellState, query: "c" });
     mockSearch({
       data: {
         places: [

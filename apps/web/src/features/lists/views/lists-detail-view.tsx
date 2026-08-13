@@ -14,6 +14,7 @@ import { useList } from "../hooks/use-list";
 import { useListMapPois } from "../hooks/use-list-map-pois";
 
 import { Button } from "@/components/ui";
+import { useShell } from "@/features/app-shell";
 import { PoiMarkersLayer } from "@/features/map";
 
 type ListsDetailViewProps = {
@@ -25,6 +26,7 @@ type ListsDetailViewProps = {
 
 export function ListsDetailView({ listId, onBack, onEdit, onDelete }: ListsDetailViewProps) {
   const tLists = useTranslations("lists");
+  const { selectedPoiId, selectPoi, clearSelection } = useShell();
   const { data } = useList(listId);
   const mapPois = useListMapPois(listId);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -36,7 +38,12 @@ export function ListsDetailView({ listId, onBack, onEdit, onDelete }: ListsDetai
       description={list?.description ?? undefined}
       onBack={onBack}
     >
-      <PoiMarkersLayer pois={mapPois} />
+      <PoiMarkersLayer
+        pois={mapPois}
+        selectedPoiId={selectedPoiId}
+        onSelectPoi={selectPoi}
+        onDeselect={clearSelection}
+      />
       <ListsListQueryBoundary listId={listId}>
         {(loadedList) => (
           <div className="grid gap-6">
@@ -70,7 +77,12 @@ export function ListsDetailView({ listId, onBack, onEdit, onDelete }: ListsDetai
                 onDeleted={onDelete}
               />
             )}
-            <ListPoisSection listId={listId} role={loadedList.role} />
+            <ListPoisSection
+              listId={listId}
+              role={loadedList.role}
+              selectedPoiId={selectedPoiId}
+              onSelectPoi={selectPoi}
+            />
           </div>
         )}
       </ListsListQueryBoundary>

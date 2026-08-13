@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   getCoordinatesFromGooglePlace,
   getCoordinatesFromSavedPoi,
+  getSavedPoiMapId,
 } from "./get-poi-coordinates";
 
 describe("getCoordinatesFromGooglePlace", () => {
@@ -163,5 +164,32 @@ describe("getCoordinatesFromSavedPoi", () => {
       lng: 2.2945,
       label: "Custom fallback",
     });
+  });
+});
+
+describe("getSavedPoiMapId", () => {
+  it("prefers the saved POI id", () => {
+    expect(
+      getSavedPoiMapId({
+        id: "sp-1",
+        googlePlaceCache: { placeId: "ChIJgoogle", name: "Google place" },
+      })
+    ).toBe("sp-1");
+  });
+
+  it("falls back to the Google place id", () => {
+    expect(
+      getSavedPoiMapId({
+        googlePlaceCache: { placeId: "ChIJgoogle", name: "Google place" },
+      })
+    ).toBe("ChIJgoogle");
+  });
+
+  it("falls back to the custom POI id", () => {
+    expect(
+      getSavedPoiMapId({
+        poi: { id: "poi-1", name: "Custom place" },
+      })
+    ).toBe("poi-1");
   });
 });

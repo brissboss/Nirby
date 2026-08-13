@@ -15,6 +15,13 @@ function toMapPoi(id: string, lat: number, lng: number, name?: string | null): M
   return label ? { id, lat, lng, label } : { id, lat, lng };
 }
 
+export function getSavedPoiMapId(savedPoi: SavedPoiListItem): string | null {
+  if (savedPoi.id) return savedPoi.id;
+  if (savedPoi.googlePlaceCache?.placeId) return savedPoi.googlePlaceCache.placeId;
+  if (savedPoi.poi?.id) return savedPoi.poi.id;
+  return null;
+}
+
 export function getCoordinatesFromGooglePlace(place: GooglePlace): MapPoi | null {
   const coords = parseCoordinates(place.latitude, place.longitude);
   if (!coords) return null;
@@ -30,18 +37,20 @@ function getCoordinatesFromPoi(poi: Poi, id: string): MapPoi | null {
 }
 
 export function getCoordinatesFromSavedPoi(savedPoi: SavedPoiListItem): MapPoi | null {
+  const mapId = getSavedPoiMapId(savedPoi);
+
   if (savedPoi.googlePlaceCache) {
     const fromCache = getCoordinatesFromGooglePlace(savedPoi.googlePlaceCache);
     if (fromCache) {
       return {
         ...fromCache,
-        id: savedPoi.id ?? savedPoi.googlePlaceCache.placeId ?? fromCache.id,
+        id: mapId ?? fromCache.id,
       };
     }
   }
 
   if (savedPoi.poi) {
-    return getCoordinatesFromPoi(savedPoi.poi, savedPoi.id ?? savedPoi.poi.id ?? "");
+    return getCoordinatesFromPoi(savedPoi.poi, mapId ?? "");
   }
 
   return null;
