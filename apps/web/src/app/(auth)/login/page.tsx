@@ -3,7 +3,7 @@
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useState, useMemo } from "react";
 import { useForm } from "react-hook-form";
@@ -21,13 +21,20 @@ import {
 import { Input } from "@/components/ui/input";
 import { useAuth, type LoginSignupFormData, createLoginSignupSchema } from "@/features/auth";
 import { useErrorMessage } from "@/hooks/use-error-message";
+import {
+  RETURN_URL_PARAM,
+  buildSignupHref,
+  getSafeReturnPath,
+} from "@/lib/navigation/auth-redirect";
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const { login } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const t = useTranslations();
   const getErrorMessage = useErrorMessage();
+  const safeReturnPath = getSafeReturnPath(searchParams.get(RETURN_URL_PARAM));
 
   const loginSchema = useMemo(
     () =>
@@ -50,7 +57,7 @@ export default function LoginPage() {
   async function onSubmit(values: LoginSignupFormData) {
     try {
       await login(values.email, values.password);
-      router.push("/");
+      router.push(safeReturnPath ?? "/");
     } catch (error) {
       toast.error(t("auth.login.loginError"), {
         description: getErrorMessage(error),
@@ -146,7 +153,10 @@ export default function LoginPage() {
 
         <div className="text-center text-base lg:text-sm pt-4">
           <span className="text-muted-foreground">{t("auth.login.noAccount")} </span>
-          <Link href="/signup" className="font-semibold text-primary hover:underline">
+          <Link
+            href={safeReturnPath ? buildSignupHref(safeReturnPath) : "/signup"}
+            className="font-semibold text-primary hover:underline"
+          >
             {t("auth.login.signup")}
           </Link>
         </div>

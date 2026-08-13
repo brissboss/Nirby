@@ -5,9 +5,16 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 
 import { Button, Card, CardInset } from "@/components/ui";
+import { buildLoginHref, buildSignupHref } from "@/lib/navigation/auth-redirect";
 
-export function AuthRequiredPrompt() {
+type AuthRequiredPromptProps = {
+  returnPath?: string;
+};
+
+export function AuthRequiredPrompt({ returnPath }: AuthRequiredPromptProps) {
   const t = useTranslations("auth.required");
+  const loginHref = returnPath ? buildLoginHref(returnPath) : "/login";
+  const signupHref = returnPath ? buildSignupHref(returnPath) : "/signup";
 
   return (
     <div className="flex min-h-56 flex-col items-center justify-center py-8">
@@ -21,11 +28,11 @@ export function AuthRequiredPrompt() {
             <p className="text-sm text-muted-foreground">{t("description")}</p>
           </div>
           <Button asChild className="w-full">
-            <Link href="/login">{t("login")}</Link>
+            <Link href={loginHref}>{t("login")}</Link>
           </Button>
           <p className="text-sm text-muted-foreground">
             {t("noAccount")}{" "}
-            <Link href="/signup" className="font-semibold text-primary hover:underline">
+            <Link href={signupHref} className="font-semibold text-primary hover:underline">
               {t("signup")}
             </Link>
           </p>
