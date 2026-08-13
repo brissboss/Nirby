@@ -115,4 +115,16 @@ describe("PoiMarkersLayer", () => {
     expect(markerInstances).toHaveLength(0);
     expect(fitBounds).not.toHaveBeenCalled();
   });
+
+  it("does not refit when the same POIs are passed with a new array reference", () => {
+    const { rerender } = render(<PoiMarkersLayer pois={[paris]} />);
+
+    expect(fitBounds).toHaveBeenCalledTimes(1);
+
+    rerender(<PoiMarkersLayer pois={[{ ...paris }]} />);
+
+    expect(fitBounds).toHaveBeenCalledTimes(1);
+    expect(markerInstances).toHaveLength(1);
+    expect(markerInstances[0].remove).not.toHaveBeenCalled();
+  });
 });

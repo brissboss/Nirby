@@ -47,6 +47,12 @@ vi.mock("../components/add-to-list-picker", () => ({
     open ? <div>picker for {placeName}</div> : null,
 }));
 
+vi.mock("@/features/map", () => ({
+  PoiMarkersLayer: ({ pois }: { pois: { id: string }[] }) => (
+    <div data-testid="poi-markers-layer" data-ids={pois.map((poi) => poi.id).join(",")} />
+  ),
+}));
+
 type SearchResult = ReturnType<typeof useSearchGooglePlaces>;
 
 function mockSearch(overrides: Partial<Record<keyof SearchResult, unknown>>) {
@@ -122,5 +128,70 @@ describe("ExploreResultsView", () => {
     await user.click(screen.getByRole("button", { name: "Louvre" }));
 
     expect(screen.getByText("picker for Louvre")).toBeInTheDocument();
+  });
+
+  it("passes geolocated places to the markers layer", () => {
+    mockSearch({
+      data: {
+        places: [
+          { placeId: "ChIJeiffel", name: "Tour Eiffel", latitude: 48.8584, longitude: 2.2945 },
+          { placeId: "ChIJlouvre", name: "Louvre", latitude: 48.8606, longitude: 2.3376 },
+        ],
+      },
+    });
+
+    render(<ExploreResultsView />);
+
+    expect(screen.getByTestId("poi-markers-layer")).toHaveAttribute(
+      "data-ids",
+      "ChIJeiffel,ChIJlouvre"
+    );
+  });
+
+  it("omits places without coordinates or with the (0, 0) sentinel", () => {
+    mockSearch({
+      data: {
+        places: [
+          { placeId: "ChIJeiffel", name: "Tour Eiffel", latitude: 48.8584, longitude: 2.2945 },
+          { placeId: "ChIJmissing", name: "No coords" },
+          { placeId: "ChIJzero", name: "Unknown", latitude: 0, longitude: 0 },
+        ],
+      },
+    });
+
+    render(<ExploreResultsView />);
+
+    expect(screen.getByTestId("poi-markers-layer")).toHaveAttribute("data-ids", "ChIJeiffel");
+  });
+
+  it("clears markers when the search errors", () => {
+    mockSearch({
+      isError: true,
+      error: { error: { code: "GOOGLE_PLACE_SEARCH_ERROR" } },
+      data: {
+        places: [
+          { placeId: "ChIJeiffel", name: "Tour Eiffel", latitude: 48.8584, longitude: 2.2945 },
+        ],
+      },
+    });
+
+    render(<ExploreResultsView />);
+
+    expect(screen.getByTestId("poi-markers-layer")).toHaveAttribute("data-ids", "");
+  });
+
+  it("does not mount the markers layer on the idle state", () => {
+    mockUseShell.mockReturnValue({ query: "c" });
+    mockSearch({
+      data: {
+        places: [
+          { placeId: "ChIJeiffel", name: "Tour Eiffel", latitude: 48.8584, longitude: 2.2945 },
+        ],
+      },
+    });
+
+    render(<ExploreResultsView />);
+
+    expect(screen.queryByTestId("poi-markers-layer")).not.toBeInTheDocument();
   });
 });

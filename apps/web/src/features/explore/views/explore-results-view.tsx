@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { AddToListPicker, type AddToListTarget } from "../components/add-to-list-picker";
 import { ExploreResultRow } from "../components/explore-result-row";
@@ -11,6 +11,8 @@ import { usePoiListMembership } from "../hooks/use-poi-list-membership";
 import { useSearchGooglePlaces } from "../hooks/use-search-google-places";
 
 import { EXPLORE_MIN_QUERY_LENGTH, useShell } from "@/features/app-shell";
+import { PoiMarkersLayer } from "@/features/map";
+import { getCoordinatesFromGooglePlace, type MapPoi } from "@/features/pois";
 import { useErrorMessage } from "@/hooks/use-error-message";
 
 export function ExploreResultsView() {
@@ -24,6 +26,10 @@ export function ExploreResultsView() {
     .filter((placeId): placeId is string => Boolean(placeId));
   const { data: membershipData } = usePoiListMembership(placeIds);
   const membership = membershipData?.membership ?? {};
+  const mapPois = useMemo(() => {
+    if (isError) return [];
+    return places.map(getCoordinatesFromGooglePlace).filter((poi): poi is MapPoi => poi !== null);
+  }, [isError, places]);
   // A single picker for the whole list: mounting one per row would duplicate the lists query.
   const [target, setTarget] = useState<AddToListTarget | null>(null);
   const [isPickerOpen, setIsPickerOpen] = useState(false);
@@ -82,6 +88,8 @@ export function ExploreResultsView() {
           onOpenChange={setIsPickerOpen}
         />
       ) : null}
+
+      <PoiMarkersLayer pois={mapPois} />
     </div>
   );
 }

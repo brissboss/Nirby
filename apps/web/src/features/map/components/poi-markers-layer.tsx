@@ -1,7 +1,7 @@
 "use client";
 
 import mapboxgl from "mapbox-gl";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 import { useMap } from "../context";
 import { getMapPoiBounds } from "../utils/map-bounds";
@@ -12,13 +12,21 @@ type PoiMarkersLayerProps = {
   pois: MapPoi[];
 };
 
+function getPoisKey(pois: MapPoi[]): string {
+  return pois.map((poi) => `${poi.id}:${poi.lat}:${poi.lng}`).join("|");
+}
+
 export function PoiMarkersLayer({ pois }: PoiMarkersLayerProps) {
   const { map } = useMap();
+  const poisRef = useRef(pois);
+  const poisKey = getPoisKey(pois);
+  poisRef.current = pois;
 
   useEffect(() => {
     if (!map) return;
 
-    const markers = pois.map((poi) => {
+    const currentPois = poisRef.current;
+    const markers = currentPois.map((poi) => {
       const marker = new mapboxgl.Marker().setLngLat([poi.lng, poi.lat]);
 
       if (poi.label) {
@@ -28,7 +36,7 @@ export function PoiMarkersLayer({ pois }: PoiMarkersLayerProps) {
       return marker.addTo(map);
     });
 
-    const bounds = getMapPoiBounds(pois);
+    const bounds = getMapPoiBounds(currentPois);
     if (bounds) {
       map.fitBounds(bounds, { padding: 80, maxZoom: 15, duration: 800 });
     }
@@ -36,7 +44,7 @@ export function PoiMarkersLayer({ pois }: PoiMarkersLayerProps) {
     return () => {
       markers.forEach((marker) => marker.remove());
     };
-  }, [map, pois]);
+  }, [map, poisKey]);
 
   return null;
 }
