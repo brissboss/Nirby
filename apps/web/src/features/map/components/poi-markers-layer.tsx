@@ -5,6 +5,7 @@ import { useEffect, useRef } from "react";
 
 import { useMap } from "../context";
 import { getMapPoiBounds } from "../utils/map-bounds";
+import { createPoiMarkerElement } from "../utils/poi-marker-element";
 
 import type { MapPoi } from "@/features/pois";
 
@@ -30,10 +31,12 @@ export function PoiMarkersLayer({ pois }: PoiMarkersLayerProps) {
 
     const currentPois = poisRef.current;
     const markers = currentPois.map((poi) => {
-      const marker = new mapboxgl.Marker().setLngLat([poi.lng, poi.lat]);
+      const marker = new mapboxgl.Marker({
+        element: createPoiMarkerElement(poi.label),
+      }).setLngLat([poi.lng, poi.lat]);
 
       if (poi.label) {
-        marker.setPopup(new mapboxgl.Popup({ closeButton: false }).setText(poi.label));
+        marker.setPopup(new mapboxgl.Popup({ closeButton: false, offset: 18 }).setText(poi.label));
       }
 
       return marker.addTo(map);
