@@ -11,5 +11,85 @@
     "opensAt": "Ouvre à {time}",
     "opensTomorrowAt": "Ouvre demain à {time}",
     "opensDayAt": "Ouvre {day} à {time}"
+  },
+  "create": {
+    "title": "Nouveau lieu",
+    "submit": "Créer"
+  },
+  "edit": {
+    "title": "Modifier le lieu",
+    "action": "Modifier",
+    "submit": "Enregistrer"
+  },
+  "fields": {
+    "name": "Nom",
+    "description": "Description",
+    "address": "Adresse",
+    "latitude": "Latitude",
+    "longitude": "Longitude",
+    "visibility": "Visibilité",
+    "category": "Catégorie"
+  },
+  "placeholders": {
+    "name": "ex. Jardin secret",
+    "description": "Notes optionnelles sur ce lieu",
+    "address": "Rue, ville"
+  },
+  "visibility": {
+    "PRIVATE": { "label": "Privé" },
+    "SHARED": { "label": "Partagé" },
+    "PUBLIC": { "label": "Public" }
+  },
+  "categories": {
+    "restaurant": { "label": "Restaurant" },
+    "cafe": { "label": "Café" },
+    "bar": { "label": "Bar" },
+    "bakery": { "label": "Boulangerie" },
+    "grocery_store": { "label": "Épicerie" },
+    "supermarket": { "label": "Supermarché" },
+    "hotel": { "label": "Hôtel" },
+    "museum": { "label": "Musée" },
+    "park": { "label": "Parc" },
+    "gym": { "label": "Salle de sport" },
+    "pharmacy": { "label": "Pharmacie" },
+    "hospital": { "label": "Hôpital" },
+    "bank": { "label": "Banque" },
+    "gas_station": { "label": "Station-service" },
+    "parking": { "label": "Parking" },
+    "shopping_mall": { "label": "Centre commercial" },
+    "movie_theater": { "label": "Cinéma" },
+    "library": { "label": "Bibliothèque" },
+    "church": { "label": "Église" },
+    "mosque": { "label": "Mosquée" },
+    "school": { "label": "École" },
+    "university": { "label": "Université" },
+    "train_station": { "label": "Gare" },
+    "bus_station": { "label": "Gare routière" },
+    "airport": { "label": "Aéroport" },
+    "tourist_attraction": { "label": "Attraction touristique" },
+    "other": { "label": "Autre" }
+  },
+  "photo": {
+    "title": "Photo",
+    "hint": "Appuyer pour ajouter une photo",
+    "formats": "JPEG, PNG ou WebP · 5 Mo max.",
+    "uploadSuccess": "Photo envoyée avec succès",
+    "uploadError": "Impossible d’envoyer la photo"
+  },
+  "createPoi": {
+    "success": "Lieu créé avec succès",
+    "error": "Impossible de créer le lieu"
+  },
+  "updatePoi": {
+    "success": "Lieu mis à jour avec succès",
+    "error": "Impossible de mettre à jour le lieu"
+  },
+  "validation": {
+    "requiredName": "Le nom du lieu est requis",
+    "nameTooLong": "Le nom du lieu ne peut pas dépasser 255 caractères",
+    "descriptionTooLong": "La description ne peut pas dépasser 1000 caractères",
+    "addressTooLong": "L’adresse ne peut pas dépasser 500 caractères",
+    "latitudeInvalid": "La latitude doit être comprise entre -90 et 90",
+    "longitudeInvalid": "La longitude doit être comprise entre -180 et 180"
   }
 }

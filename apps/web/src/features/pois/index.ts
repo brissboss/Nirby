@@ -4,6 +4,7 @@ export { PoiOpeningHours } from "./components/poi-opening-hours";
 
 export { useCreatePoi } from "./hooks/use-create-poi";
 export { useUploadPoiPhoto } from "./hooks/use-upload-poi-photo";
+export { usePoiFormSchema } from "./hooks/use-poi-form-schema";
 
 export { createPoiFormSchema } from "./schemas/pois.schema";
 export {

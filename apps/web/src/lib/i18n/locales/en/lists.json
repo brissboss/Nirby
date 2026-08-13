@@ -86,7 +86,7 @@
     },
     "empty": {
       "title": "No places yet",
-      "description": "Search for places in Explore to add them here."
+      "description": "Search in Explore or create a custom place to add it here."
     },
     "loading": "Loading places…",
     "loadingMore": "Loading more…",
