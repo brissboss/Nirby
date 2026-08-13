@@ -171,5 +171,18 @@
     "leaveConfirm": "Quitter",
     "leaveSuccess": "Tu as quitté la liste",
     "leaveError": "Impossible de quitter la liste"
+  },
+  "shared": {
+    "title": "Liste partagée",
+    "loading": "Chargement de la liste partagée…",
+    "notFound": "Cette liste partagée est introuvable",
+    "expired": "Ce lien de partage a expiré",
+    "error": {
+      "retry": "Réessayer"
+    },
+    "creator": {
+      "by": "Par {name}",
+      "unknown": "Liste partagée"
+    }
   }
 }

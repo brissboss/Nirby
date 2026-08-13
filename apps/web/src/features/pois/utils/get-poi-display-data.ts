@@ -109,3 +109,29 @@ export function getPoiDisplayDataFromSavedPoi(savedPoi: SavedPoiListItem): PoiDi
 
   return null;
 }
+
+function isGooglePlace(value: unknown): value is GooglePlace {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "placeId" in value &&
+    typeof (value as { placeId?: unknown }).placeId === "string" &&
+    Boolean((value as { placeId: string }).placeId)
+  );
+}
+
+/**
+ * Maps a flattened public shared POI (`Poi` or `GooglePlace`) to display data.
+ * `placeId` identifies a Google Place; everything else is treated as a custom POI.
+ */
+export function getPoiDisplayDataFromSharedPoi(poi: unknown): PoiDisplayData | null {
+  if (!poi || typeof poi !== "object") {
+    return null;
+  }
+
+  if (isGooglePlace(poi)) {
+    return getPoiDisplayDataFromGooglePlace(poi);
+  }
+
+  return getPoiDisplayDataFromPoi(poi as Poi);
+}
