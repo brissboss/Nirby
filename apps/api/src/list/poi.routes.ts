@@ -132,7 +132,6 @@ listPoiRouter.post("/poi/membership", requireAuth, async (req, res) => {
     if (err instanceof z.ZodError) {
       return res.status(400).json(handleZodError(err));
     }
-    console.error("Error fetching POI list membership:", err);
     res.status(500).json(formatError(ErrorCodes.INTERNAL_ERROR, "Internal server error"));
   }
 });
