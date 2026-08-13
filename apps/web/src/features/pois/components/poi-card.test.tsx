@@ -11,6 +11,7 @@ vi.mock("./poi-photo", () => ({
 }));
 
 const poi: PoiDisplayData = {
+  id: "ChIJLU7jZClu5kcR4PcOOO6p3I0",
   name: "Tour Eiffel",
   address: "Champ de Mars, Paris",
   category: null,
