@@ -70,11 +70,12 @@ export const getPlaceRateLimiter = createRateLimiter(
 
 /**
  * Rate limiter for Google Place photo endpoints
- * 50 requests per hour (moderate cost)
+ * 200 requests per hour: a single search renders up to 10 photos, and responses are
+ * browser-cached, so the quota only grows with distinct photos actually viewed.
  */
 export const photoRateLimiter = createRateLimiter(
   60 * 60 * 1000, // 1 hour
-  50,
+  200,
   "Too many requests, please try again in 1 hour"
 );
 

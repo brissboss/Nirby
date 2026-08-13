@@ -193,8 +193,9 @@ googlePlaceRouter.get("/photo", requireAuth, photoRateLimiter, async (req, res) 
     const photoBuffer = await getPhotoWithCacheRefresh(ref, maxWidth);
 
     res.set("Content-Type", "image/jpeg");
-    res.set("Cache-Control", "private, no-cache, no-store, must-revalidate");
-    res.set("Pragma", "no-cache");
+    // Photos are immutable for a given reference: let the browser cache them so a list of
+    // results does not re-download every image on each render (and burn the rate limit).
+    res.set("Cache-Control", "private, max-age=86400, immutable");
     res.send(photoBuffer);
   } catch (err) {
     if (err instanceof z.ZodError) {

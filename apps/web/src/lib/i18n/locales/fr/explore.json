@@ -7,7 +7,10 @@
     "placeholder": "Rechercher un lieu…",
     "hint": "Cafés, musées, restaurants",
     "minLengthHint": "Saisis au moins 2 caractères pour lancer la recherche",
-    "loading": "Recherche en cours…"
+    "loading": "Recherche en cours…",
+    "ariaLabel": "Rechercher un lieu",
+    "clearAriaLabel": "Effacer la recherche",
+    "filtersAriaLabel": "Filtres"
   },
   "results": {
     "title": "Résultats",
@@ -18,7 +21,8 @@
     "error": {
       "title": "La recherche a échoué",
       "retry": "Réessayer"
-    }
+    },
+    "savedIn": "{count, plural, one {Dans # liste} other {Dans # listes}}"
   },
   "addToList": {
     "action": "Ajouter à une liste",
@@ -26,7 +30,9 @@
       "title": "Ajouter à une liste",
       "description": "Choisis une liste pour « {placeName} »",
       "empty": "Aucune liste que tu peux modifier",
-      "submit": "Ajouter"
+      "submit": "Ajouter",
+      "loading": "Chargement de tes listes…",
+      "alreadyInList": "Déjà ajouté"
     },
     "success": "Ajouté à {listName}",
     "error": "Impossible d'ajouter le lieu",

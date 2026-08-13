@@ -1,7 +1,4 @@
-import { renderHook } from "@testing-library/react";
-import { createTranslator, NextIntlClientProvider } from "next-intl";
-import { useTranslations } from "next-intl";
-import type { ReactNode } from "react";
+import { createTranslator } from "next-intl";
 import { describe, expect, it } from "vitest";
 
 import enExplore from "./locales/en/explore.json";
@@ -53,6 +50,8 @@ const NEW_EXPLORE_KEYS = [
   "results.empty.title",
   "addToList.picker.title",
   "addToList.alreadySaved",
+  "results.savedIn",
+  "addToList.picker.alreadyInList",
 ] as const;
 
 function expectNonEmptyStrings(obj: JsonObject, keys: readonly string[], locale: string) {
@@ -61,16 +60,6 @@ function expectNonEmptyStrings(obj: JsonObject, keys: readonly string[], locale:
     expect(value, `${locale}.${key}`).toEqual(expect.any(String));
     expect(String(value).length, `${locale}.${key} should not be empty`).toBeGreaterThan(0);
   }
-}
-
-function createIntlWrapper(messages: Record<string, unknown>) {
-  return function Wrapper({ children }: { children: ReactNode }) {
-    return (
-      <NextIntlClientProvider locale="en" messages={messages}>
-        {children}
-      </NextIntlClientProvider>
-    );
-  };
 }
 
 describe("locales parity", () => {

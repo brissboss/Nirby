@@ -12,16 +12,18 @@ import { PoiPhoto } from "./poi-photo";
 type PoiCardProps = {
   poi: PoiDisplayData;
   actions?: ReactNode;
+  badge?: ReactNode;
 };
 
-export function PoiCard({ poi, actions }: PoiCardProps) {
+export function PoiCard({ poi, actions, badge }: PoiCardProps) {
   const tPoi = useTranslations("poi");
 
   return (
     <article className="group flex flex-col items-start rounded-md border border-border">
       {poi.photo ? (
-        <div className="overflow-hidden rounded-t-md h-[150px] w-full">
+        <div className="relative overflow-hidden rounded-t-md h-[150px] w-full">
           <PoiPhoto photo={poi.photo} alt={poi.name} />
+          {badge ? <div className="absolute top-2 right-2">{badge}</div> : null}
         </div>
       ) : null}
       <div className="px-4 py-2 flex flex-col gap-1 w-full">

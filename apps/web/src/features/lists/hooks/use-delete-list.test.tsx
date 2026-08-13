@@ -18,6 +18,11 @@ function createWrapper(queryClient: QueryClient) {
   };
 }
 
+/** The hook only forwards the payload, so a partial response is enough here. */
+function apiResponse(value: { data?: unknown; error?: unknown }) {
+  return value as Awaited<ReturnType<typeof deleteList>>;
+}
+
 describe("useDeleteList", () => {
   let queryClient: QueryClient;
 
@@ -30,14 +35,14 @@ describe("useDeleteList", () => {
 
   it("calls deleteList and returns data on success", async () => {
     const listId = "list-1";
-    const data = { success: true };
-    vi.mocked(deleteList).mockResolvedValue({ data, error: undefined });
+    const data = { message: "List deleted" };
+    vi.mocked(deleteList).mockResolvedValue(apiResponse({ data }));
 
     const { result } = renderHook(() => useDeleteList(), {
       wrapper: createWrapper(queryClient),
     });
 
-    let resolved: typeof data | undefined;
+    let resolved: unknown;
     await act(async () => {
       resolved = await result.current.mutateAsync(listId);
     });
@@ -48,10 +53,7 @@ describe("useDeleteList", () => {
 
   it("invalidates lists and removes detail cache on success", async () => {
     const listId = "list-1";
-    vi.mocked(deleteList).mockResolvedValue({
-      data: { success: true },
-      error: undefined,
-    });
+    vi.mocked(deleteList).mockResolvedValue(apiResponse({ data: { message: "List deleted" } }));
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
     const removeSpy = vi.spyOn(queryClient, "removeQueries");
 
@@ -71,7 +73,7 @@ describe("useDeleteList", () => {
 
   it("throws API error when response has no data", async () => {
     const apiError = { message: "Not found" };
-    vi.mocked(deleteList).mockResolvedValue({ data: undefined, error: apiError });
+    vi.mocked(deleteList).mockResolvedValue(apiResponse({ error: apiError }));
 
     const { result } = renderHook(() => useDeleteList(), {
       wrapper: createWrapper(queryClient),
