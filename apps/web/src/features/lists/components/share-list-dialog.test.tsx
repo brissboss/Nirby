@@ -58,7 +58,10 @@ describe("ShareListDialog", () => {
     });
     revokeEditLink.mockResolvedValue({ message: "ok" });
     writeText.mockResolvedValue(undefined);
-    Object.assign(navigator, { clipboard: { writeText } });
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText },
+    });
 
     vi.mocked(useShareList).mockReturnValue(
       mockMutation(shareList) as unknown as ReturnType<typeof useShareList>
@@ -116,6 +119,11 @@ describe("ShareListDialog", () => {
 
   it("copies an existing read link", async () => {
     const user = userEvent.setup();
+    const clipboardWrite = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText: clipboardWrite },
+    });
     const expectedUrl = `${window.location.origin}/shared/abc123`;
 
     render(
@@ -130,7 +138,7 @@ describe("ShareListDialog", () => {
 
     await user.click(screen.getByRole("button", { name: "share.readLink.copy" }));
 
-    expect(writeText).toHaveBeenCalledWith(expectedUrl);
+    expect(clipboardWrite).toHaveBeenCalledWith(expectedUrl);
     expect(toast.success).toHaveBeenCalledWith("share.copySuccess");
   });
 
