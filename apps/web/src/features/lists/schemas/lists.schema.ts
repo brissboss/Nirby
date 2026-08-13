@@ -1,10 +1,6 @@
 import * as z from "zod";
 
-import {
-  DEFAULT_LIST_VISIBILITY,
-  LIST_VISIBILITY_VALUES,
-  listConstraints,
-} from "../constants/lists.constants";
+import { LIST_VISIBILITY_VALUES, listConstraints } from "../constants/lists.constants";
 
 const listVisibility = z.enum(LIST_VISIBILITY_VALUES);
 

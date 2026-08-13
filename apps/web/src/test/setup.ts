@@ -6,6 +6,22 @@ afterEach(() => {
   cleanup();
 });
 
+// jsdom ships no matchMedia: default every media query to "does not match" so components
+// relying on `useMediaQuery` render their base variant instead of throwing.
+if (typeof window !== "undefined" && !window.matchMedia) {
+  window.matchMedia = (query: string) =>
+    ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      addListener: () => {},
+      removeListener: () => {},
+      dispatchEvent: () => false,
+    }) as unknown as MediaQueryList;
+}
+
 vi.mock("next/navigation", () => ({
   useRouter: () => ({
     push: vi.fn(),

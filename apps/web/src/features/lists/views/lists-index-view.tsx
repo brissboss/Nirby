@@ -38,7 +38,7 @@ export function ListsIndexView({ onCreate, onSelectList }: ListsIndexViewProps) 
   } = useListsInfinite();
 
   const items = data?.pages.flatMap((page) => page.lists) ?? [];
-  const total = data?.pages[0]?.pagination.total;
+  const total = data?.pages[0]?.pagination.total ?? 0;
   const isInitialLoading = (isPending || isLoading) && items.length === 0;
   const isRefreshing = isFetching && !isFetchingNextPage && items.length > 0;
 

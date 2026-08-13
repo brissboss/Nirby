@@ -90,7 +90,7 @@ export function ListFormFields({ control, disabled = false }: ListFormFieldsProp
                   <SelectValue />
                 </SelectTrigger>
               </FormControl>
-              <SelectContent className="z-10000">
+              <SelectContent>
                 {LIST_VISIBILITY_VALUES.map((value) => (
                   <SelectItem key={value} value={value}>
                     {tLists(`visibility.${value}.label`)}

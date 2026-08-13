@@ -49,6 +49,23 @@
   --radius-4xl: calc(var(--radius) + 16px);
 }
 
+/*
+ * Stacking order, as named utilities so the layers stay in one place: the shell floats
+ * above the fullscreen map, overlays (dialog, drawer, sheet) cover the shell, and popovers
+ * cover an overlay they were opened from. Hence the large values.
+ */
+@utility z-shell {
+  z-index: 9999;
+}
+
+@utility z-overlay {
+  z-index: 10000;
+}
+
+@utility z-popover {
+  z-index: 10010;
+}
+
 :root {
   --radius: 1rem;
   --background: oklch(1 0 0);

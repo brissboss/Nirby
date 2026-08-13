@@ -7,7 +7,10 @@
     "placeholder": "Search for a place…",
     "hint": "Cafés, museums, restaurants",
     "minLengthHint": "Type at least 2 characters to search",
-    "loading": "Searching…"
+    "loading": "Searching…",
+    "ariaLabel": "Search for a place",
+    "clearAriaLabel": "Clear search",
+    "filtersAriaLabel": "Filters"
   },
   "results": {
     "title": "Results",
@@ -18,7 +21,8 @@
     "error": {
       "title": "Search failed",
       "retry": "Retry"
-    }
+    },
+    "savedIn": "{count, plural, one {In # list} other {In # lists}}"
   },
   "addToList": {
     "action": "Add to list",
@@ -26,7 +30,9 @@
       "title": "Add to a list",
       "description": "Choose a list for \"{placeName}\"",
       "empty": "No lists you can edit",
-      "submit": "Add"
+      "submit": "Add",
+      "loading": "Loading your lists…",
+      "alreadyInList": "Already added"
     },
     "success": "Added to {listName}",
     "error": "Could not add the place",

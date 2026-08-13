@@ -41,6 +41,102 @@ const nearbyPoiSchema = z.object({
     .default(1000),
 });
 
+const poiMembershipSchema = z.object({
+  googlePlaceIds: z.array(z.string().min(1)).min(1).max(50),
+});
+
+/**
+ * @openapi
+ * /list/poi/membership:
+ *   post:
+ *     operationId: getPoiListMembership
+ *     summary: Get list membership for Google places
+ *     description: |
+ *       Returns which of the current user's lists (owned or collaborated) already contain
+ *       each requested Google place. Lists visible only as a public viewer are excluded.
+ *     tags:
+ *       - POI
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               googlePlaceIds:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 minItems: 1
+ *                 maxItems: 50
+ *             required:
+ *               - googlePlaceIds
+ *     responses:
+ *       200:
+ *         description: Membership map (only places found in at least one list)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/PoiListMembershipResponse'
+ *       400:
+ *         description: Invalid input
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+listPoiRouter.post("/poi/membership", requireAuth, async (req, res) => {
+  try {
+    const { googlePlaceIds } = poiMembershipSchema.parse(req.body);
+    const userId = req.user!.id;
+
+    const savedPois = await prisma.savedPoi.findMany({
+      where: {
+        googlePlaceId: { in: googlePlaceIds },
+        list: {
+          OR: [{ createdBy: userId }, { collaborators: { some: { userId } } }],
+        },
+      },
+      select: { googlePlaceId: true, listId: true },
+    });
+
+    const membership: Record<string, string[]> = {};
+
+    for (const savedPoi of savedPois) {
+      if (!savedPoi.googlePlaceId) continue;
+
+      const existing = membership[savedPoi.googlePlaceId];
+      if (existing) {
+        existing.push(savedPoi.listId);
+      } else {
+        membership[savedPoi.googlePlaceId] = [savedPoi.listId];
+      }
+    }
+
+    res.json({ membership });
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      return res.status(400).json(handleZodError(err));
+    }
+    console.error("Error fetching POI list membership:", err);
+    res.status(500).json(formatError(ErrorCodes.INTERNAL_ERROR, "Internal server error"));
+  }
+});
+
 /**
  * @openapi
  * /list/{listId}/poi:

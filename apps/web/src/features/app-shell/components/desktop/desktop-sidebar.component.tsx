@@ -13,7 +13,7 @@ export function DesktopSidebar({ children }: { children: React.ReactNode }) {
       className="pointer-events-auto flex h-full w-[390px] flex-col overflow-hidden lg:w-[430px]"
     >
       <ShellHeader />
-      {view === "explore" && <SearchBox />}
+      <SearchBox />
       <ViewTabs value={view} onChange={setView} />
       <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">{children}</div>
     </GlassPanel>

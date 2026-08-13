@@ -40,3 +40,12 @@ export const LIST_ID_PARAM = "listId";
 
 /** Mobile shell map-focus mode (`?mapMode=1` when the bottom sheet is collapsed). */
 export const SHELL_MAP_MODE_PARAM = "mapMode";
+
+/**
+ * Explore search query (`?q=café`). Persists across shell tab changes so returning
+ * to Explore restores the last search.
+ *
+ * @example
+ * // /?q=tour+eiffel
+ */
+export const EXPLORE_QUERY_PARAM = "q";

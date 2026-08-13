@@ -468,9 +468,7 @@ describe("Google Place Routes", () => {
 
       expect(response.status).toBe(200);
       expect(response.headers["content-type"]).toBe("image/jpeg");
-      expect(response.headers["cache-control"]).toBe(
-        "private, no-cache, no-store, must-revalidate"
-      );
+      expect(response.headers["cache-control"]).toBe("private, max-age=86400, immutable");
     });
 
     it("should pass maxWidth to Google API", async () => {

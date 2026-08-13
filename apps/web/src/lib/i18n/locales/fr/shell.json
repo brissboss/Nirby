@@ -3,11 +3,6 @@
     "tagline": "Tes lieux, rangés sur la carte.",
     "badge": "Base UI"
   },
-  "search": {
-    "placeholder": "Rechercher un lieu, une liste...",
-    "hint": "Cafés, musées, restaurants",
-    "filtersAriaLabel": "Filtres"
-  },
   "mapMode": {
     "showMap": "Voir la carte"
   },

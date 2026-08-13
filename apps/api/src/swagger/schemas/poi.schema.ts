@@ -279,6 +279,25 @@ export const poiSchemas = {
     },
     required: ["savedPois", "pagination"],
   },
+  PoiListMembershipResponse: {
+    type: "object",
+    properties: {
+      membership: {
+        type: "object",
+        additionalProperties: {
+          type: "array",
+          items: { type: "string" },
+        },
+        description: "Map of googlePlaceId to list IDs that already contain the place",
+      },
+    },
+    required: ["membership"],
+    example: {
+      membership: {
+        ChIJN1t_tDeuEmsRUsoyG83frY4: ["list-id-1", "list-id-2"],
+      },
+    },
+  },
   SharedListResponse: {
     type: "object",
     properties: {

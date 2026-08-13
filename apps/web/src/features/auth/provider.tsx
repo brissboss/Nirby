@@ -20,6 +20,7 @@ import {
 } from "@/lib/api";
 import { setAccessToken, setRefreshTokenFn } from "@/lib/api/client";
 import type { User } from "@/lib/api/generated";
+import type { Locale } from "@/lib/i18n/constants";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient();
@@ -63,7 +64,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [updateToken, fetchUser]
   );
 
-  const handleSignup = useCallback(async (email: string, password: string, language?: string) => {
+  const handleSignup = useCallback(async (email: string, password: string, language?: Locale) => {
     const response = await signup({
       body: { email, password, language },
     });
@@ -75,7 +76,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const handleForgotPassword = useCallback(async (email: string, language?: string) => {
+  const handleForgotPassword = useCallback(async (email: string, language?: Locale) => {
     const response = await forgotPassword({
       body: { email, language },
     });
@@ -151,7 +152,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const handleDeleteAccount = useCallback(
-    async (password: string, language?: string) => {
+    async (password: string, language?: Locale) => {
       const response = await deleteAccount({
         body: { password, language },
       });
