@@ -18,6 +18,11 @@ function createWrapper(queryClient: QueryClient) {
   };
 }
 
+/** The hook only forwards the payload, so a partial response is enough here. */
+function apiResponse(value: { data?: unknown; error?: unknown }) {
+  return value as Awaited<ReturnType<typeof createList>>;
+}
+
 describe("useCreateList", () => {
   let queryClient: QueryClient;
 
@@ -30,14 +35,14 @@ describe("useCreateList", () => {
 
   it("calls createList and returns data on success", async () => {
     const input = { name: "Paris", visibility: "PRIVATE" as const };
-    const data = { id: "list-1", name: "Paris", visibility: "PRIVATE" };
-    vi.mocked(createList).mockResolvedValue({ data, error: undefined });
+    const data = { list: { id: "list-1", name: "Paris", visibility: "PRIVATE" } };
+    vi.mocked(createList).mockResolvedValue(apiResponse({ data }));
 
     const { result } = renderHook(() => useCreateList(), {
       wrapper: createWrapper(queryClient),
     });
 
-    let resolved: typeof data | undefined;
+    let resolved: unknown;
     await act(async () => {
       resolved = await result.current.mutateAsync(input);
     });
@@ -47,10 +52,9 @@ describe("useCreateList", () => {
   });
 
   it("invalidates lists cache on success", async () => {
-    vi.mocked(createList).mockResolvedValue({
-      data: { id: "list-1", name: "Paris", visibility: "PRIVATE" },
-      error: undefined,
-    });
+    vi.mocked(createList).mockResolvedValue(
+      apiResponse({ data: { list: { id: "list-1", name: "Paris" } } })
+    );
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
 
     const { result } = renderHook(() => useCreateList(), {
@@ -68,7 +72,7 @@ describe("useCreateList", () => {
 
   it("throws API error when response has no data", async () => {
     const apiError = { message: "Forbidden" };
-    vi.mocked(createList).mockResolvedValue({ data: undefined, error: apiError });
+    vi.mocked(createList).mockResolvedValue(apiResponse({ error: apiError }));
 
     const { result } = renderHook(() => useCreateList(), {
       wrapper: createWrapper(queryClient),

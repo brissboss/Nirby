@@ -1,0 +1,42 @@
+{
+  "idle": {
+    "title": "Find places",
+    "description": "Search for cafés, museums, restaurants and more."
+  },
+  "search": {
+    "placeholder": "Search for a place…",
+    "hint": "Cafés, museums, restaurants",
+    "minLengthHint": "Type at least 2 characters to search",
+    "loading": "Searching…",
+    "ariaLabel": "Search for a place",
+    "clearAriaLabel": "Clear search",
+    "filtersAriaLabel": "Filters"
+  },
+  "results": {
+    "title": "Results",
+    "empty": {
+      "title": "No places found",
+      "description": "Try a different name or address."
+    },
+    "error": {
+      "title": "Search failed",
+      "retry": "Retry"
+    },
+    "savedIn": "{count, plural, one {In # list} other {In # lists}}"
+  },
+  "addToList": {
+    "action": "Add to list",
+    "picker": {
+      "title": "Add to a list",
+      "description": "Choose a list for \"{placeName}\"",
+      "empty": "No lists you can edit",
+      "submit": "Add",
+      "loading": "Loading your lists…",
+      "alreadyInList": "Already added"
+    },
+    "success": "Added to {listName}",
+    "error": "Could not add the place",
+    "alreadySaved": "This place is already in the list",
+    "viewList": "View list"
+  }
+}

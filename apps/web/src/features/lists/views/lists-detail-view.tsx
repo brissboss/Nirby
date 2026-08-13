@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { DeleteListDialog } from "../components/delete-list-dialog";
+import { ListPoisSection } from "../components/list-pois-section";
 import { ListsDetailMetadata } from "../components/lists-detail-metadata";
 import { ListsListQueryBoundary } from "../components/lists-list-query-boundary";
 import { ListsSectionLayout } from "../components/lists-section-layout";
@@ -65,9 +66,7 @@ export function ListsDetailView({ listId, onBack, onEdit, onDelete }: ListsDetai
                 onDeleted={onDelete}
               />
             )}
-            <div className="border-t border-border pt-6">
-              <p className="text-sm text-muted-foreground">{tLists("detail.poisComingSoon")}</p>
-            </div>
+            <ListPoisSection listId={listId} role={loadedList.role} />
           </div>
         )}
       </ListsListQueryBoundary>

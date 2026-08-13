@@ -33,10 +33,12 @@ type UseUrlParamStateOptions<T> = {
 /**
  * Syncs React state with a single URL search param (Next.js App Router).
  *
- * - **URL → state:** When `searchParams` changes, parses `param` and updates
- *   local state if it differs (browser back/forward, deep link).
- * - **State → URL:** `setValueAndPush` updates state and calls `router.push` with
- *   `scroll: false`, unless the update came from a URL sync (avoids a push loop).
+ * - **State → URL:** `setValueAndPush` updates state right away — so the UI reacts
+ *   instantly — then calls `router.push` with `scroll: false`.
+ * - **URL → state:** When `searchParams` changes, parses `param` and updates local state
+ *   if it differs (browser back/forward, deep link). URL values observed while one of our
+ *   own pushes is still in flight are ignored, otherwise the previous value would flash
+ *   back before the new URL commits.
  *
  * Must run under `Suspense` because it uses `useSearchParams`.
  *
@@ -67,8 +69,9 @@ export function useUrlParamState<T>({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const isSyncingFromUrl = useRef(false);
   const valueRef = useRef(value);
+  /** Value we pushed and are waiting for in the URL, or `null` when nothing is in flight. */
+  const pendingValueRef = useRef<{ value: T } | null>(null);
 
   useLayoutEffect(() => {
     valueRef.current = value;
@@ -76,26 +79,30 @@ export function useUrlParamState<T>({
 
   useEffect(() => {
     const fromUrl = parse(searchParams.get(param));
-    if (fromUrl !== valueRef.current) {
-      isSyncingFromUrl.current = true;
+    const pending = pendingValueRef.current;
+
+    if (pending !== null) {
+      // `router.push` is asynchronous: until it commits, `searchParams` still holds the
+      // previous value. Adopting it here would flash the previous view on every render
+      // that happens in between (and again once the URL lands).
+      if (Object.is(fromUrl, pending.value) || Object.is(fromUrl, valueRef.current)) {
+        pendingValueRef.current = null;
+      }
+      return;
+    }
+
+    if (!Object.is(fromUrl, valueRef.current)) {
       setValue(fromUrl);
-    } else {
-      isSyncingFromUrl.current = false;
     }
   }, [searchParams, param, parse, setValue]);
 
   const setValueAndPush = useCallback(
     (next: T) => {
-      if (isSyncingFromUrl.current) {
-        isSyncingFromUrl.current = false;
-        setValue(next);
-        return;
-      }
-
       if (Object.is(next, valueRef.current)) {
         return;
       }
 
+      pendingValueRef.current = { value: next };
       setValue(next);
       const qs = buildHref(searchParams, next);
       router.push(`${pathname}${qs}`, { scroll: false });
