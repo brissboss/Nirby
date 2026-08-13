@@ -45,6 +45,8 @@ const NEW_LISTS_KEYS = [
   "pois.error.retry",
   "poi.source.custom",
   "removePoi.success",
+  "addPoi.success",
+  "addPoi.error",
   "share.action",
   "share.readLink.generate",
   "share.editLink.revokeConfirm",

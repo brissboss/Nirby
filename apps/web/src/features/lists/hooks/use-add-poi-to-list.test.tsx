@@ -56,6 +56,30 @@ describe("useAddPoiToList", () => {
     expect(resolved).toEqual(data);
   });
 
+  it("calls addPoiToList with poiId and returns data on success", async () => {
+    const input = {
+      listId: "list-1",
+      body: { poiId: "poi-1" },
+    };
+    const data = { savedPoi: { id: "saved-1", poiId: "poi-1" } };
+    vi.mocked(addPoiToList).mockResolvedValue(apiResponse({ data }));
+
+    const { result } = renderHook(() => useAddPoiToList(), {
+      wrapper: createWrapper(queryClient),
+    });
+
+    let resolved: unknown;
+    await act(async () => {
+      resolved = await result.current.mutateAsync(input);
+    });
+
+    expect(addPoiToList).toHaveBeenCalledWith({
+      path: { listId: "list-1" },
+      body: { poiId: "poi-1" },
+    });
+    expect(resolved).toEqual(data);
+  });
+
   it("invalidates POI, detail, and lists cache on success", async () => {
     const listId = "list-1";
     vi.mocked(addPoiToList).mockResolvedValue(

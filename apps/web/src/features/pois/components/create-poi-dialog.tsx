@@ -22,6 +22,7 @@ export type CreatePoiDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCreated?: (poiId: string) => void;
+  listId?: string;
 };
 
 /** Create custom POI: Dialog on desktop, Drawer on mobile. */
@@ -31,7 +32,7 @@ export function CreatePoiDialog(props: CreatePoiDialogProps) {
   return isMobile ? <CreatePoiDrawer {...props} /> : <CreatePoiDesktopDialog {...props} />;
 }
 
-function CreatePoiDesktopDialog({ open, onOpenChange, onCreated }: CreatePoiDialogProps) {
+function CreatePoiDesktopDialog({ open, onOpenChange, onCreated, listId }: CreatePoiDialogProps) {
   const tPoi = useTranslations("poi");
 
   return (
@@ -41,13 +42,17 @@ function CreatePoiDesktopDialog({ open, onOpenChange, onCreated }: CreatePoiDial
           <DialogTitle>{tPoi("create.title")}</DialogTitle>
           <DialogDescription className="sr-only">{tPoi("create.title")}</DialogDescription>
         </DialogHeader>
-        <CreatePoiForm closeDialog={() => onOpenChange(false)} onCreated={onCreated} />
+        <CreatePoiForm
+          listId={listId}
+          closeDialog={() => onOpenChange(false)}
+          onCreated={onCreated}
+        />
       </DialogContent>
     </Dialog>
   );
 }
 
-function CreatePoiDrawer({ open, onOpenChange, onCreated }: CreatePoiDialogProps) {
+function CreatePoiDrawer({ open, onOpenChange, onCreated, listId }: CreatePoiDialogProps) {
   const tPoi = useTranslations("poi");
 
   return (
@@ -58,7 +63,11 @@ function CreatePoiDrawer({ open, onOpenChange, onCreated }: CreatePoiDialogProps
           <DrawerDescription className="sr-only">{tPoi("create.title")}</DrawerDescription>
         </DrawerHeader>
         <div className="overflow-y-auto px-4 pb-4">
-          <CreatePoiForm closeDialog={() => onOpenChange(false)} onCreated={onCreated} />
+          <CreatePoiForm
+            listId={listId}
+            closeDialog={() => onOpenChange(false)}
+            onCreated={onCreated}
+          />
         </div>
       </DrawerContent>
     </Drawer>

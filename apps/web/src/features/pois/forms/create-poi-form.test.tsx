@@ -8,12 +8,18 @@ import { useUploadPoiPhoto } from "../hooks/use-upload-poi-photo";
 
 import { CreatePoiForm } from "./create-poi-form";
 
+import { useAddPoiToList } from "@/features/lists/hooks/use-add-poi-to-list";
+
 vi.mock("../hooks/use-create-poi", () => ({
   useCreatePoi: vi.fn(),
 }));
 
 vi.mock("../hooks/use-upload-poi-photo", () => ({
   useUploadPoiPhoto: vi.fn(),
+}));
+
+vi.mock("@/features/lists/hooks/use-add-poi-to-list", () => ({
+  useAddPoiToList: vi.fn(),
 }));
 
 vi.mock("@/hooks/use-error-message", () => ({
@@ -31,11 +37,13 @@ describe("CreatePoiForm", () => {
   const closeDialog = vi.fn();
   const createPoi = vi.fn();
   const uploadPoiPhoto = vi.fn();
+  const addPoiToList = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
     createPoi.mockResolvedValue({ poi: { id: "poi-1", name: "Secret spot" } });
     uploadPoiPhoto.mockResolvedValue({ url: "https://cdn.example.com/spot.webp" });
+    addPoiToList.mockResolvedValue({ savedPoi: { id: "saved-1", poiId: "poi-1" } });
     vi.mocked(useCreatePoi).mockReturnValue({
       mutateAsync: createPoi,
       isPending: false,
@@ -44,6 +52,10 @@ describe("CreatePoiForm", () => {
       mutateAsync: uploadPoiPhoto,
       isPending: false,
     } as unknown as ReturnType<typeof useUploadPoiPhoto>);
+    vi.mocked(useAddPoiToList).mockReturnValue({
+      mutateAsync: addPoiToList,
+      isPending: false,
+    } as unknown as ReturnType<typeof useAddPoiToList>);
   });
 
   it("shows validation messages for required fields", async () => {
@@ -82,6 +94,7 @@ describe("CreatePoiForm", () => {
     });
 
     expect(uploadPoiPhoto).not.toHaveBeenCalled();
+    expect(addPoiToList).not.toHaveBeenCalled();
     expect(toast.success).toHaveBeenCalledWith("createPoi.success");
     expect(closeDialog).toHaveBeenCalledTimes(1);
   });
@@ -139,5 +152,52 @@ describe("CreatePoiForm", () => {
     });
 
     expect(closeDialog).not.toHaveBeenCalled();
+  });
+
+  it("adds the created POI to the list when listId is provided", async () => {
+    const user = userEvent.setup();
+
+    render(<CreatePoiForm listId="list-1" closeDialog={closeDialog} />);
+
+    await user.type(screen.getByLabelText("fields.name"), "Secret spot");
+    await user.type(screen.getByLabelText("fields.latitude"), "48.8566");
+    await user.type(screen.getByLabelText("fields.longitude"), "2.3522");
+    await user.click(screen.getByRole("button", { name: "create.submit" }));
+
+    await waitFor(() => {
+      expect(createPoi).toHaveBeenCalled();
+      expect(addPoiToList).toHaveBeenCalledWith({
+        listId: "list-1",
+        body: { poiId: "poi-1" },
+      });
+    });
+
+    expect(createPoi.mock.invocationCallOrder[0]).toBeLessThan(
+      addPoiToList.mock.invocationCallOrder[0]
+    );
+    expect(toast.success).toHaveBeenCalledWith("addPoi.success");
+    expect(closeDialog).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows an error toast when addPoiToList fails after create", async () => {
+    const user = userEvent.setup();
+    addPoiToList.mockRejectedValue({ message: "Forbidden" });
+
+    render(<CreatePoiForm listId="list-1" closeDialog={closeDialog} />);
+
+    await user.type(screen.getByLabelText("fields.name"), "Secret spot");
+    await user.type(screen.getByLabelText("fields.latitude"), "48.8566");
+    await user.type(screen.getByLabelText("fields.longitude"), "2.3522");
+    await user.click(screen.getByRole("button", { name: "create.submit" }));
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith("addPoi.error", {
+        description: "API error message",
+      });
+    });
+
+    expect(createPoi).toHaveBeenCalled();
+    expect(closeDialog).not.toHaveBeenCalled();
+    expect(toast.success).not.toHaveBeenCalled();
   });
 });

@@ -156,7 +156,9 @@ export function ListPoisSection({
         </>
       )}
 
-      {canEdit ? <CreatePoiDialog open={createOpen} onOpenChange={setCreateOpen} /> : null}
+      {canEdit ? (
+        <CreatePoiDialog listId={listId} open={createOpen} onOpenChange={setCreateOpen} />
+      ) : null}
     </section>
   );
 }
