@@ -8,10 +8,16 @@ export {
   getPoiDisplayDataFromGooglePlace,
 } from "./utils/get-poi-display-data";
 
+export {
+  getCoordinatesFromGooglePlace,
+  getCoordinatesFromSavedPoi,
+} from "./utils/get-poi-coordinates";
+
 export type {
   PoiDisplayData,
   PoiPhoto as PoiPhotoData,
   PoiOpeningHours as PoiOpeningHoursData,
   SavedPoiListItem,
   PoiSource,
+  MapPoi,
 } from "./types/poi-display-types";
