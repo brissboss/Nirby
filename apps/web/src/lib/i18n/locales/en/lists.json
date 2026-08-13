@@ -110,5 +110,33 @@
     "confirmSubmit": "Remove",
     "success": "Place removed from list",
     "error": "Could not remove the place"
+  },
+  "share": {
+    "action": "Share",
+    "title": "Share list",
+    "description": "Create a read-only link or an edit invite link for this list.",
+    "readLink": {
+      "title": "Read-only link",
+      "description": "Anyone with this link can view the list.",
+      "generate": "Create link",
+      "copy": "Copy",
+      "revoke": "Revoke",
+      "revokeConfirm": "Revoke link",
+      "empty": "No link yet"
+    },
+    "editLink": {
+      "title": "Edit invite link",
+      "description": "Anyone with this link can join the list as an editor.",
+      "generate": "Create link",
+      "copy": "Copy",
+      "revoke": "Revoke",
+      "revokeConfirm": "Revoke link",
+      "empty": "No link yet"
+    },
+    "copySuccess": "Link copied",
+    "copyError": "Could not copy the link",
+    "generateError": "Could not create the link",
+    "revokeSuccess": "Link revoked",
+    "revokeError": "Could not revoke the link"
   }
 }

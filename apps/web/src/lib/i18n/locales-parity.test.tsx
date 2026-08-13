@@ -42,6 +42,10 @@ const NEW_LISTS_KEYS = [
   "pois.error.retry",
   "poi.source.custom",
   "removePoi.success",
+  "share.action",
+  "share.readLink.generate",
+  "share.editLink.revokeConfirm",
+  "share.copySuccess",
 ] as const;
 
 const NEW_EXPLORE_KEYS = [
