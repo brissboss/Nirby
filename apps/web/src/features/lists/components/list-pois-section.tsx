@@ -1,8 +1,8 @@
 "use client";
 
-import { Loader2Icon, MapPinOffIcon, OctagonXIcon } from "lucide-react";
+import { Loader2Icon, MapPinOffIcon, OctagonXIcon, PlusIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 
 import { canEditList, type ListRole } from "../constants/lists.constants";
 import { useInfiniteScroll } from "../hooks/use-infinite-scroll";
@@ -13,6 +13,7 @@ import { ListPoisSkeleton } from "./list-pois-skeleton";
 
 import { Button } from "@/components/ui";
 import { getSavedPoiMapId, type SavedPoiListItem } from "@/features/pois";
+import { CreatePoiDialog } from "@/features/pois/components/create-poi-dialog";
 import { useErrorMessage } from "@/hooks/use-error-message";
 
 type ListPoisSectionProps = {
@@ -28,9 +29,11 @@ export function ListPoisSection({
   selectedPoiId,
   onSelectPoi,
 }: ListPoisSectionProps) {
-  const canRemove = canEditList(role);
+  const canEdit = canEditList(role);
   const tLists = useTranslations("lists");
+  const tPoi = useTranslations("poi");
   const getErrorMessage = useErrorMessage();
+  const [createOpen, setCreateOpen] = useState(false);
 
   const {
     data,
@@ -60,12 +63,22 @@ export function ListPoisSection({
 
   return (
     <section className="border-t border-border pt-6">
-      <header className="mb-4 grid gap-1">
-        <h2 className="font-display text-base font-semibold tracking-tight">
-          {tLists("pois.section.title")}
-        </h2>
-        {!isInitialLoading && !isError && total !== undefined ? (
-          <p className="text-sm text-muted-foreground">{tLists("pois.section.total", { total })}</p>
+      <header className="mb-4 flex items-start justify-between gap-3">
+        <div className="grid gap-1">
+          <h2 className="font-display text-base font-semibold tracking-tight">
+            {tLists("pois.section.title")}
+          </h2>
+          {!isInitialLoading && !isError && total !== undefined ? (
+            <p className="text-sm text-muted-foreground">
+              {tLists("pois.section.total", { total })}
+            </p>
+          ) : null}
+        </div>
+        {canEdit && !isInitialLoading && !isError && items.length > 0 ? (
+          <Button type="button" variant="outline" size="sm" onClick={() => setCreateOpen(true)}>
+            <PlusIcon />
+            {tPoi("create.title")}
+          </Button>
         ) : null}
       </header>
 
@@ -99,6 +112,12 @@ export function ListPoisSection({
             </h3>
             <p className="text-sm text-muted-foreground">{tLists("pois.empty.description")}</p>
           </div>
+          {canEdit ? (
+            <Button type="button" size="sm" onClick={() => setCreateOpen(true)}>
+              <PlusIcon />
+              {tPoi("create.title")}
+            </Button>
+          ) : null}
         </div>
       )}
 
@@ -113,7 +132,7 @@ export function ListPoisSection({
                   <ListPoiRow
                     savedPoi={savedPoi}
                     listId={listId}
-                    canRemove={canRemove}
+                    canRemove={canEdit}
                     isSelected={mapId !== null && selectedPoiId === mapId}
                     onSelect={onSelectPoi}
                   />
@@ -136,6 +155,8 @@ export function ListPoisSection({
           )}
         </>
       )}
+
+      {canEdit ? <CreatePoiDialog open={createOpen} onOpenChange={setCreateOpen} /> : null}
     </section>
   );
 }

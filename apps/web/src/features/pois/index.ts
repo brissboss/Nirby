@@ -1,11 +1,13 @@
 export { PoiCard } from "./components/poi-card";
 export { PoiPhoto } from "./components/poi-photo";
 export { PoiOpeningHours } from "./components/poi-opening-hours";
+export { CreatePoiDialog } from "./components/create-poi-dialog";
 
 export { useCreatePoi } from "./hooks/use-create-poi";
 export { useUploadPoiPhoto } from "./hooks/use-upload-poi-photo";
 export { usePoiFormSchema } from "./hooks/use-poi-form-schema";
 
+export { CreatePoiForm } from "./forms/create-poi-form";
 export { createPoiFormSchema } from "./schemas/pois.schema";
 export {
   poiConstraints,
