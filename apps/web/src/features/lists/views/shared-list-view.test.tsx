@@ -112,7 +112,7 @@ describe("SharedListView", () => {
     mockSharedListQuery({
       data: undefined,
       isError: true,
-      error: { success: false, error: { code: "LIST_NOT_FOUND" } },
+      error: new Error("LIST_NOT_FOUND"),
     });
 
     render(<SharedListView shareToken="missing-token" />);
@@ -126,7 +126,7 @@ describe("SharedListView", () => {
     mockSharedListQuery({
       data: undefined,
       isError: true,
-      error: { success: false, error: { code: "SHARE_TOKEN_EXPIRED" } },
+      error: new Error("SHARE_TOKEN_EXPIRED"),
     });
 
     render(<SharedListView shareToken="expired-token" />);
