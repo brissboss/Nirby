@@ -111,6 +111,10 @@
     "success": "Lieu retiré de la liste",
     "error": "Impossible de retirer le lieu"
   },
+  "addPoi": {
+    "success": "Lieu ajouté à la liste",
+    "error": "Impossible d’ajouter le lieu"
+  },
   "share": {
     "action": "Partager",
     "title": "Partager la liste",

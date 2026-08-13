@@ -16,6 +16,7 @@ import { poiFormValuesToBody } from "../utils/poi-form.utils";
 import { PoiFormFields } from "./poi-form-fields";
 
 import { Button, Form } from "@/components/ui";
+import { useAddPoiToList } from "@/features/lists/hooks/use-add-poi-to-list";
 import { poiPhotoFileSchema } from "@/features/upload";
 import { useErrorMessage } from "@/hooks/use-error-message";
 import { cn } from "@/lib/utils";
@@ -23,14 +24,18 @@ import { cn } from "@/lib/utils";
 export type CreatePoiFormProps = {
   closeDialog?: () => void;
   onCreated?: (poiId: string) => void;
+  /** When set, the created POI is added to this list after create. */
+  listId?: string;
 };
 
-export function CreatePoiForm({ closeDialog, onCreated }: CreatePoiFormProps) {
+export function CreatePoiForm({ closeDialog, onCreated, listId }: CreatePoiFormProps) {
   const tPoi = useTranslations("poi");
+  const tLists = useTranslations("lists");
   const t = useTranslations();
   const getErrorMessage = useErrorMessage();
   const { mutateAsync: createPoi, isPending: isCreating } = useCreatePoi();
   const { mutateAsync: uploadPoiPhoto, isPending: isUploading } = useUploadPoiPhoto();
+  const { mutateAsync: addPoiToList, isPending: isAdding } = useAddPoiToList();
   const poiFormSchema = usePoiFormSchema();
   const [photoFile, setPhotoFile] = useState<File | null>(null);
 
@@ -47,7 +52,7 @@ export function CreatePoiForm({ closeDialog, onCreated }: CreatePoiFormProps) {
     },
   });
 
-  const isPending = isCreating || isUploading;
+  const isPending = isCreating || isUploading || isAdding;
 
   async function onSubmit(values: CreatePoiFormData) {
     try {
@@ -78,7 +83,21 @@ export function CreatePoiForm({ closeDialog, onCreated }: CreatePoiFormProps) {
         ...(photoUrls ? { photoUrls } : {}),
       });
 
-      toast.success(tPoi("createPoi.success"));
+      if (listId && poi.id) {
+        try {
+          await addPoiToList({ listId, body: { poiId: poi.id } });
+        } catch (error) {
+          toast.error(tLists("addPoi.error"), {
+            description: getErrorMessage(error),
+          });
+          return;
+        }
+
+        toast.success(tLists("addPoi.success"));
+      } else {
+        toast.success(tPoi("createPoi.success"));
+      }
+
       form.reset();
       setPhotoFile(null);
       closeDialog?.();

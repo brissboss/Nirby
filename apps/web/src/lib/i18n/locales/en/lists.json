@@ -111,6 +111,10 @@
     "success": "Place removed from list",
     "error": "Could not remove the place"
   },
+  "addPoi": {
+    "success": "Place added to the list",
+    "error": "Could not add the place"
+  },
   "share": {
     "action": "Share",
     "title": "Share list",
