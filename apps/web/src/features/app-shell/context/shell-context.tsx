@@ -14,6 +14,9 @@ type ShellContextValue = ShellSearch & {
   setViewAndExitMapMode: (view: ShellView) => void;
   mapMode: boolean;
   setMapMode: (value: boolean) => void;
+  selectedPoiId: string | null;
+  selectPoi: (id: string) => void;
+  clearSelection: () => void;
 };
 
 const ShellContext = createContext<ShellContextValue | null>(null);
@@ -21,6 +24,7 @@ const ShellContext = createContext<ShellContextValue | null>(null);
 export function ShellProvider({ children }: { children: ReactNode }) {
   const [view, setViewState] = useState<ShellView>(DEFAULT_SHELL_VIEW);
   const [mapMode, setMapModeState] = useState(false);
+  const [selectedPoiId, setSelectedPoiId] = useState<string | null>(null);
 
   const { setView } = useShellViewUrl(view, setViewState);
   const { setMapMode } = useShellMapModeUrl(mapMode, setMapModeState);
@@ -28,24 +32,58 @@ export function ShellProvider({ children }: { children: ReactNode }) {
   // adopt those params, so switching to Explore needs no extra wiring here.
   const { query, searchDraft, setSearchDraft, setQuery } = useShellSearch();
 
+  const [lastQueryForSelection, setLastQueryForSelection] = useState(query);
+
+  if (query !== lastQueryForSelection) {
+    setLastQueryForSelection(query);
+    if (selectedPoiId !== null) {
+      setSelectedPoiId(null);
+    }
+  }
+
+  const clearSelection = useCallback(() => {
+    setSelectedPoiId(null);
+    setMapMode(false);
+  }, [setMapMode]);
+
+  const selectPoi = useCallback(
+    (id: string) => {
+      setSelectedPoiId(id);
+      setMapMode(true);
+    },
+    [setMapMode]
+  );
+
+  const setViewWithClear = useCallback(
+    (next: ShellView) => {
+      setSelectedPoiId(null);
+      setView(next);
+    },
+    [setView]
+  );
+
   const setViewAndExitMapMode = useCallback(
     (next: ShellView) => {
       if (mapMode && next === view) {
-        setMapMode(false);
+        clearSelection();
         return;
       }
+      setSelectedPoiId(null);
       setView(next);
     },
-    [mapMode, view, setMapMode, setView]
+    [mapMode, view, clearSelection, setView]
   );
 
   const value = useMemo(
     () => ({
       view,
-      setView,
+      setView: setViewWithClear,
       setViewAndExitMapMode,
       mapMode,
       setMapMode,
+      selectedPoiId,
+      selectPoi,
+      clearSelection,
       query,
       searchDraft,
       setSearchDraft,
@@ -53,10 +91,13 @@ export function ShellProvider({ children }: { children: ReactNode }) {
     }),
     [
       view,
-      setView,
+      setViewWithClear,
       setViewAndExitMapMode,
       mapMode,
       setMapMode,
+      selectedPoiId,
+      selectPoi,
+      clearSelection,
       query,
       searchDraft,
       setSearchDraft,

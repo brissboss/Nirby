@@ -12,15 +12,22 @@ import { ListPoiRow } from "./list-poi-row";
 import { ListPoisSkeleton } from "./list-pois-skeleton";
 
 import { Button } from "@/components/ui";
-import type { SavedPoiListItem } from "@/features/pois";
+import { getSavedPoiMapId, type SavedPoiListItem } from "@/features/pois";
 import { useErrorMessage } from "@/hooks/use-error-message";
 
 type ListPoisSectionProps = {
   listId: string;
   role?: ListRole;
+  selectedPoiId?: string | null;
+  onSelectPoi?: (id: string) => void;
 };
 
-export function ListPoisSection({ listId, role }: ListPoisSectionProps) {
+export function ListPoisSection({
+  listId,
+  role,
+  selectedPoiId,
+  onSelectPoi,
+}: ListPoisSectionProps) {
   const canRemove = canEditList(role);
   const tLists = useTranslations("lists");
   const getErrorMessage = useErrorMessage();
@@ -98,11 +105,21 @@ export function ListPoisSection({ listId, role }: ListPoisSectionProps) {
       {!isInitialLoading && !isError && items.length > 0 && (
         <>
           <ul className="flex w-full min-w-0 flex-col gap-3">
-            {items.map((savedPoi: SavedPoiListItem, index) => (
-              <li key={savedPoi.id ?? `saved-poi-${index}`}>
-                <ListPoiRow savedPoi={savedPoi} listId={listId} canRemove={canRemove} />
-              </li>
-            ))}
+            {items.map((savedPoi: SavedPoiListItem, index) => {
+              const mapId = getSavedPoiMapId(savedPoi);
+
+              return (
+                <li key={savedPoi.id ?? `saved-poi-${index}`}>
+                  <ListPoiRow
+                    savedPoi={savedPoi}
+                    listId={listId}
+                    canRemove={canRemove}
+                    isSelected={mapId !== null && selectedPoiId === mapId}
+                    onSelect={onSelectPoi}
+                  />
+                </li>
+              );
+            })}
           </ul>
 
           <div ref={sentinelRef} className="h-1 w-full" aria-hidden />

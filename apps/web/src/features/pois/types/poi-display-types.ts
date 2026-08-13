@@ -26,4 +26,11 @@ export type PoiDisplayData = {
   openingHours: PoiOpeningHours | null;
 };
 
+export type MapPoi = {
+  id: string;
+  lat: number;
+  lng: number;
+  label?: string;
+};
+
 export type { Poi, GooglePlace };

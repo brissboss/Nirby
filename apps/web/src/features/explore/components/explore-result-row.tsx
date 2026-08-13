@@ -13,9 +13,17 @@ type ExploreResultRowProps = {
   place: GooglePlace;
   savedListCount: number;
   onAddToList: (target: AddToListTarget) => void;
+  isSelected?: boolean;
+  onSelect?: (id: string) => void;
 };
 
-export function ExploreResultRow({ place, savedListCount, onAddToList }: ExploreResultRowProps) {
+export function ExploreResultRow({
+  place,
+  savedListCount,
+  onAddToList,
+  isSelected,
+  onSelect,
+}: ExploreResultRowProps) {
   const tExplore = useTranslations("explore");
   const display = getPoiDisplayDataFromGooglePlace(place);
 
@@ -28,6 +36,8 @@ export function ExploreResultRow({ place, savedListCount, onAddToList }: Explore
   return (
     <PoiCard
       poi={display}
+      isSelected={isSelected}
+      onSelect={onSelect ? () => onSelect(googlePlaceId) : undefined}
       badge={
         savedListCount > 0 ? (
           <Badge variant="secondary" className="gap-1 text-xs font-normal">
