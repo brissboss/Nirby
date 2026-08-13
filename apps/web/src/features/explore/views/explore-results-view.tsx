@@ -28,8 +28,10 @@ export function ExploreResultsView() {
   const membership = membershipData?.membership ?? {};
   const mapPois = useMemo(() => {
     if (isError) return [];
-    return places.map(getCoordinatesFromGooglePlace).filter((poi): poi is MapPoi => poi !== null);
-  }, [isError, places]);
+    return (data?.places ?? [])
+      .map(getCoordinatesFromGooglePlace)
+      .filter((poi): poi is MapPoi => poi !== null);
+  }, [isError, data?.places]);
   // A single picker for the whole list: mounting one per row would duplicate the lists query.
   const [target, setTarget] = useState<AddToListTarget | null>(null);
   const [isPickerOpen, setIsPickerOpen] = useState(false);

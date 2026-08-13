@@ -20,7 +20,10 @@ export function PoiMarkersLayer({ pois }: PoiMarkersLayerProps) {
   const { map } = useMap();
   const poisRef = useRef(pois);
   const poisKey = getPoisKey(pois);
-  poisRef.current = pois;
+
+  useEffect(() => {
+    poisRef.current = pois;
+  }, [pois]);
 
   useEffect(() => {
     if (!map) return;
