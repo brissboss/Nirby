@@ -114,7 +114,7 @@
   "share": {
     "action": "Share",
     "title": "Share list",
-    "description": "Create a read-only link or an edit invite link for this list.",
+    "description": "Create a read-only or edit invite link, and manage people on this list.",
     "readLink": {
       "title": "Read-only link",
       "description": "Anyone with this link can view the list.",

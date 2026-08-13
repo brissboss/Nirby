@@ -4,11 +4,14 @@ import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import type { ListRole } from "../constants/lists.constants";
 import { useGenerateEditLink } from "../hooks/use-generate-edit-link";
 import { useRevokeEditLink } from "../hooks/use-revoke-edit-link";
 import { useShareList } from "../hooks/use-share-list";
 import { useUnshareList } from "../hooks/use-unshare-list";
 import { buildEditLinkUrl, buildShareUrl } from "../utils/share-links.utils";
+
+import { ListCollaboratorsSection } from "./list-collaborators-section";
 
 import {
   Button,
@@ -31,6 +34,8 @@ export type ShareListDialogProps = {
   listId: string;
   shareToken: string | null;
   editToken: string | null;
+  role?: ListRole;
+  createdBy: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 };
@@ -146,6 +151,9 @@ function useShareListDialog({ listId, shareToken, editToken, onOpenChange }: Sha
 type ShareDialogState = ReturnType<typeof useShareListDialog>;
 
 function ShareListBody({
+  listId,
+  role,
+  createdBy,
   tLists,
   tCommon,
   shareUrl,
@@ -159,9 +167,9 @@ function ShareListBody({
   handleGenerate,
   handleCopy,
   handleRevoke,
-}: ShareDialogState) {
+}: ShareDialogState & Pick<ShareListDialogProps, "listId" | "role" | "createdBy">) {
   return (
-    <div className="grid gap-6">
+    <div className="grid max-h-[min(70vh,32rem)] gap-6 overflow-y-auto">
       <ShareLinkSection
         title={tLists("share.readLink.title")}
         description={tLists("share.readLink.description")}
@@ -200,6 +208,7 @@ function ShareListBody({
         onCancelRevoke={() => setConfirming(null)}
         onConfirmRevoke={() => handleRevoke("edit")}
       />
+      <ListCollaboratorsSection listId={listId} role={role} createdBy={createdBy} embedded />
     </div>
   );
 }
@@ -314,7 +323,12 @@ function ShareListDesktopDialog(props: ShareListDialogProps) {
           <DialogTitle>{tLists("share.title")}</DialogTitle>
           <DialogDescription>{tLists("share.description")}</DialogDescription>
         </DialogHeader>
-        <ShareListBody {...state} />
+        <ShareListBody
+          {...state}
+          listId={props.listId}
+          role={props.role}
+          createdBy={props.createdBy}
+        />
       </DialogContent>
     </Dialog>
   );
@@ -332,7 +346,12 @@ function ShareListDrawer(props: ShareListDialogProps) {
           <DrawerDescription>{tLists("share.description")}</DrawerDescription>
         </DrawerHeader>
         <div className="px-4 pb-4">
-          <ShareListBody {...state} />
+          <ShareListBody
+            {...state}
+            listId={props.listId}
+            role={props.role}
+            createdBy={props.createdBy}
+          />
         </div>
       </DrawerContent>
     </Drawer>

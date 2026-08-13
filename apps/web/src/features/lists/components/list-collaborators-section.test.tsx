@@ -5,7 +5,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useCollaborators } from "../hooks/use-collaborators";
 import { useInviteCollaborator } from "../hooks/use-invite-collaborator";
-import { useLeaveList } from "../hooks/use-leave-list";
 import { useRemoveCollaborator } from "../hooks/use-remove-collaborator";
 import { useUpdateCollaboratorRole } from "../hooks/use-update-collaborator-role";
 
@@ -36,10 +35,6 @@ vi.mock("../hooks/use-update-collaborator-role", () => ({
 
 vi.mock("../hooks/use-remove-collaborator", () => ({
   useRemoveCollaborator: vi.fn(),
-}));
-
-vi.mock("../hooks/use-leave-list", () => ({
-  useLeaveList: vi.fn(),
 }));
 
 vi.mock("@/hooks/use-error-message", () => ({
@@ -104,20 +99,16 @@ function mockCollaboratorsQuery(
   } as ReturnType<typeof useCollaborators>);
 }
 
-function renderSection(role: ListRole, onLeft = vi.fn()) {
-  return {
-    onLeft,
-    ...render(
-      <ListCollaboratorsSection listId="list-1" role={role} createdBy="user-1" onLeft={onLeft} />
-    ),
-  };
+function renderSection(role: ListRole) {
+  return render(
+    <ListCollaboratorsSection listId="list-1" role={role} createdBy="user-1" embedded />
+  );
 }
 
 describe("ListCollaboratorsSection", () => {
   const inviteMutate = vi.fn();
   const updateRoleMutate = vi.fn();
   const removeMutate = vi.fn();
-  const leaveMutate = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -127,7 +118,6 @@ describe("ListCollaboratorsSection", () => {
     inviteMutate.mockResolvedValue({ inviteLink: "https://example.com/invite", emailSent: true });
     updateRoleMutate.mockResolvedValue({ message: "ok" });
     removeMutate.mockResolvedValue({ message: "ok" });
-    leaveMutate.mockResolvedValue({ message: "ok" });
     vi.mocked(useInviteCollaborator).mockReturnValue({
       mutateAsync: inviteMutate,
       isPending: false,
@@ -140,10 +130,6 @@ describe("ListCollaboratorsSection", () => {
       mutateAsync: removeMutate,
       isPending: false,
     } as unknown as ReturnType<typeof useRemoveCollaborator>);
-    vi.mocked(useLeaveList).mockReturnValue({
-      mutateAsync: leaveMutate,
-      isPending: false,
-    } as unknown as ReturnType<typeof useLeaveList>);
   });
 
   it("shows invite and remove for OWNER, without Leave", () => {
@@ -159,35 +145,35 @@ describe("ListCollaboratorsSection", () => {
     expect(screen.getByText("role.OWNER")).toBeInTheDocument();
   });
 
-  it("shows invite, remove, and Leave for ADMIN without inventing an owner row", () => {
+  it("shows invite and remove for ADMIN without inventing an owner row or Leave", () => {
     mockCollaboratorsQuery({}, [selfAsAdmin, otherCollaborator]);
 
     renderSection("ADMIN");
 
     expect(screen.getByRole("button", { name: "collaborators.invite.submit" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "collaborators.remove" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "collaborators.leave" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "collaborators.leave" })).not.toBeInTheDocument();
     expect(screen.queryByText("role.OWNER")).not.toBeInTheDocument();
   });
 
-  it("hides invite and remove for EDITOR and shows Leave", () => {
+  it("hides invite, remove, and Leave for EDITOR", () => {
     renderSection("EDITOR");
 
     expect(
       screen.queryByRole("button", { name: "collaborators.invite.submit" })
     ).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "collaborators.remove" })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "collaborators.leave" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "collaborators.leave" })).not.toBeInTheDocument();
   });
 
-  it("hides invite and remove for VIEWER and shows Leave", () => {
+  it("hides invite, remove, and Leave for VIEWER", () => {
     renderSection("VIEWER");
 
     expect(
       screen.queryByRole("button", { name: "collaborators.invite.submit" })
     ).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "collaborators.remove" })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "collaborators.leave" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "collaborators.leave" })).not.toBeInTheDocument();
   });
 
   it("invites a collaborator and shows a success toast", async () => {
@@ -231,17 +217,5 @@ describe("ListCollaboratorsSection", () => {
 
     expect(removeMutate).toHaveBeenCalledWith({ listId: "list-1", collaboratorId: "user-2" });
     expect(toast.success).toHaveBeenCalledWith("collaborators.removeSuccess");
-  });
-
-  it("leaves the list after confirmation, toasts, and calls onLeft", async () => {
-    const user = userEvent.setup();
-    const { onLeft } = renderSection("EDITOR");
-
-    await user.click(screen.getByRole("button", { name: "collaborators.leave" }));
-    await user.click(screen.getByRole("button", { name: "collaborators.leaveConfirm" }));
-
-    expect(leaveMutate).toHaveBeenCalledWith({ listId: "list-1" });
-    expect(toast.success).toHaveBeenCalledWith("collaborators.leaveSuccess");
-    expect(onLeft).toHaveBeenCalledTimes(1);
   });
 });
