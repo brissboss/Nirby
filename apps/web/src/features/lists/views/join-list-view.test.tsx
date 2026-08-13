@@ -27,19 +27,8 @@ vi.mock("../hooks/use-join-list-by-edit-link", () => ({
 }));
 
 vi.mock("@/hooks/use-error-message", () => ({
-  useErrorMessage: () => (error: unknown) => {
-    if (
-      typeof error === "object" &&
-      error !== null &&
-      "error" in error &&
-      typeof error.error === "object" &&
-      error.error !== null &&
-      "code" in error.error
-    ) {
-      return String(error.error.code);
-    }
-    return "API error message";
-  },
+  useErrorMessage: () => (error: unknown) =>
+    error instanceof Error ? error.message : "API error message",
 }));
 
 const returnPath = "/list/url-list/join?editToken=edit-token";
@@ -95,10 +84,9 @@ describe("JoinListView", () => {
   });
 
   it("shows an API error and does not redirect when the token is invalid", () => {
-    const apiError = { success: false, error: { code: "LIST_NOT_FOUND" } };
     mockMutation({
       isError: true,
-      error: apiError,
+      error: new Error("LIST_NOT_FOUND"),
     });
 
     render(<JoinListView editToken="bad-token" returnPath={returnPath} />);

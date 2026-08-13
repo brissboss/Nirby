@@ -27,19 +27,8 @@ vi.mock("../hooks/use-join-list-by-invite", () => ({
 }));
 
 vi.mock("@/hooks/use-error-message", () => ({
-  useErrorMessage: () => (error: unknown) => {
-    if (
-      typeof error === "object" &&
-      error !== null &&
-      "error" in error &&
-      typeof error.error === "object" &&
-      error.error !== null &&
-      "code" in error.error
-    ) {
-      return String(error.error.code);
-    }
-    return "API error message";
-  },
+  useErrorMessage: () => (error: unknown) =>
+    error instanceof Error ? error.message : "API error message",
 }));
 
 const returnPath = "/list/list-1/collaborators/accept?token=invite-token";
@@ -66,10 +55,9 @@ describe("AcceptInviteView", () => {
   });
 
   it("shows COLLABORATOR_ALREADY_EXISTS and does not redirect", () => {
-    const apiError = { success: false, error: { code: "COLLABORATOR_ALREADY_EXISTS" } };
     mockMutation({
       isError: true,
-      error: apiError,
+      error: new Error("COLLABORATOR_ALREADY_EXISTS"),
     });
 
     render(<AcceptInviteView listId="list-1" token="invite-token" returnPath={returnPath} />);
