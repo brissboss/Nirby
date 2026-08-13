@@ -11,8 +11,10 @@ import { ListsListQueryBoundary } from "../components/lists-list-query-boundary"
 import { ListsSectionLayout } from "../components/lists-section-layout";
 import { canDeleteList, canEditList } from "../constants/lists.constants";
 import { useList } from "../hooks/use-list";
+import { useListMapPois } from "../hooks/use-list-map-pois";
 
 import { Button } from "@/components/ui";
+import { PoiMarkersLayer } from "@/features/map";
 
 type ListsDetailViewProps = {
   listId: string;
@@ -24,6 +26,7 @@ type ListsDetailViewProps = {
 export function ListsDetailView({ listId, onBack, onEdit, onDelete }: ListsDetailViewProps) {
   const tLists = useTranslations("lists");
   const { data } = useList(listId);
+  const mapPois = useListMapPois(listId);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const list = data?.list;
 
@@ -33,6 +36,7 @@ export function ListsDetailView({ listId, onBack, onEdit, onDelete }: ListsDetai
       description={list?.description ?? undefined}
       onBack={onBack}
     >
+      <PoiMarkersLayer pois={mapPois} />
       <ListsListQueryBoundary listId={listId}>
         {(loadedList) => (
           <div className="grid gap-6">
