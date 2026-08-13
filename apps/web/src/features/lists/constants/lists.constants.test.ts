@@ -4,6 +4,8 @@ import {
   buildListsNavigationSearchParams,
   canDeleteList,
   canEditList,
+  canManageCollaborators,
+  canManageShareAndEditLinks,
   parseListId,
 } from "./lists.constants";
 
@@ -29,6 +31,32 @@ describe("canDeleteList", () => {
     expect(canDeleteList("EDITOR")).toBe(false);
     expect(canDeleteList("VIEWER")).toBe(false);
     expect(canDeleteList(undefined)).toBe(false);
+  });
+});
+
+describe("canManageShareAndEditLinks", () => {
+  it("allows OWNER and ADMIN", () => {
+    expect(canManageShareAndEditLinks("OWNER")).toBe(true);
+    expect(canManageShareAndEditLinks("ADMIN")).toBe(true);
+  });
+
+  it("denies EDITOR, VIEWER and undefined", () => {
+    expect(canManageShareAndEditLinks("EDITOR")).toBe(false);
+    expect(canManageShareAndEditLinks("VIEWER")).toBe(false);
+    expect(canManageShareAndEditLinks(undefined)).toBe(false);
+  });
+});
+
+describe("canManageCollaborators", () => {
+  it("allows OWNER and ADMIN", () => {
+    expect(canManageCollaborators("OWNER")).toBe(true);
+    expect(canManageCollaborators("ADMIN")).toBe(true);
+  });
+
+  it("denies EDITOR, VIEWER and undefined", () => {
+    expect(canManageCollaborators("EDITOR")).toBe(false);
+    expect(canManageCollaborators("VIEWER")).toBe(false);
+    expect(canManageCollaborators(undefined)).toBe(false);
   });
 });
 

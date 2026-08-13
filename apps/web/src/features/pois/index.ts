@@ -6,6 +6,7 @@ export {
   getPoiDisplayDataFromSavedPoi,
   getPoiDisplayDataFromPoi,
   getPoiDisplayDataFromGooglePlace,
+  getPoiDisplayDataFromSharedPoi,
 } from "./utils/get-poi-display-data";
 
 export {

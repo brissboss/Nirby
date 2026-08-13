@@ -110,5 +110,91 @@
     "confirmSubmit": "Retirer",
     "success": "Lieu retiré de la liste",
     "error": "Impossible de retirer le lieu"
+  },
+  "share": {
+    "action": "Partager",
+    "title": "Partager la liste",
+    "description": "Crée un lien de lecture ou d'invitation à éditer, et gère les personnes de cette liste.",
+    "readLink": {
+      "title": "Lien en lecture seule",
+      "description": "Toute personne avec ce lien peut consulter la liste.",
+      "generate": "Créer le lien",
+      "copy": "Copier",
+      "revoke": "Révoquer",
+      "revokeConfirm": "Révoquer le lien",
+      "empty": "Aucun lien pour l'instant"
+    },
+    "editLink": {
+      "title": "Lien d'invitation à éditer",
+      "description": "Toute personne avec ce lien peut rejoindre la liste en tant qu'éditeur.",
+      "generate": "Créer le lien",
+      "copy": "Copier",
+      "revoke": "Révoquer",
+      "revokeConfirm": "Révoquer le lien",
+      "empty": "Aucun lien pour l'instant"
+    },
+    "copySuccess": "Lien copié",
+    "copyError": "Impossible de copier le lien",
+    "generateError": "Impossible de créer le lien",
+    "revokeSuccess": "Lien révoqué",
+    "revokeError": "Impossible de révoquer le lien"
+  },
+  "collaborators": {
+    "section": {
+      "title": "Collaborateurs"
+    },
+    "empty": "Aucun collaborateur pour l'instant",
+    "loading": "Chargement des collaborateurs…",
+    "error": {
+      "title": "Impossible de charger les collaborateurs",
+      "retry": "Réessayer"
+    },
+    "invite": {
+      "email": "Email",
+      "role": "Rôle",
+      "submit": "Inviter",
+      "success": "Invitation envoyée",
+      "error": "Impossible d'inviter cette personne",
+      "requiredEmail": "L'email est requis",
+      "invalidEmail": "Email invalide"
+    },
+    "remove": "Retirer",
+    "removeTitle": "Retirer le collaborateur",
+    "removeDescription": "« {name} » n'aura plus accès à cette liste.",
+    "removeConfirm": "Retirer",
+    "removeSuccess": "Collaborateur retiré",
+    "removeError": "Impossible de retirer le collaborateur",
+    "updateRoleError": "Impossible de modifier le rôle",
+    "leave": "Quitter la liste",
+    "leaveTitle": "Quitter cette liste",
+    "leaveDescription": "Tu perdras l'accès tant que tu ne seras pas réinvité.",
+    "leaveConfirm": "Quitter",
+    "leaveSuccess": "Tu as quitté la liste",
+    "leaveError": "Impossible de quitter la liste"
+  },
+  "shared": {
+    "title": "Liste partagée",
+    "loading": "Chargement de la liste partagée…",
+    "notFound": "Cette liste partagée est introuvable",
+    "expired": "Ce lien de partage a expiré",
+    "error": {
+      "retry": "Réessayer"
+    },
+    "creator": {
+      "by": "Par {name}",
+      "unknown": "Liste partagée"
+    }
+  },
+  "join": {
+    "edit": {
+      "title": "Rejoindre cette liste",
+      "description": "Connecte-toi pour rejoindre cette liste en tant qu'éditeur."
+    },
+    "accept": {
+      "title": "Accepter l'invitation",
+      "description": "Connecte-toi avec l'adresse e-mail à laquelle cette invitation a été envoyée."
+    },
+    "missingToken": "Ce lien d'invitation n'a pas de jeton.",
+    "joining": "Rejoindre la liste…"
   }
 }
