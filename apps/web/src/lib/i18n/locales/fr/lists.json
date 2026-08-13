@@ -138,5 +138,38 @@
     "generateError": "Impossible de créer le lien",
     "revokeSuccess": "Lien révoqué",
     "revokeError": "Impossible de révoquer le lien"
+  },
+  "collaborators": {
+    "section": {
+      "title": "Collaborateurs"
+    },
+    "empty": "Aucun collaborateur pour l'instant",
+    "loading": "Chargement des collaborateurs…",
+    "error": {
+      "title": "Impossible de charger les collaborateurs",
+      "retry": "Réessayer"
+    },
+    "invite": {
+      "email": "Email",
+      "role": "Rôle",
+      "submit": "Inviter",
+      "success": "Invitation envoyée",
+      "error": "Impossible d'inviter cette personne",
+      "requiredEmail": "L'email est requis",
+      "invalidEmail": "Email invalide"
+    },
+    "remove": "Retirer",
+    "removeTitle": "Retirer le collaborateur",
+    "removeDescription": "« {name} » n'aura plus accès à cette liste.",
+    "removeConfirm": "Retirer",
+    "removeSuccess": "Collaborateur retiré",
+    "removeError": "Impossible de retirer le collaborateur",
+    "updateRoleError": "Impossible de modifier le rôle",
+    "leave": "Quitter la liste",
+    "leaveTitle": "Quitter cette liste",
+    "leaveDescription": "Tu perdras l'accès tant que tu ne seras pas réinvité.",
+    "leaveConfirm": "Quitter",
+    "leaveSuccess": "Tu as quitté la liste",
+    "leaveError": "Impossible de quitter la liste"
   }
 }

@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { DeleteListDialog } from "../components/delete-list-dialog";
+import { ListCollaboratorsSection } from "../components/list-collaborators-section";
 import { ListPoisSection } from "../components/list-pois-section";
 import { ListsDetailMetadata } from "../components/lists-detail-metadata";
 import { ListsListQueryBoundary } from "../components/lists-list-query-boundary";
@@ -103,6 +104,12 @@ export function ListsDetailView({ listId, onBack, onEdit, onDelete }: ListsDetai
                 onDeleted={onDelete}
               />
             )}
+            <ListCollaboratorsSection
+              listId={listId}
+              role={loadedList.role}
+              createdBy={loadedList.createdBy}
+              onLeft={onBack}
+            />
             <ListPoisSection
               listId={listId}
               role={loadedList.role}
