@@ -4,7 +4,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { MapPoi } from "@/features/pois";
 
 const fitBounds = vi.fn();
-const useMapMock = vi.fn(() => ({ map: { fitBounds } }));
+const useMapMock = vi.fn((): { map: { fitBounds: typeof fitBounds } | null } => ({
+  map: { fitBounds },
+}));
 
 type MarkerMock = {
   setLngLat: ReturnType<typeof vi.fn>;
