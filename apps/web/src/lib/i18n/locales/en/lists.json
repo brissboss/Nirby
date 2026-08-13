@@ -138,5 +138,38 @@
     "generateError": "Could not create the link",
     "revokeSuccess": "Link revoked",
     "revokeError": "Could not revoke the link"
+  },
+  "collaborators": {
+    "section": {
+      "title": "Collaborators"
+    },
+    "empty": "No collaborators yet",
+    "loading": "Loading collaborators…",
+    "error": {
+      "title": "Could not load collaborators",
+      "retry": "Retry"
+    },
+    "invite": {
+      "email": "Email",
+      "role": "Role",
+      "submit": "Invite",
+      "success": "Invitation sent",
+      "error": "Could not invite this person",
+      "requiredEmail": "Email is required",
+      "invalidEmail": "Invalid email"
+    },
+    "remove": "Remove",
+    "removeTitle": "Remove collaborator",
+    "removeDescription": "\"{name}\" will lose access to this list.",
+    "removeConfirm": "Remove",
+    "removeSuccess": "Collaborator removed",
+    "removeError": "Could not remove the collaborator",
+    "updateRoleError": "Could not update the role",
+    "leave": "Leave list",
+    "leaveTitle": "Leave this list",
+    "leaveDescription": "You will lose access until you are invited again.",
+    "leaveConfirm": "Leave",
+    "leaveSuccess": "You left the list",
+    "leaveError": "Could not leave the list"
   }
 }

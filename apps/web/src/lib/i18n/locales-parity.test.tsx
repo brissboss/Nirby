@@ -46,6 +46,9 @@ const NEW_LISTS_KEYS = [
   "share.readLink.generate",
   "share.editLink.revokeConfirm",
   "share.copySuccess",
+  "collaborators.section.title",
+  "collaborators.invite.submit",
+  "collaborators.leaveConfirm",
 ] as const;
 
 const NEW_EXPLORE_KEYS = [
