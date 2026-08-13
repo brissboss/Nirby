@@ -8,6 +8,7 @@ import { useList } from "../hooks/use-list";
 
 import { ListsDetailView } from "./lists-detail-view";
 
+import type { MapPoi } from "@/features/pois";
 import type { ListWithRole } from "@/lib/api";
 import { getErrorCode } from "@/lib/api/errors";
 
@@ -25,6 +26,42 @@ vi.mock("@/lib/api/errors", () => ({
 
 vi.mock("../hooks/use-delete-list", () => ({
   useDeleteList: vi.fn(),
+}));
+
+const useListMapPois = vi.fn((): MapPoi[] => []);
+
+vi.mock("../hooks/use-list-map-pois", () => ({
+  useListMapPois: () => useListMapPois(),
+}));
+
+vi.mock("@/features/app-shell", () => ({
+  useShell: () => ({
+    selectedPoiId: null,
+    selectPoi: vi.fn(),
+    clearSelection: vi.fn(),
+  }),
+}));
+
+vi.mock("@/features/map", () => ({
+  PoiMarkersLayer: ({
+    pois,
+    selectedPoiId,
+    onSelectPoi,
+    onDeselect,
+  }: {
+    pois: { id: string }[];
+    selectedPoiId?: string | null;
+    onSelectPoi?: (id: string) => void;
+    onDeselect?: () => void;
+  }) => (
+    <div
+      data-testid="poi-markers-layer"
+      data-ids={pois.map((poi) => poi.id).join(",")}
+      data-selected={selectedPoiId ?? ""}
+      data-has-select={onSelectPoi ? "1" : "0"}
+      data-has-deselect={onDeselect ? "1" : "0"}
+    />
+  ),
 }));
 
 vi.mock("../components/list-pois-section", () => ({
@@ -77,6 +114,7 @@ describe("ListsDetailView", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    useListMapPois.mockReturnValue([]);
     vi.mocked(getErrorCode).mockReturnValue(null);
     mutateAsync.mockResolvedValue({ message: "List deleted successfully" });
     vi.mocked(useDeleteList).mockReturnValue({
@@ -208,5 +246,26 @@ describe("ListsDetailView", () => {
     expect(mutateAsync).toHaveBeenCalledWith("list-1");
     expect(toast.success).toHaveBeenCalledWith("deleteList.success");
     expect(onDelete).toHaveBeenCalledTimes(1);
+  });
+
+  it("passes geolocated list POIs to the markers layer", () => {
+    mockListQuery();
+    useListMapPois.mockReturnValue([
+      { id: "sp-1", lat: 48.8732, lng: 2.3413, label: "Fraktion" },
+      { id: "sp-2", lat: 48.8587, lng: 2.3423, label: "Le Tout-Paris" },
+    ]);
+
+    render(<ListsDetailView listId="list-1" onBack={onBack} onEdit={onEdit} onDelete={onDelete} />);
+
+    expect(screen.getByTestId("poi-markers-layer")).toHaveAttribute("data-ids", "sp-1,sp-2");
+  });
+
+  it("renders an empty markers layer when the list has no geo POIs", () => {
+    mockListQuery();
+    useListMapPois.mockReturnValue([]);
+
+    render(<ListsDetailView listId="list-1" onBack={onBack} onEdit={onEdit} onDelete={onDelete} />);
+
+    expect(screen.getByTestId("poi-markers-layer")).toHaveAttribute("data-ids", "");
   });
 });
