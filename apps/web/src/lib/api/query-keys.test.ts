@@ -29,6 +29,21 @@ describe("queryKeys.lists", () => {
     expect(queryKeys.lists.detail("id")[0]).toBe(queryKeys.lists.all[0]);
   });
 
+  it("pois.all includes listId", () => {
+    expect(queryKeys.lists.pois.all("list-1")).toEqual(["lists", "pois", "list-1"]);
+  });
+
+  it("pois.list includes listId and filters", () => {
+    expect(queryKeys.lists.pois.list("list-1")).toEqual(["lists", "pois", "list-1", undefined]);
+
+    expect(queryKeys.lists.pois.list("list-1", { page: 1 })).toEqual([
+      "lists",
+      "pois",
+      "list-1",
+      { page: 1 },
+    ]);
+  });
+
   it("pois.infinite includes listId and filters", () => {
     expect(queryKeys.lists.pois.infinite("list-1")).toEqual([
       "lists",
@@ -45,5 +60,16 @@ describe("queryKeys.lists", () => {
       "infinite",
       { limit: 10 },
     ]);
+  });
+
+  it("poiMembership keys are prefixed by lists root", () => {
+    expect(queryKeys.lists.poiMembership.all).toEqual(["lists", "poi-membership"]);
+    expect(queryKeys.lists.poiMembership.byPlaces(["a", "b"])).toEqual([
+      "lists",
+      "poi-membership",
+      ["a", "b"],
+    ]);
+    expect(queryKeys.lists.poiMembership.all[0]).toBe(queryKeys.lists.all[0]);
+    expect(queryKeys.lists.poiMembership.byPlaces(["a"])[0]).toBe(queryKeys.lists.all[0]);
   });
 });
