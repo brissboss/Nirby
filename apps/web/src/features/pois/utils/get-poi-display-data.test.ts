@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { getPoiDisplayDataFromSavedPoi } from "./get-poi-display-data";
+import {
+  getPoiDisplayDataFromSavedPoi,
+  getPoiDisplayDataFromSharedPoi,
+} from "./get-poi-display-data";
 
 import type { Poi } from "@/lib/api";
 
@@ -104,5 +107,48 @@ describe("getPoiDisplayDataFromSavedPoi", () => {
       name: "Google name",
       source: "google",
     });
+  });
+});
+
+describe("getPoiDisplayDataFromSharedPoi", () => {
+  it("maps a flattened custom POI", () => {
+    expect(
+      getPoiDisplayDataFromSharedPoi({
+        id: "poi-1",
+        name: "Tour Eiffel",
+        address: "Champ de Mars, Paris",
+        category: "monument",
+        photoUrls: ["https://example.com/eiffel.jpg"],
+      })
+    ).toMatchObject({
+      id: "poi-1",
+      name: "Tour Eiffel",
+      address: "Champ de Mars, Paris",
+      category: "monument",
+      source: "custom",
+      photo: { kind: "url", url: "https://example.com/eiffel.jpg" },
+    });
+  });
+
+  it("maps a flattened Google Place when placeId is present", () => {
+    expect(
+      getPoiDisplayDataFromSharedPoi({
+        placeId: "ChIJ...",
+        name: "Café de Flore",
+        address: "172 Bd Saint-Germain, Paris",
+        categoryDisplayName: "Café",
+        photoReferences: ["places/abc/photos/ref1"],
+      })
+    ).toMatchObject({
+      id: "ChIJ...",
+      name: "Café de Flore",
+      source: "google",
+      photo: { kind: "google-ref", photoRef: "places/abc/photos/ref1" },
+    });
+  });
+
+  it("returns null for non-objects", () => {
+    expect(getPoiDisplayDataFromSharedPoi(null)).toBeNull();
+    expect(getPoiDisplayDataFromSharedPoi(undefined)).toBeNull();
   });
 });

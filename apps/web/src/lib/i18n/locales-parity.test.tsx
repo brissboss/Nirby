@@ -49,6 +49,9 @@ const NEW_LISTS_KEYS = [
   "collaborators.section.title",
   "collaborators.invite.submit",
   "collaborators.leaveConfirm",
+  "shared.title",
+  "shared.notFound",
+  "shared.expired",
 ] as const;
 
 const NEW_EXPLORE_KEYS = [

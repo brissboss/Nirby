@@ -171,5 +171,18 @@
     "leaveConfirm": "Leave",
     "leaveSuccess": "You left the list",
     "leaveError": "Could not leave the list"
+  },
+  "shared": {
+    "title": "Shared list",
+    "loading": "Loading shared list…",
+    "notFound": "This shared list was not found",
+    "expired": "This share link has expired",
+    "error": {
+      "retry": "Retry"
+    },
+    "creator": {
+      "by": "By {name}",
+      "unknown": "Shared list"
+    }
   }
 }
