@@ -1,15 +1,6 @@
 "use client";
 
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ReactNode,
-} from "react";
+import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
 
 import { DEFAULT_SHELL_VIEW } from "../constants/shell.constants";
 import { useShellMapModeUrl } from "../hooks/use-shell-map-mode-url";
@@ -41,14 +32,14 @@ export function ShellProvider({ children }: { children: ReactNode }) {
   // adopt those params, so switching to Explore needs no extra wiring here.
   const { query, searchDraft, setSearchDraft, setQuery } = useShellSearch();
 
-  const prevQueryRef = useRef(query);
+  const [lastQueryForSelection, setLastQueryForSelection] = useState(query);
 
-  useEffect(() => {
-    if (query !== prevQueryRef.current) {
-      prevQueryRef.current = query;
+  if (query !== lastQueryForSelection) {
+    setLastQueryForSelection(query);
+    if (selectedPoiId !== null) {
       setSelectedPoiId(null);
     }
-  }, [query]);
+  }
 
   const clearSelection = useCallback(() => {
     setSelectedPoiId(null);
