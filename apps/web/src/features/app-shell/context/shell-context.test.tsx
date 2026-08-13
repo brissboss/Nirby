@@ -2,10 +2,11 @@ import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const replace = vi.fn();
+const push = vi.fn();
 let searchParams = new URLSearchParams();
 
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn(), replace, prefetch: vi.fn(), back: vi.fn() }),
+  useRouter: () => ({ push, replace, prefetch: vi.fn(), back: vi.fn() }),
   usePathname: () => "/",
   useSearchParams: () => searchParams,
 }));
@@ -93,5 +94,97 @@ describe("ShellProvider search", () => {
 
     expect(result.current.searchDraft).toBe("café");
     expect(replace).toHaveBeenCalledWith("/?q=caf%C3%A9", { scroll: false });
+  });
+});
+
+describe("ShellProvider POI selection", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    replace.mockClear();
+    push.mockClear();
+    replace.mockImplementation((href: string) => {
+      searchParams = new URLSearchParams(href.split("?")[1] ?? "");
+    });
+    push.mockImplementation((href: string) => {
+      searchParams = new URLSearchParams(href.split("?")[1] ?? "");
+    });
+    searchParams = new URLSearchParams("view=lists");
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("selectPoi stores the id and enters map mode", () => {
+    const { result } = renderShell();
+
+    act(() => {
+      result.current.selectPoi("poi-1");
+    });
+
+    expect(result.current.selectedPoiId).toBe("poi-1");
+    expect(result.current.mapMode).toBe(true);
+  });
+
+  it("clearSelection resets the id and exits map mode", () => {
+    const { result } = renderShell();
+
+    act(() => {
+      result.current.selectPoi("poi-1");
+    });
+    act(() => {
+      result.current.clearSelection();
+    });
+
+    expect(result.current.selectedPoiId).toBeNull();
+    expect(result.current.mapMode).toBe(false);
+  });
+
+  it("clears selection when exiting map mode from the active tab", () => {
+    searchParams = new URLSearchParams("view=lists&mapMode=1");
+    const { result, rerender } = renderShell();
+    rerender();
+
+    act(() => {
+      result.current.selectPoi("poi-1");
+    });
+
+    act(() => {
+      result.current.setViewAndExitMapMode("lists");
+    });
+
+    expect(result.current.selectedPoiId).toBeNull();
+    expect(result.current.mapMode).toBe(false);
+  });
+
+  it("clears selection when the search query changes", () => {
+    const { result, rerender } = renderShell();
+
+    act(() => {
+      result.current.selectPoi("poi-1");
+    });
+
+    act(() => {
+      result.current.setSearchDraft("caf");
+    });
+    act(() => {
+      vi.advanceTimersByTime(EXPLORE_SEARCH_DEBOUNCE_MS);
+    });
+    rerender();
+
+    expect(result.current.selectedPoiId).toBeNull();
+  });
+
+  it("clears selection when switching shell views", () => {
+    const { result } = renderShell();
+
+    act(() => {
+      result.current.selectPoi("poi-1");
+    });
+    act(() => {
+      result.current.setView("explore");
+    });
+
+    expect(result.current.selectedPoiId).toBeNull();
   });
 });

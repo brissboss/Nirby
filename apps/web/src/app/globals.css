@@ -204,6 +204,20 @@ html {
   outline: none;
 }
 
+.nirby-poi-marker--selected {
+  transform: scale(1.25);
+  z-index: 1;
+  box-shadow:
+    0 0 0 3px var(--primary),
+    0 0 0 5.5px var(--background),
+    0 6px 16px oklch(0 0 0 / 30%);
+}
+
+.nirby-poi-marker--selected:hover,
+.nirby-poi-marker--selected:focus-visible {
+  transform: scale(1.25);
+}
+
 .mapboxgl-popup-content {
   padding: 0.375rem 0.75rem;
   border-radius: var(--radius-md);

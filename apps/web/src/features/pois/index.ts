@@ -11,6 +11,7 @@ export {
 export {
   getCoordinatesFromGooglePlace,
   getCoordinatesFromSavedPoi,
+  getSavedPoiMapId,
 } from "./utils/get-poi-coordinates";
 
 export type {

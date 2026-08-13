@@ -34,9 +34,33 @@ vi.mock("../hooks/use-list-map-pois", () => ({
   useListMapPois: () => useListMapPois(),
 }));
 
+vi.mock("@/features/app-shell", () => ({
+  useShell: () => ({
+    selectedPoiId: null,
+    selectPoi: vi.fn(),
+    clearSelection: vi.fn(),
+  }),
+}));
+
 vi.mock("@/features/map", () => ({
-  PoiMarkersLayer: ({ pois }: { pois: { id: string }[] }) => (
-    <div data-testid="poi-markers-layer" data-ids={pois.map((poi) => poi.id).join(",")} />
+  PoiMarkersLayer: ({
+    pois,
+    selectedPoiId,
+    onSelectPoi,
+    onDeselect,
+  }: {
+    pois: { id: string }[];
+    selectedPoiId?: string | null;
+    onSelectPoi?: (id: string) => void;
+    onDeselect?: () => void;
+  }) => (
+    <div
+      data-testid="poi-markers-layer"
+      data-ids={pois.map((poi) => poi.id).join(",")}
+      data-selected={selectedPoiId ?? ""}
+      data-has-select={onSelectPoi ? "1" : "0"}
+      data-has-deselect={onDeselect ? "1" : "0"}
+    />
   ),
 }));
 

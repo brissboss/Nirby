@@ -7,15 +7,22 @@ import { useState } from "react";
 import { RemovePoiDialog } from "./remove-poi-dialog";
 
 import { Button } from "@/components/ui";
-import { PoiCard, getPoiDisplayDataFromSavedPoi, type SavedPoiListItem } from "@/features/pois";
+import {
+  PoiCard,
+  getPoiDisplayDataFromSavedPoi,
+  getSavedPoiMapId,
+  type SavedPoiListItem,
+} from "@/features/pois";
 
 type ListPoiRowProps = {
   savedPoi: SavedPoiListItem;
   listId: string;
   canRemove: boolean;
+  isSelected?: boolean;
+  onSelect?: (id: string) => void;
 };
 
-export function ListPoiRow({ savedPoi, listId, canRemove }: ListPoiRowProps) {
+export function ListPoiRow({ savedPoi, listId, canRemove, isSelected, onSelect }: ListPoiRowProps) {
   const tLists = useTranslations("lists");
   const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
   const display = getPoiDisplayDataFromSavedPoi(savedPoi);
@@ -25,11 +32,14 @@ export function ListPoiRow({ savedPoi, listId, canRemove }: ListPoiRowProps) {
   }
 
   const showRemoveAction = canRemove && Boolean(savedPoi.id);
+  const mapId = getSavedPoiMapId(savedPoi);
 
   return (
     <>
       <PoiCard
         poi={display}
+        isSelected={isSelected}
+        onSelect={mapId && onSelect ? () => onSelect(mapId) : undefined}
         actions={
           showRemoveAction ? (
             <Button

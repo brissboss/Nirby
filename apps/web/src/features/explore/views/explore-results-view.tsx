@@ -18,7 +18,7 @@ import { useErrorMessage } from "@/hooks/use-error-message";
 export function ExploreResultsView() {
   const tExplore = useTranslations("explore");
   const getErrorMessage = useErrorMessage();
-  const { query } = useShell();
+  const { query, selectedPoiId, selectPoi, clearSelection } = useShell();
   const { data, isLoading, isError, error, refetch, isFetching } = useSearchGooglePlaces(query);
   const places = data?.places ?? [];
   const placeIds = places
@@ -75,6 +75,8 @@ export function ExploreResultsView() {
                 place={place}
                 savedListCount={place.placeId ? (membership[place.placeId]?.length ?? 0) : 0}
                 onAddToList={openPicker}
+                isSelected={place.placeId === selectedPoiId}
+                onSelect={selectPoi}
               />
             </li>
           ))}
@@ -91,7 +93,12 @@ export function ExploreResultsView() {
         />
       ) : null}
 
-      <PoiMarkersLayer pois={mapPois} />
+      <PoiMarkersLayer
+        pois={mapPois}
+        selectedPoiId={selectedPoiId}
+        onSelectPoi={selectPoi}
+        onDeselect={clearSelection}
+      />
     </div>
   );
 }

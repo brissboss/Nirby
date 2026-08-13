@@ -4,6 +4,7 @@
     "google": "Google"
   },
   "addressUnknown": "No address",
+  "select": "Select {name}",
   "openingHours": {
     "openNow": "Open now",
     "closedNow": "Closed",
