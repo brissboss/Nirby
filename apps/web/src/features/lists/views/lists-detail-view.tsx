@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { DeleteListDialog } from "../components/delete-list-dialog";
-import { ListCollaboratorsSection } from "../components/list-collaborators-section";
+import { LeaveListControl } from "../components/leave-list-control";
 import { ListPoisSection } from "../components/list-pois-section";
 import { ListsDetailMetadata } from "../components/lists-detail-metadata";
 import { ListsListQueryBoundary } from "../components/lists-list-query-boundary";
@@ -52,72 +52,73 @@ export function ListsDetailView({ listId, onBack, onEdit, onDelete }: ListsDetai
         onDeselect={clearSelection}
       />
       <ListsListQueryBoundary listId={listId}>
-        {(loadedList) => (
-          <div className="grid gap-6">
-            <ListsDetailMetadata list={loadedList} />
-            {(canEditList(loadedList.role) || canDeleteList(loadedList.role)) && (
-              <div className="flex flex-wrap gap-2">
-                {canManageShareAndEditLinks(loadedList.role) && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShareDialogOpen(true)}
-                  >
-                    <Share2Icon className="size-4" />
-                    {tLists("share.action")}
-                  </Button>
-                )}
-                {canEditList(loadedList.role) && (
-                  <Button type="button" variant="outline" size="sm" onClick={onEdit}>
-                    <PencilIcon className="size-4" />
-                    {tLists("edit.action")}
-                  </Button>
-                )}
-                {canDeleteList(loadedList.role) && (
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => setDeleteDialogOpen(true)}
-                  >
-                    <Trash2Icon className="size-4" />
-                    {tLists("delete.submit")}
-                  </Button>
-                )}
-              </div>
-            )}
-            {canManageShareAndEditLinks(loadedList.role) && (
-              <ShareListDialog
+        {(loadedList) => {
+          const canLeave = loadedList.role !== undefined && loadedList.role !== "OWNER";
+
+          return (
+            <div className="grid gap-6">
+              <ListsDetailMetadata list={loadedList} />
+              {(canEditList(loadedList.role) || canDeleteList(loadedList.role) || canLeave) && (
+                <div className="flex flex-wrap gap-2">
+                  {canManageShareAndEditLinks(loadedList.role) && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShareDialogOpen(true)}
+                    >
+                      <Share2Icon className="size-4" />
+                      {tLists("share.action")}
+                    </Button>
+                  )}
+                  {canEditList(loadedList.role) && (
+                    <Button type="button" variant="outline" size="sm" onClick={onEdit}>
+                      <PencilIcon className="size-4" />
+                      {tLists("edit.action")}
+                    </Button>
+                  )}
+                  {canDeleteList(loadedList.role) && (
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => setDeleteDialogOpen(true)}
+                    >
+                      <Trash2Icon className="size-4" />
+                      {tLists("delete.submit")}
+                    </Button>
+                  )}
+                  {canLeave ? <LeaveListControl listId={listId} onLeft={onBack} /> : null}
+                </div>
+              )}
+              {canManageShareAndEditLinks(loadedList.role) && (
+                <ShareListDialog
+                  listId={listId}
+                  shareToken={loadedList.shareToken}
+                  editToken={loadedList.editToken}
+                  role={loadedList.role}
+                  createdBy={loadedList.createdBy}
+                  open={shareDialogOpen}
+                  onOpenChange={setShareDialogOpen}
+                />
+              )}
+              {canDeleteList(loadedList.role) && (
+                <DeleteListDialog
+                  listId={listId}
+                  open={deleteDialogOpen}
+                  onOpenChange={setDeleteDialogOpen}
+                  onDeleted={onDelete}
+                />
+              )}
+              <ListPoisSection
                 listId={listId}
-                shareToken={loadedList.shareToken}
-                editToken={loadedList.editToken}
-                open={shareDialogOpen}
-                onOpenChange={setShareDialogOpen}
+                role={loadedList.role}
+                selectedPoiId={selectedPoiId}
+                onSelectPoi={selectPoi}
               />
-            )}
-            {canDeleteList(loadedList.role) && (
-              <DeleteListDialog
-                listId={listId}
-                open={deleteDialogOpen}
-                onOpenChange={setDeleteDialogOpen}
-                onDeleted={onDelete}
-              />
-            )}
-            <ListCollaboratorsSection
-              listId={listId}
-              role={loadedList.role}
-              createdBy={loadedList.createdBy}
-              onLeft={onBack}
-            />
-            <ListPoisSection
-              listId={listId}
-              role={loadedList.role}
-              selectedPoiId={selectedPoiId}
-              onSelectPoi={selectPoi}
-            />
-          </div>
-        )}
+            </div>
+          );
+        }}
       </ListsListQueryBoundary>
     </ListsSectionLayout>
   );

@@ -10,6 +10,28 @@ import { useUnshareList } from "../hooks/use-unshare-list";
 
 import { ShareListDialog } from "./share-list-dialog";
 
+vi.mock("./list-collaborators-section", () => ({
+  ListCollaboratorsSection: ({
+    listId,
+    role,
+    createdBy,
+    embedded,
+  }: {
+    listId: string;
+    role?: string;
+    createdBy: string;
+    embedded?: boolean;
+  }) => (
+    <div
+      data-testid="list-collaborators-section"
+      data-list-id={listId}
+      data-role={role ?? ""}
+      data-created-by={createdBy}
+      data-embedded={embedded ? "1" : "0"}
+    />
+  ),
+}));
+
 vi.mock("../hooks/use-share-list", () => ({
   useShareList: vi.fn(),
 }));
@@ -49,6 +71,25 @@ describe("ShareListDialog", () => {
   const revokeEditLink = vi.fn();
   const writeText = vi.fn();
 
+  function renderDialog(
+    overrides: Partial<{
+      shareToken: string | null;
+      editToken: string | null;
+    }> = {}
+  ) {
+    return render(
+      <ShareListDialog
+        listId="list-1"
+        shareToken={overrides.shareToken ?? null}
+        editToken={overrides.editToken ?? null}
+        role="OWNER"
+        createdBy="user-1"
+        open
+        onOpenChange={onOpenChange}
+      />
+    );
+  }
+
   beforeEach(() => {
     vi.clearAllMocks();
     shareList.mockResolvedValue({ shareLink: "https://example.com/shared/new-token" });
@@ -77,18 +118,20 @@ describe("ShareListDialog", () => {
     );
   });
 
+  it("renders collaborators next to the share links", () => {
+    renderDialog();
+
+    const collaborators = screen.getByTestId("list-collaborators-section");
+    expect(collaborators).toHaveAttribute("data-list-id", "list-1");
+    expect(collaborators).toHaveAttribute("data-role", "OWNER");
+    expect(collaborators).toHaveAttribute("data-created-by", "user-1");
+    expect(collaborators).toHaveAttribute("data-embedded", "1");
+    expect(screen.getByRole("button", { name: "share.editLink.generate" })).toBeInTheDocument();
+  });
+
   it("generates a read link when none exists", async () => {
     const user = userEvent.setup();
-
-    render(
-      <ShareListDialog
-        listId="list-1"
-        shareToken={null}
-        editToken={null}
-        open
-        onOpenChange={onOpenChange}
-      />
-    );
+    renderDialog();
 
     await user.click(screen.getByRole("button", { name: "share.readLink.generate" }));
 
@@ -98,16 +141,7 @@ describe("ShareListDialog", () => {
 
   it("generates an edit link when none exists", async () => {
     const user = userEvent.setup();
-
-    render(
-      <ShareListDialog
-        listId="list-1"
-        shareToken={null}
-        editToken={null}
-        open
-        onOpenChange={onOpenChange}
-      />
-    );
+    renderDialog();
 
     await user.click(screen.getByRole("button", { name: "share.editLink.generate" }));
 
@@ -126,15 +160,7 @@ describe("ShareListDialog", () => {
     });
     const expectedUrl = `${window.location.origin}/shared/abc123`;
 
-    render(
-      <ShareListDialog
-        listId="list-1"
-        shareToken="abc123"
-        editToken={null}
-        open
-        onOpenChange={onOpenChange}
-      />
-    );
+    renderDialog({ shareToken: "abc123" });
 
     await user.click(screen.getByRole("button", { name: "share.readLink.copy" }));
 
@@ -144,16 +170,7 @@ describe("ShareListDialog", () => {
 
   it("revokes a read link after inline confirmation", async () => {
     const user = userEvent.setup();
-
-    render(
-      <ShareListDialog
-        listId="list-1"
-        shareToken="abc123"
-        editToken={null}
-        open
-        onOpenChange={onOpenChange}
-      />
-    );
+    renderDialog({ shareToken: "abc123" });
 
     await user.click(screen.getByRole("button", { name: "share.readLink.revoke" }));
     expect(unshareList).not.toHaveBeenCalled();
@@ -167,16 +184,7 @@ describe("ShareListDialog", () => {
 
   it("revokes an edit link after inline confirmation", async () => {
     const user = userEvent.setup();
-
-    render(
-      <ShareListDialog
-        listId="list-1"
-        shareToken={null}
-        editToken="edit-1"
-        open
-        onOpenChange={onOpenChange}
-      />
-    );
+    renderDialog({ editToken: "edit-1" });
 
     await user.click(screen.getByRole("button", { name: "share.editLink.revoke" }));
     await user.click(screen.getByRole("button", { name: "share.editLink.revokeConfirm" }));

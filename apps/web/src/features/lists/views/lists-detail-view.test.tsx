@@ -70,22 +70,11 @@ vi.mock("../components/list-pois-section", () => ({
   ),
 }));
 
-vi.mock("../components/list-collaborators-section", () => ({
-  ListCollaboratorsSection: ({
-    listId,
-    role,
-    createdBy,
-  }: {
-    listId: string;
-    role?: string;
-    createdBy: string;
-  }) => (
-    <div
-      data-testid="list-collaborators-section"
-      data-list-id={listId}
-      data-role={role ?? ""}
-      data-created-by={createdBy}
-    />
+vi.mock("../components/leave-list-control", () => ({
+  LeaveListControl: ({ listId }: { listId: string }) => (
+    <button type="button" data-testid="leave-list-control" data-list-id={listId}>
+      collaborators.leave
+    </button>
   ),
 }));
 
@@ -203,11 +192,8 @@ describe("ListsDetailView", () => {
     expect(poisSection).toHaveAttribute("data-list-id", "list-1");
     expect(poisSection).toHaveAttribute("data-role", "OWNER");
 
-    const collaboratorsSection = screen.getByTestId("list-collaborators-section");
-    expect(collaboratorsSection).toBeInTheDocument();
-    expect(collaboratorsSection).toHaveAttribute("data-list-id", "list-1");
-    expect(collaboratorsSection).toHaveAttribute("data-role", "OWNER");
-    expect(collaboratorsSection).toHaveAttribute("data-created-by", "user-1");
+    expect(screen.queryByTestId("list-collaborators-section")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("leave-list-control")).not.toBeInTheDocument();
   });
 
   it("shows edit button for OWNER and calls onEdit", async () => {
@@ -233,7 +219,7 @@ describe("ListsDetailView", () => {
 
     expect(screen.queryByRole("button", { name: "edit.action" })).not.toBeInTheDocument();
     expect(screen.queryByText("edit.readOnly")).not.toBeInTheDocument();
-    expect(screen.getByTestId("list-collaborators-section")).toHaveAttribute("data-role", "VIEWER");
+    expect(screen.getByTestId("leave-list-control")).toHaveAttribute("data-list-id", "list-1");
   });
 
   it("hides delete button for VIEWER", () => {
@@ -282,7 +268,7 @@ describe("ListsDetailView", () => {
     expect(screen.getByRole("button", { name: "share.action" })).toBeInTheDocument();
   });
 
-  it("hides share button for VIEWER", () => {
+  it("hides share button for VIEWER and shows Leave", () => {
     mockListQuery({
       data: { list: { ...mockList, role: "VIEWER" } },
     });
@@ -290,9 +276,10 @@ describe("ListsDetailView", () => {
     render(<ListsDetailView listId="list-1" onBack={onBack} onEdit={onEdit} onDelete={onDelete} />);
 
     expect(screen.queryByRole("button", { name: "share.action" })).not.toBeInTheDocument();
+    expect(screen.getByTestId("leave-list-control")).toBeInTheDocument();
   });
 
-  it("hides share button for EDITOR", () => {
+  it("hides share button for EDITOR and shows Leave", () => {
     mockListQuery({
       data: { list: { ...mockList, role: "EDITOR" } },
     });
@@ -301,6 +288,7 @@ describe("ListsDetailView", () => {
 
     expect(screen.getByRole("button", { name: "edit.action" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "share.action" })).not.toBeInTheDocument();
+    expect(screen.getByTestId("leave-list-control")).toBeInTheDocument();
   });
 
   it("shows delete button for OWNER", () => {

@@ -10,7 +10,6 @@ import { z } from "zod";
 import { canManageCollaborators, type ListRole } from "../constants/lists.constants";
 import { COLLABORATORS_PAGE_SIZE, useCollaborators } from "../hooks/use-collaborators";
 import { useInviteCollaborator } from "../hooks/use-invite-collaborator";
-import { useLeaveList } from "../hooks/use-leave-list";
 import { useRemoveCollaborator } from "../hooks/use-remove-collaborator";
 import { useUpdateCollaboratorRole } from "../hooks/use-update-collaborator-role";
 
@@ -51,7 +50,7 @@ export type ListCollaboratorsSectionProps = {
   listId: string;
   role?: ListRole;
   createdBy: string;
-  onLeft: () => void;
+  embedded?: boolean;
 };
 
 type InviteFormValues = {
@@ -68,12 +67,15 @@ function initials(user: { name?: string | null; email: string }) {
   return source.slice(0, 1).toUpperCase();
 }
 
-export function ListCollaboratorsSection({ listId, role, onLeft }: ListCollaboratorsSectionProps) {
+export function ListCollaboratorsSection({
+  listId,
+  role,
+  embedded = false,
+}: ListCollaboratorsSectionProps) {
   const tLists = useTranslations("lists");
   const getErrorMessage = useErrorMessage();
   const { user } = useAuth();
   const canManage = canManageCollaborators(role);
-  const canLeave = role !== undefined && role !== "OWNER";
 
   const { data, isPending, isError, error, refetch } = useCollaborators(listId, {
     limit: COLLABORATORS_PAGE_SIZE,
@@ -83,11 +85,18 @@ export function ListCollaboratorsSection({ listId, role, onLeft }: ListCollabora
   const showOwnerRow = role === "OWNER" && user;
 
   return (
-    <section className="border-t border-border pt-6" data-testid="list-collaborators-section">
-      <header className="mb-4">
-        <h2 className="font-display text-base font-semibold tracking-tight">
-          {tLists("collaborators.section.title")}
-        </h2>
+    <section
+      className={embedded ? "grid gap-3" : "border-t border-border pt-6"}
+      data-testid="list-collaborators-section"
+    >
+      <header className={embedded ? undefined : "mb-4"}>
+        {embedded ? (
+          <h3 className="text-sm font-medium">{tLists("collaborators.section.title")}</h3>
+        ) : (
+          <h2 className="font-display text-base font-semibold tracking-tight">
+            {tLists("collaborators.section.title")}
+          </h2>
+        )}
       </header>
 
       {canManage ? <InviteCollaboratorForm listId={listId} /> : null}
@@ -143,8 +152,6 @@ export function ListCollaboratorsSection({ listId, role, onLeft }: ListCollabora
           ) : null}
         </ul>
       ) : null}
-
-      {canLeave ? <LeaveListControl listId={listId} onLeft={onLeft} /> : null}
     </section>
   );
 }
@@ -431,75 +438,5 @@ function RemoveCollaboratorDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
-}
-
-function LeaveListControl({ listId, onLeft }: { listId: string; onLeft: () => void }) {
-  const tLists = useTranslations("lists");
-  const tCommon = useTranslations("common");
-  const getErrorMessage = useErrorMessage();
-  const { mutateAsync: leaveList, isPending } = useLeaveList();
-  const [open, setOpen] = useState(false);
-
-  async function handleLeave() {
-    if (isPending) return;
-
-    try {
-      await leaveList({ listId });
-      toast.success(tLists("collaborators.leaveSuccess"));
-      setOpen(false);
-      onLeft();
-    } catch (error) {
-      if (getErrorCode(error) === "LIST_OWNER_CANNOT_LEAVE") {
-        toast.error(tLists("collaborators.leaveError"), {
-          description: getErrorMessage(error),
-        });
-        return;
-      }
-      toast.error(tLists("collaborators.leaveError"), {
-        description: getErrorMessage(error),
-      });
-    }
-  }
-
-  return (
-    <>
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        className="mt-4 w-fit"
-        onClick={() => setOpen(true)}
-      >
-        {tLists("collaborators.leave")}
-      </Button>
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{tLists("collaborators.leaveTitle")}</DialogTitle>
-            <DialogDescription>{tLists("collaborators.leaveDescription")}</DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setOpen(false)}
-              disabled={isPending}
-            >
-              {tCommon("buttons.cancel")}
-            </Button>
-            <Button
-              type="button"
-              variant="destructive"
-              loading={isPending}
-              disabled={isPending}
-              onClick={handleLeave}
-            >
-              {tLists("collaborators.leaveConfirm")}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </>
   );
 }
