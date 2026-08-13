@@ -110,5 +110,91 @@
     "confirmSubmit": "Remove",
     "success": "Place removed from list",
     "error": "Could not remove the place"
+  },
+  "share": {
+    "action": "Share",
+    "title": "Share list",
+    "description": "Create a read-only or edit invite link, and manage people on this list.",
+    "readLink": {
+      "title": "Read-only link",
+      "description": "Anyone with this link can view the list.",
+      "generate": "Create link",
+      "copy": "Copy",
+      "revoke": "Revoke",
+      "revokeConfirm": "Revoke link",
+      "empty": "No link yet"
+    },
+    "editLink": {
+      "title": "Edit invite link",
+      "description": "Anyone with this link can join the list as an editor.",
+      "generate": "Create link",
+      "copy": "Copy",
+      "revoke": "Revoke",
+      "revokeConfirm": "Revoke link",
+      "empty": "No link yet"
+    },
+    "copySuccess": "Link copied",
+    "copyError": "Could not copy the link",
+    "generateError": "Could not create the link",
+    "revokeSuccess": "Link revoked",
+    "revokeError": "Could not revoke the link"
+  },
+  "collaborators": {
+    "section": {
+      "title": "Collaborators"
+    },
+    "empty": "No collaborators yet",
+    "loading": "Loading collaborators…",
+    "error": {
+      "title": "Could not load collaborators",
+      "retry": "Retry"
+    },
+    "invite": {
+      "email": "Email",
+      "role": "Role",
+      "submit": "Invite",
+      "success": "Invitation sent",
+      "error": "Could not invite this person",
+      "requiredEmail": "Email is required",
+      "invalidEmail": "Invalid email"
+    },
+    "remove": "Remove",
+    "removeTitle": "Remove collaborator",
+    "removeDescription": "\"{name}\" will lose access to this list.",
+    "removeConfirm": "Remove",
+    "removeSuccess": "Collaborator removed",
+    "removeError": "Could not remove the collaborator",
+    "updateRoleError": "Could not update the role",
+    "leave": "Leave list",
+    "leaveTitle": "Leave this list",
+    "leaveDescription": "You will lose access until you are invited again.",
+    "leaveConfirm": "Leave",
+    "leaveSuccess": "You left the list",
+    "leaveError": "Could not leave the list"
+  },
+  "shared": {
+    "title": "Shared list",
+    "loading": "Loading shared list…",
+    "notFound": "This shared list was not found",
+    "expired": "This share link has expired",
+    "error": {
+      "retry": "Retry"
+    },
+    "creator": {
+      "by": "By {name}",
+      "unknown": "Shared list"
+    }
+  },
+  "join": {
+    "edit": {
+      "title": "Join this list",
+      "description": "Sign in to join this list as an editor."
+    },
+    "accept": {
+      "title": "Accept invitation",
+      "description": "Sign in with the email address this invitation was sent to."
+    },
+    "missingToken": "This invite link is missing a token.",
+    "joining": "Joining the list…"
   }
 }

@@ -62,6 +62,35 @@ describe("queryKeys.lists", () => {
     ]);
   });
 
+  it("collaborators.all includes listId", () => {
+    expect(queryKeys.lists.collaborators.all("list-1")).toEqual([
+      "lists",
+      "collaborators",
+      "list-1",
+    ]);
+  });
+
+  it("collaborators.list includes listId and filters", () => {
+    expect(queryKeys.lists.collaborators.list("list-1")).toEqual([
+      "lists",
+      "collaborators",
+      "list-1",
+      undefined,
+    ]);
+
+    expect(queryKeys.lists.collaborators.list("list-1", { page: 1 })).toEqual([
+      "lists",
+      "collaborators",
+      "list-1",
+      { page: 1 },
+    ]);
+  });
+
+  it("collaborators keys are prefixed by lists root", () => {
+    expect(queryKeys.lists.collaborators.all("list-1")[0]).toBe(queryKeys.lists.all[0]);
+    expect(queryKeys.lists.collaborators.list("list-1")[0]).toBe(queryKeys.lists.all[0]);
+  });
+
   it("poiMembership keys are prefixed by lists root", () => {
     expect(queryKeys.lists.poiMembership.all).toEqual(["lists", "poi-membership"]);
     expect(queryKeys.lists.poiMembership.byPlaces(["a", "b"])).toEqual([

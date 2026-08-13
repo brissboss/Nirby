@@ -42,6 +42,23 @@ const NEW_LISTS_KEYS = [
   "pois.error.retry",
   "poi.source.custom",
   "removePoi.success",
+  "share.action",
+  "share.readLink.generate",
+  "share.editLink.revokeConfirm",
+  "share.copySuccess",
+  "share.description",
+  "collaborators.section.title",
+  "collaborators.invite.submit",
+  "collaborators.leaveConfirm",
+  "shared.title",
+  "shared.notFound",
+  "shared.expired",
+  "join.edit.title",
+  "join.edit.description",
+  "join.accept.title",
+  "join.accept.description",
+  "join.missingToken",
+  "join.joining",
 ] as const;
 
 const NEW_EXPLORE_KEYS = [

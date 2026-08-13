@@ -61,6 +61,12 @@ export const EDITABLE_LIST_ROLES = ["OWNER", "ADMIN", "EDITOR"] as const;
 /** Collaborator / owner roles that may delete a list (mirrors API `canDeleteList`). */
 export const DELETABLE_LIST_ROLES = ["OWNER", "ADMIN"] as const;
 
+/** Roles that may manage share tokens and edit-invite links (mirrors API `canManageShareAndEditLinks`). */
+export const SHARE_MANAGE_ROLES = ["OWNER", "ADMIN"] as const;
+
+/** Roles that may invite, remove, or change collaborator roles (mirrors API `canManageCollaborators`). */
+export const COLLABORATOR_MANAGE_ROLES = ["OWNER", "ADMIN"] as const;
+
 export type ListRole = (typeof EDITABLE_LIST_ROLES)[number] | "VIEWER";
 
 /**
@@ -81,5 +87,26 @@ export function canDeleteList(role?: ListRole): boolean {
 export function canEditList(role?: ListRole): boolean {
   return (
     role !== undefined && EDITABLE_LIST_ROLES.includes(role as (typeof EDITABLE_LIST_ROLES)[number])
+  );
+}
+
+/**
+ * Whether the current user may manage share tokens and edit-invite links.
+ * EDITOR, VIEWER and missing role → no share management.
+ */
+export function canManageShareAndEditLinks(role?: ListRole): boolean {
+  return (
+    role !== undefined && SHARE_MANAGE_ROLES.includes(role as (typeof SHARE_MANAGE_ROLES)[number])
+  );
+}
+
+/**
+ * Whether the current user may invite, remove, or change collaborator roles.
+ * EDITOR, VIEWER and missing role → no collaborator management.
+ */
+export function canManageCollaborators(role?: ListRole): boolean {
+  return (
+    role !== undefined &&
+    COLLABORATOR_MANAGE_ROLES.includes(role as (typeof COLLABORATOR_MANAGE_ROLES)[number])
   );
 }
