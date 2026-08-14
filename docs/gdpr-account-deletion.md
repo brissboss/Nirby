@@ -19,10 +19,10 @@ Le flux vérifie le mot de passe **avant** toute écriture. Un mot de passe inva
 
 Deux stratégies étaient possibles :
 
-| Stratégie | Effet | Pourquoi retenue / écartée |
-|-----------|--------|----------------------------|
-| **Cascade** (retenue) | `User` supprimé → sessions, POI custom, listes possédées, médias associés | Effacement réel des données personnelles de l’auteur (photos, notes, descriptions). |
-| Anonymisation | `createdBy` nullable ou user fantôme, contenu conservé | Le contenu reste identifiable (style, photos, géolocalisation). Plus complexe (schéma, user sentinel) pour un bénéfice faible en MVP. |
+| Stratégie             | Effet                                                                     | Pourquoi retenue / écartée                                                                                                            |
+| --------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| **Cascade** (retenue) | `User` supprimé → sessions, POI custom, listes possédées, médias associés | Effacement réel des données personnelles de l’auteur (photos, notes, descriptions).                                                   |
+| Anonymisation         | `createdBy` nullable ou user fantôme, contenu conservé                    | Le contenu reste identifiable (style, photos, géolocalisation). Plus complexe (schéma, user sentinel) pour un bénéfice faible en MVP. |
 
 `ListCollaborator.user` cascadait déjà : un utilisateur qui n’est **pas** propriétaire d’une liste tierce disparaît comme collaborateur, **la liste survit**.
 
