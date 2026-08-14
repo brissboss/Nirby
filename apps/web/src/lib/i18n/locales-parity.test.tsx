@@ -6,11 +6,13 @@ import enExplore from "./locales/en/explore.json";
 import enLegal from "./locales/en/legal.json";
 import enLists from "./locales/en/lists.json";
 import enPoi from "./locales/en/poi.json";
+import enShell from "./locales/en/shell.json";
 import frCommon from "./locales/fr/common.json";
 import frExplore from "./locales/fr/explore.json";
 import frLegal from "./locales/fr/legal.json";
 import frLists from "./locales/fr/lists.json";
 import frPoi from "./locales/fr/poi.json";
+import frShell from "./locales/fr/shell.json";
 
 type JsonObject = Record<string, unknown>;
 
@@ -126,6 +128,8 @@ const NEW_POI_KEYS = [
   "updatePoi.error",
 ] as const;
 
+const NEW_SHELL_KEYS = ["tabs.navLabel"] as const;
+
 function expectNonEmptyStrings(obj: JsonObject, keys: readonly string[], locale: string) {
   for (const key of keys) {
     const value = getValue(obj, key);
@@ -155,6 +159,10 @@ describe("locales parity", () => {
     expectLocaleParity(enCommon, frCommon, "common");
   });
 
+  it("shell.json has the same keys in en and fr", () => {
+    expectLocaleParity(enShell, frShell, "shell");
+  });
+
   it("new lists keys are non-empty strings in both locales", () => {
     expectNonEmptyStrings(enLists, NEW_LISTS_KEYS, "en");
     expectNonEmptyStrings(frLists, NEW_LISTS_KEYS, "fr");
@@ -178,6 +186,11 @@ describe("locales parity", () => {
   it("new common legal keys are non-empty strings in both locales", () => {
     expectNonEmptyStrings(enCommon, NEW_COMMON_KEYS, "en");
     expectNonEmptyStrings(frCommon, NEW_COMMON_KEYS, "fr");
+  });
+
+  it("new shell keys are non-empty strings in both locales", () => {
+    expectNonEmptyStrings(enShell, NEW_SHELL_KEYS, "en");
+    expectNonEmptyStrings(frShell, NEW_SHELL_KEYS, "fr");
   });
 
   it("does not keep the removed detail.poisComingSoon key", () => {
@@ -229,5 +242,16 @@ describe("message resolution", () => {
     expect(tCommon("skipLink")).toBe("Skip to content");
     expect(tCommon("globalError.title")).toBe("Something went wrong");
     expect(tCommon("globalError.retry")).toBe("Try again");
+  });
+
+  it("resolves shell namespace", () => {
+    const tShell = createTranslator({
+      locale: "en",
+      messages: { shell: enShell },
+      namespace: "shell",
+    });
+
+    expect(tShell("tabs.navLabel")).toBe("Main navigation");
+    expect(tShell("tabs.explore")).toBe("Explore");
   });
 });
