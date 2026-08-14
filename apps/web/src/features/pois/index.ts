@@ -2,12 +2,15 @@ export { PoiCard } from "./components/poi-card";
 export { PoiPhoto } from "./components/poi-photo";
 export { PoiOpeningHours } from "./components/poi-opening-hours";
 export { CreatePoiDialog } from "./components/create-poi-dialog";
+export { EditPoiDialog } from "./components/edit-poi-dialog";
 
 export { useCreatePoi } from "./hooks/use-create-poi";
+export { useUpdatePoi } from "./hooks/use-update-poi";
 export { useUploadPoiPhoto } from "./hooks/use-upload-poi-photo";
 export { usePoiFormSchema } from "./hooks/use-poi-form-schema";
 
 export { CreatePoiForm } from "./forms/create-poi-form";
+export { EditPoiForm } from "./forms/edit-poi-form";
 export { createPoiFormSchema } from "./schemas/pois.schema";
 export {
   poiConstraints,
@@ -28,8 +31,10 @@ export {
   getCoordinatesFromSavedPoi,
   getSavedPoiMapId,
 } from "./utils/get-poi-coordinates";
+export { canEditSavedPoi } from "./utils/can-edit-saved-poi";
 
 export type { CreatePoiInput } from "./hooks/use-create-poi";
+export type { UpdatePoiInput } from "./hooks/use-update-poi";
 export type { UploadPoiPhotoInput } from "./hooks/use-upload-poi-photo";
 export type { CreatePoiFormData, CreatePoiFormMessages } from "./schemas/pois.schema";
 export type { PoiVisibility, PoiCategory } from "./constants/pois.constants";
