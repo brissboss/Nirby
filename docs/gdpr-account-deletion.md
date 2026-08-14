@@ -67,6 +67,8 @@ Pourquoi S3 hors transaction : l’API objet n’est pas transactionnelle avec P
 
 En cas d’échec de la transaction : `500 ACCOUNT_DELETION_FAILED` (pas le `INTERNAL_ERROR` générique). Rollback Postgres : user et sessions intacts.
 
+Le style `$transaction` interactif et les autres écritures multi-étapes (reset / change password, upload, join) sont décrits dans [prisma-transactions.md](./prisma-transactions.md).
+
 ---
 
 ## 5. Démo jury

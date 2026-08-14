@@ -27,6 +27,34 @@ import { deleteFile } from "../../src/upload/service";
 
 const app = createServer();
 
+function spyTransactionMethodFailure(
+  model: "user" | "session",
+  method: "delete" | "deleteMany" | "update"
+) {
+  const originalTransaction = prisma.$transaction.bind(prisma);
+  return vi.spyOn(prisma, "$transaction").mockImplementationOnce((async (fn: unknown) => {
+    return originalTransaction(async (tx) => {
+      const callback = fn as (client: typeof tx) => Promise<unknown>;
+      const failingTx = new Proxy(tx, {
+        get(target, prop, receiver) {
+          if (prop === model) {
+            return new Proxy(Reflect.get(target, prop, receiver) as object, {
+              get(modelTarget, modelProp, modelReceiver) {
+                if (modelProp === method) {
+                  return () => Promise.reject(new Error("simulated db failure"));
+                }
+                return Reflect.get(modelTarget, modelProp, modelReceiver);
+              },
+            });
+          }
+          return Reflect.get(target, prop, receiver);
+        },
+      });
+      return callback(failingTx);
+    });
+  }) as typeof prisma.$transaction);
+}
+
 describe("Auth routes", () => {
   beforeAll(async () => {
     await prisma.session.deleteMany();
@@ -924,6 +952,41 @@ describe("Auth routes", () => {
       const sessions = await prisma.session.findMany({ where: { userId: user.id } });
       expect(sessions).toHaveLength(0);
     });
+
+    it("should roll back if session invalidation fails during password reset", async () => {
+      const passwordHash = await hashPassword("oldpassword123");
+      const user = await prisma.user.create({
+        data: {
+          email: "reset-rollback@example.com",
+          passwordHash,
+          emailVerified: true,
+          passwordResetToken: "rollback-reset-token",
+          passwordResetExpiresAt: new Date(Date.now() + 60 * 60 * 1000),
+        },
+      });
+
+      await prisma.session.create({
+        data: {
+          userId: user.id,
+          refreshToken: "reset-rollback-refresh",
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        },
+      });
+
+      const spy = spyTransactionMethodFailure("session", "deleteMany");
+      const res = await request(app)
+        .post("/auth/reset-password")
+        .send({ token: "rollback-reset-token", password: "newpassword123" });
+      spy.mockRestore();
+
+      expect(res.status).toBe(500);
+      expect(res.body.error.code).toBe(ErrorCodes.INTERNAL_ERROR);
+
+      const remaining = await prisma.user.findUnique({ where: { id: user.id } });
+      expect(remaining?.passwordHash).toBe(passwordHash);
+      expect(remaining?.passwordResetToken).toBe("rollback-reset-token");
+      expect(await prisma.session.findMany({ where: { userId: user.id } })).toHaveLength(1);
+    });
   });
 });
 
@@ -1037,6 +1100,34 @@ describe("POST /auth/change-password", () => {
 
     const sessions = await prisma.session.findMany({ where: { userId } });
     expect(sessions).toHaveLength(0);
+  });
+
+  it("should roll back if session invalidation fails during password change", async () => {
+    await prisma.session.create({
+      data: {
+        userId,
+        refreshToken: "change-rollback-refresh",
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      },
+    });
+
+    const before = await prisma.user.findUnique({ where: { id: userId } });
+    const spy = spyTransactionMethodFailure("session", "deleteMany");
+    const res = await request(app)
+      .post("/auth/change-password")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .send({
+        oldPassword: "oldpassword123",
+        newPassword: "newpassword123",
+      });
+    spy.mockRestore();
+
+    expect(res.status).toBe(500);
+    expect(res.body.error.code).toBe(ErrorCodes.INTERNAL_ERROR);
+
+    const remaining = await prisma.user.findUnique({ where: { id: userId } });
+    expect(remaining?.passwordHash).toBe(before?.passwordHash);
+    expect(await prisma.session.findMany({ where: { userId } })).toHaveLength(1);
   });
 });
 

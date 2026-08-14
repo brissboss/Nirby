@@ -154,6 +154,32 @@ describe("Upload Routes", () => {
       expect(deleteFile).toHaveBeenCalledWith("https://s3.example.com/old-avatar.jpg");
     });
 
+    it("should not persist avatar URL when database update fails", async () => {
+      await prisma.user.update({
+        where: { id: userId },
+        data: { avatarUrl: "https://s3.example.com/old-avatar.jpg" },
+      });
+
+      const updateSpy = vi
+        .spyOn(prisma.user, "update")
+        .mockRejectedValueOnce(new Error("simulated db failure"));
+
+      const res = await request(app)
+        .post("/upload/avatar")
+        .set("Authorization", `Bearer ${accessToken}`)
+        .attach("file", createValidJpegBuffer(), "avatar.jpg");
+
+      updateSpy.mockRestore();
+
+      expect(res.status).toBe(500);
+      expect(res.body.error.code).toBe("INTERNAL_ERROR");
+
+      const user = await prisma.user.findUnique({ where: { id: userId } });
+      expect(user?.avatarUrl).toBe("https://s3.example.com/old-avatar.jpg");
+      expect(deleteFile).toHaveBeenCalledWith("https://s3.example.com/test-file.jpg");
+      expect(deleteFile).not.toHaveBeenCalledWith("https://s3.example.com/old-avatar.jpg");
+    });
+
     it("should fail without authentication", async () => {
       const res = await request(app)
         .post("/upload/avatar")

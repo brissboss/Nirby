@@ -115,6 +115,20 @@ uploadRouter.post("/avatar", requireAuth, upload.single("file"), async (req, res
     const key = generateKey("avatars", req.user!.id, file.mimetype);
     const url = await uploadFile(file.buffer, key, file.mimetype);
 
+    try {
+      await prisma.user.update({
+        where: { id: req.user!.id },
+        data: { avatarUrl: url },
+      });
+    } catch (err) {
+      try {
+        await deleteFile(url);
+      } catch (cleanupErr) {
+        req.log?.warn({ err: cleanupErr, url }, "Failed to delete orphaned avatar after DB error");
+      }
+      throw err;
+    }
+
     if (user?.avatarUrl) {
       try {
         await deleteFile(user.avatarUrl);
@@ -122,11 +136,6 @@ uploadRouter.post("/avatar", requireAuth, upload.single("file"), async (req, res
         req.log?.warn({ err }, "Failed to delete old avatar");
       }
     }
-
-    await prisma.user.update({
-      where: { id: req.user!.id },
-      data: { avatarUrl: url },
-    });
 
     res.json({ url });
   } catch (err) {
@@ -252,10 +261,22 @@ uploadRouter.post("/poi-photo", requireAuth, upload.single("file"), async (req, 
     const url = await uploadFile(file.buffer, key, file.mimetype);
 
     if (poiId) {
-      await prisma.poi.update({
-        where: { id: poiId },
-        data: { photoUrls: { push: url } },
-      });
+      try {
+        await prisma.poi.update({
+          where: { id: poiId },
+          data: { photoUrls: { push: url } },
+        });
+      } catch (err) {
+        try {
+          await deleteFile(url);
+        } catch (cleanupErr) {
+          req.log?.warn(
+            { err: cleanupErr, url },
+            "Failed to delete orphaned POI photo after DB error"
+          );
+        }
+        throw err;
+      }
     }
 
     res.json({ url });
