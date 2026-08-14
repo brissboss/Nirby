@@ -117,14 +117,18 @@ Ci-dessous : **extraits représentatifs** au format attendu par la checklist (en
 
 ### 6.3 Authentification JWT
 
-| Scénario                          | Entrée                                    | Sortie attendue             | Résultat | Fichier                                     |
-| --------------------------------- | ----------------------------------------- | --------------------------- | -------- | ------------------------------------------- |
-| Requête sans header Authorization | `GET /protected` sans token               | HTTP 401, `UNAUTHORIZED`    | ✅ Pass  | `apps/api/__test__/auth/middleware.test.ts` |
-| Token JWT invalide                | `Authorization: Bearer invalid-token-123` | HTTP 401                    | ✅ Pass  | idem                                        |
-| Token valide, user existant       | Bearer token signé + user en BDD          | HTTP 200, `user` dans body  | ✅ Pass  | idem                                        |
-| Email non vérifié                 | user `emailVerified: false`               | HTTP 403 sur route protégée | ✅ Pass  | idem                                        |
-| Login mot de passe incorrect      | email valide, mauvais password            | HTTP 401                    | ✅ Pass  | `apps/api/__test__/auth/routes.test.ts`     |
-| Refresh token invalide            | cookie `refreshToken=invalid-token`       | HTTP 401                    | ✅ Pass  | idem                                        |
+| Scénario                          | Entrée                                    | Sortie attendue              | Résultat | Fichier                                     |
+| --------------------------------- | ----------------------------------------- | ---------------------------- | -------- | ------------------------------------------- |
+| Requête sans header Authorization | `GET /protected` sans token               | HTTP 401, `UNAUTHORIZED`     | ✅ Pass  | `apps/api/__test__/auth/middleware.test.ts` |
+| Token JWT invalide                | `Authorization: Bearer invalid-token-123` | HTTP 401                     | ✅ Pass  | idem                                        |
+| Token valide, user existant       | Bearer token signé + user en BDD          | HTTP 200, `user` dans body   | ✅ Pass  | idem                                        |
+| Email non vérifié                 | user `emailVerified: false`               | HTTP 403 sur route protégée  | ✅ Pass  | idem                                        |
+| Login mot de passe incorrect      | email valide, mauvais password            | HTTP 401                     | ✅ Pass  | `apps/api/__test__/auth/routes.test.ts`     |
+| Refresh token invalide            | cookie `refreshToken=invalid-token`       | HTTP 401                     | ✅ Pass  | idem                                        |
+| Suppression compte + POI et liste | `DELETE /auth/account`, user owner        | HTTP 200, plus de données    | ✅ Pass  | idem                                        |
+| Collaborateur d’une liste tierce  | delete du non-owner                       | liste intacte, collab. parti | ✅ Pass  | idem                                        |
+| Mot de passe invalide (delete)    | mauvais password, session existante       | HTTP 401, sessions intactes  | ✅ Pass  | idem                                        |
+| Rollback transaction delete       | `user.delete` lève en cours de TX         | user + sessions intacts      | ✅ Pass  | idem                                        |
 
 ### 6.4 CRUD listes & POI (routes API)
 

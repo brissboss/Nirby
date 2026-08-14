@@ -16,6 +16,7 @@
     "TOKEN_EXPIRED": "The verification link has expired, please generate a new one",
     "EMAIL_ALREADY_VERIFIED": "Your email is already verified",
     "EMAIL_NOT_VERIFIED": "Your email is not verified",
+    "ACCOUNT_DELETION_FAILED": "Account deletion failed, please try again",
     "NAME_TOO_LONG": "Name cannot contain more than 255 characters",
     "BIO_TOO_LONG": "Bio cannot contain more than 255 characters",
 
