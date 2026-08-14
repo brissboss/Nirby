@@ -204,6 +204,11 @@ html {
   outline: none;
 }
 
+.nirby-poi-marker--draft {
+  pointer-events: none;
+  opacity: 0.85;
+}
+
 .nirby-poi-marker--selected {
   transform: scale(1.25);
   z-index: 1;

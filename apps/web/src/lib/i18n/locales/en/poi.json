@@ -11,5 +11,92 @@
     "opensAt": "Opens at {time}",
     "opensTomorrowAt": "Opens tomorrow at {time}",
     "opensDayAt": "Opens {day} at {time}"
+  },
+  "create": {
+    "title": "New place",
+    "submit": "Create",
+    "listLoading": "Loading your lists…",
+    "listEmpty": "Create a list first to save this place",
+    "listError": "Could not load lists"
+  },
+  "edit": {
+    "title": "Edit place",
+    "action": "Edit",
+    "submit": "Save"
+  },
+  "fields": {
+    "name": "Name",
+    "description": "Description",
+    "address": "Address",
+    "latitude": "Latitude",
+    "longitude": "Longitude",
+    "visibility": "Visibility",
+    "category": "Category",
+    "list": "List"
+  },
+  "placeholders": {
+    "name": "e.g. Secret garden",
+    "description": "Optional notes about this place",
+    "address": "Street, city",
+    "list": "Choose a list"
+  },
+  "visibility": {
+    "PRIVATE": { "label": "Private" },
+    "SHARED": { "label": "Shared" },
+    "PUBLIC": { "label": "Public" }
+  },
+  "categories": {
+    "restaurant": { "label": "Restaurant" },
+    "cafe": { "label": "Café" },
+    "bar": { "label": "Bar" },
+    "bakery": { "label": "Bakery" },
+    "grocery_store": { "label": "Grocery store" },
+    "supermarket": { "label": "Supermarket" },
+    "hotel": { "label": "Hotel" },
+    "museum": { "label": "Museum" },
+    "park": { "label": "Park" },
+    "gym": { "label": "Gym" },
+    "pharmacy": { "label": "Pharmacy" },
+    "hospital": { "label": "Hospital" },
+    "bank": { "label": "Bank" },
+    "gas_station": { "label": "Gas station" },
+    "parking": { "label": "Parking" },
+    "shopping_mall": { "label": "Shopping mall" },
+    "movie_theater": { "label": "Movie theater" },
+    "library": { "label": "Library" },
+    "church": { "label": "Church" },
+    "mosque": { "label": "Mosque" },
+    "school": { "label": "School" },
+    "university": { "label": "University" },
+    "train_station": { "label": "Train station" },
+    "bus_station": { "label": "Bus station" },
+    "airport": { "label": "Airport" },
+    "tourist_attraction": { "label": "Tourist attraction" },
+    "other": { "label": "Other" }
+  },
+  "photo": {
+    "title": "Photo",
+    "hint": "Tap to add a photo",
+    "replaceHint": "Tap to replace the photo",
+    "formats": "JPEG, PNG or WebP · max. 5 MB",
+    "uploadSuccess": "Photo uploaded successfully",
+    "uploadError": "Could not upload the photo"
+  },
+  "createPoi": {
+    "success": "Place created successfully",
+    "error": "Could not create the place"
+  },
+  "updatePoi": {
+    "success": "Place updated successfully",
+    "error": "Could not update the place"
+  },
+  "validation": {
+    "requiredName": "Place name is required",
+    "nameTooLong": "Place name cannot be longer than 255 characters",
+    "descriptionTooLong": "Description cannot be longer than 1000 characters",
+    "addressTooLong": "Address cannot be longer than 500 characters",
+    "latitudeInvalid": "Latitude must be between -90 and 90",
+    "longitudeInvalid": "Longitude must be between -180 and 180",
+    "requiredList": "Choose a list to save this place"
   }
 }

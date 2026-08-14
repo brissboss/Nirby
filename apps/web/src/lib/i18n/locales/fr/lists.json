@@ -86,7 +86,7 @@
     },
     "empty": {
       "title": "Aucun lieu pour l'instant",
-      "description": "Recherche des lieux dans Explorer pour les ajouter ici."
+      "description": "Recherche dans Explorer ou fais un clic long / clic droit sur la carte pour ajouter un lieu personnalisé."
     },
     "loading": "Chargement des lieux…",
     "loadingMore": "Chargement…",
@@ -110,6 +110,11 @@
     "confirmSubmit": "Retirer",
     "success": "Lieu retiré de la liste",
     "error": "Impossible de retirer le lieu"
+  },
+  "addPoi": {
+    "success": "Lieu ajouté à la liste",
+    "error": "Impossible d’ajouter le lieu",
+    "viewList": "Voir la liste"
   },
   "share": {
     "action": "Partager",

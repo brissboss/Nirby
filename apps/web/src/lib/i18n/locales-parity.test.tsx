@@ -3,8 +3,10 @@ import { describe, expect, it } from "vitest";
 
 import enExplore from "./locales/en/explore.json";
 import enLists from "./locales/en/lists.json";
+import enPoi from "./locales/en/poi.json";
 import frExplore from "./locales/fr/explore.json";
 import frLists from "./locales/fr/lists.json";
+import frPoi from "./locales/fr/poi.json";
 
 type JsonObject = Record<string, unknown>;
 
@@ -39,9 +41,12 @@ function expectLocaleParity(en: JsonObject, fr: JsonObject, namespace: string) {
 const NEW_LISTS_KEYS = [
   "pois.section.title",
   "pois.empty.title",
+  "pois.empty.description",
   "pois.error.retry",
   "poi.source.custom",
   "removePoi.success",
+  "addPoi.success",
+  "addPoi.error",
   "share.action",
   "share.readLink.generate",
   "share.editLink.revokeConfirm",
@@ -71,6 +76,27 @@ const NEW_EXPLORE_KEYS = [
   "addToList.picker.alreadyInList",
 ] as const;
 
+const NEW_POI_KEYS = [
+  "create.title",
+  "create.submit",
+  "edit.submit",
+  "fields.name",
+  "fields.visibility",
+  "fields.category",
+  "placeholders.name",
+  "validation.requiredName",
+  "validation.latitudeInvalid",
+  "visibility.PRIVATE.label",
+  "categories.restaurant.label",
+  "categories.other.label",
+  "photo.uploadSuccess",
+  "photo.uploadError",
+  "createPoi.success",
+  "createPoi.error",
+  "updatePoi.success",
+  "updatePoi.error",
+] as const;
+
 function expectNonEmptyStrings(obj: JsonObject, keys: readonly string[], locale: string) {
   for (const key of keys) {
     const value = getValue(obj, key);
@@ -88,6 +114,10 @@ describe("locales parity", () => {
     expectLocaleParity(enExplore, frExplore, "explore");
   });
 
+  it("poi.json has the same keys in en and fr", () => {
+    expectLocaleParity(enPoi, frPoi, "poi");
+  });
+
   it("new lists keys are non-empty strings in both locales", () => {
     expectNonEmptyStrings(enLists, NEW_LISTS_KEYS, "en");
     expectNonEmptyStrings(frLists, NEW_LISTS_KEYS, "fr");
@@ -96,6 +126,11 @@ describe("locales parity", () => {
   it("new explore keys are non-empty strings in both locales", () => {
     expectNonEmptyStrings(enExplore, NEW_EXPLORE_KEYS, "en");
     expectNonEmptyStrings(frExplore, NEW_EXPLORE_KEYS, "fr");
+  });
+
+  it("new poi keys are non-empty strings in both locales", () => {
+    expectNonEmptyStrings(enPoi, NEW_POI_KEYS, "en");
+    expectNonEmptyStrings(frPoi, NEW_POI_KEYS, "fr");
   });
 
   it("does not keep the removed detail.poisComingSoon key", () => {
@@ -116,5 +151,12 @@ describe("message resolution", () => {
     expect(tExplore("addToList.picker.description", { placeName: "Tour Eiffel" })).toBe(
       'Choose a list for "Tour Eiffel"'
     );
+  });
+
+  it("resolves poi namespace", () => {
+    const tPoi = createTranslator({ locale: "en", messages: { poi: enPoi }, namespace: "poi" });
+
+    expect(tPoi("select", { name: "Secret garden" })).toBe("Select Secret garden");
+    expect(tPoi("create.title")).toBe("New place");
   });
 });

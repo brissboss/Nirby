@@ -346,6 +346,7 @@ jobs:
           docker build -t nirby-web:ci \
             --build-arg NEXT_PUBLIC_API_URL=http://localhost:4000 \
             --build-arg NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN=fake-token-for-ci \
+            --build-arg NEXT_PUBLIC_S3_PUBLIC_URL=http://localhost:9000/nirby-uploads-dev \
             -f apps/web/Dockerfile .
 
       - name: Run Web Container
@@ -474,6 +475,7 @@ jobs:
             --build-arg NEXT_PUBLIC_API_URL=https://staging.api.nirby.theobrissiaud.fr \
             --build-arg NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN=${{ secrets.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN }} \
             --build-arg NEXT_PUBLIC_SENTRY_DSN=${{ secrets.NEXT_PUBLIC_SENTRY_DSN }} \
+            --build-arg NEXT_PUBLIC_S3_PUBLIC_URL=${{ vars.S3_PUBLIC_URL }} \
             -f apps/web/Dockerfile .
 
       - name: Save Docker Image
@@ -671,6 +673,7 @@ jobs:
             --build-arg NEXT_PUBLIC_API_URL=https://api.nirby.theobrissiaud.fr \
             --build-arg NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN=${{ secrets.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN }} \
             --build-arg NEXT_PUBLIC_SENTRY_DSN=${{ secrets.NEXT_PUBLIC_SENTRY_DSN }} \
+            --build-arg NEXT_PUBLIC_S3_PUBLIC_URL=${{ vars.S3_PUBLIC_URL }} \
             -f apps/web/Dockerfile .
 
       - name: Save Docker Image

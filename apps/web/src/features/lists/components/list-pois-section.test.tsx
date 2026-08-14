@@ -27,6 +27,10 @@ vi.mock("../hooks/use-remove-poi-from-list", () => ({
   }),
 }));
 
+vi.mock("@/features/auth/hooks", () => ({
+  useAuth: () => ({ user: { id: "user-1" } }),
+}));
+
 const customSavedPoi: SavedPoiListItem = {
   id: "sp-1",
   listId: "list-1",
@@ -114,6 +118,15 @@ describe("ListPoisSection", () => {
     expect(screen.getByText("pois.section.total")).toBeInTheDocument();
     expect(screen.getByText("pois.empty.title")).toBeInTheDocument();
     expect(screen.getByText("pois.empty.description")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "create.title" })).not.toBeInTheDocument();
+  });
+
+  it("does not show a create CTA for EDITOR", () => {
+    mockListPoisInfiniteQuery();
+
+    render(<ListPoisSection listId="list-1" role="EDITOR" />);
+
+    expect(screen.queryByRole("button", { name: "create.title" })).not.toBeInTheDocument();
   });
 
   it("shows error state with retry", async () => {
@@ -194,5 +207,6 @@ describe("ListPoisSection", () => {
     render(<ListPoisSection listId="list-1" role="EDITOR" />);
 
     expect(screen.getAllByRole("button", { name: "removePoi.action" })).toHaveLength(2);
+    expect(screen.queryByRole("button", { name: "create.title" })).not.toBeInTheDocument();
   });
 });

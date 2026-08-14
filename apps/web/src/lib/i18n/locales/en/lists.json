@@ -86,7 +86,7 @@
     },
     "empty": {
       "title": "No places yet",
-      "description": "Search for places in Explore to add them here."
+      "description": "Search in Explore or long-press / right-click the map to add a custom place."
     },
     "loading": "Loading places…",
     "loadingMore": "Loading more…",
@@ -110,6 +110,11 @@
     "confirmSubmit": "Remove",
     "success": "Place removed from list",
     "error": "Could not remove the place"
+  },
+  "addPoi": {
+    "success": "Place added to the list",
+    "error": "Could not add the place",
+    "viewList": "View list"
   },
   "share": {
     "action": "Share",

@@ -24,6 +24,15 @@ const openingHoursPeriodSchema = z.object({
   }),
 });
 
+/** Omitted `photoUrls` stays undefined so PUT does not wipe existing photos. */
+const photoUrlsSchema = z
+  .array(z.string())
+  .optional()
+  .transform((arr) => (arr === undefined ? undefined : arr.filter((url) => url !== "")))
+  .refine((arr) => arr === undefined || arr.every((url) => /^https?:\/\/.+/.test(url)), {
+    message: "Invalid url",
+  });
+
 const createPoiSchema = z.object({
   name: z
     .string({ required_error: ErrorCodes.POI_NAME_REQUIRED })
@@ -54,11 +63,7 @@ const createPoiSchema = z.object({
     .transform((val) => (val === "" ? undefined : val)),
   priceLevel: z.number().min(0).max(4).optional(),
   openingHours: z.array(openingHoursPeriodSchema).optional(),
-  photoUrls: z
-    .array(z.string())
-    .optional()
-    .transform((arr) => arr?.filter((url) => url !== "") ?? [])
-    .refine((arr) => arr.every((url) => /^https?:\/\/.+/.test(url)), { message: "Invalid url" }),
+  photoUrls: photoUrlsSchema,
 });
 
 const updatePoiSchema = z.object({
@@ -94,11 +99,7 @@ const updatePoiSchema = z.object({
     .transform((val) => (val === "" ? undefined : val)),
   priceLevel: z.number().min(0).max(4).optional(),
   openingHours: z.array(openingHoursPeriodSchema).optional(),
-  photoUrls: z
-    .array(z.string())
-    .optional()
-    .transform((arr) => arr?.filter((url) => url !== "") ?? [])
-    .refine((arr) => arr.every((url) => /^https?:\/\/.+/.test(url)), { message: "Invalid url" }),
+  photoUrls: photoUrlsSchema,
 });
 
 const nearbyPoiSchema = z.object({
