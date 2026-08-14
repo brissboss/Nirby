@@ -846,16 +846,17 @@ authRouter.post("/reset-password", authBrutForceRateLimiter, async (req, res) =>
 
     const passwordHash = await hashPassword(password);
 
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        passwordHash,
-        passwordResetToken: null,
-        passwordResetExpiresAt: null,
-      },
+    await prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id: user.id },
+        data: {
+          passwordHash,
+          passwordResetToken: null,
+          passwordResetExpiresAt: null,
+        },
+      });
+      await tx.session.deleteMany({ where: { userId: user.id } });
     });
-
-    await prisma.session.deleteMany({ where: { userId: user.id } });
 
     res.json({ message: "Password reset successfully" });
   } catch (err) {
@@ -960,9 +961,14 @@ authRouter.post("/change-password", requireAuth, async (req, res) => {
     }
 
     const newPasswordHash = await hashPassword(newPassword);
-    await prisma.user.update({ where: { id: user.id }, data: { passwordHash: newPasswordHash } });
 
-    await prisma.session.deleteMany({ where: { userId: user.id } });
+    await prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id: user.id },
+        data: { passwordHash: newPasswordHash },
+      });
+      await tx.session.deleteMany({ where: { userId: user.id } });
+    });
 
     res.json({ message: "Password changed successfully" });
   } catch (err) {
