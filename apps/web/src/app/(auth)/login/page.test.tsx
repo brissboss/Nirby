@@ -4,6 +4,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import LoginPage from "./page";
 
+import { expectNoAxeViolations } from "@/test/axe";
+
 const push = vi.fn();
 const login = vi.fn();
 const resendEmail = vi.fn();
@@ -133,5 +135,17 @@ describe("LoginPage email verification", () => {
     await waitFor(() => {
       expect(resendEmail).toHaveBeenCalledWith("user@example.com");
     });
+  });
+});
+
+describe("LoginPage accessibility", () => {
+  beforeEach(() => {
+    searchParams = new URLSearchParams();
+  });
+
+  it("has no axe violations", async () => {
+    const { container } = render(<LoginPage />);
+
+    await expectNoAxeViolations(container);
   });
 });
