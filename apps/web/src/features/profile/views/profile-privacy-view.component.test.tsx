@@ -5,6 +5,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ProfilePrivacyView } from "./profile-privacy-view.component";
 
+import { CookieConsent } from "@/components/cookie-consent";
+import { CONSENT_STORAGE_KEY, CONSENT_VERSION } from "@/lib/consent/consent";
+
 const logout = vi.fn();
 const exportMe = vi.fn();
 
@@ -35,8 +38,25 @@ describe("ProfilePrivacyView", () => {
   const onBack = vi.fn();
   const click = vi.fn();
 
+  function renderPrivacy() {
+    return render(
+      <CookieConsent>
+        <ProfilePrivacyView onBack={onBack} />
+      </CookieConsent>
+    );
+  }
+
   beforeEach(() => {
     vi.clearAllMocks();
+    localStorage.clear();
+    localStorage.setItem(
+      CONSENT_STORAGE_KEY,
+      JSON.stringify({
+        version: CONSENT_VERSION,
+        sentry: false,
+        decidedAt: "2026-01-01T00:00:00.000Z",
+      })
+    );
     logout.mockResolvedValue(undefined);
     exportMe.mockResolvedValue({
       data: {
@@ -59,7 +79,7 @@ describe("ProfilePrivacyView", () => {
   });
 
   it("downloads a JSON export and toasts success", async () => {
-    render(<ProfilePrivacyView onBack={onBack} />);
+    renderPrivacy();
 
     await userEvent.click(screen.getByRole("button", { name: "privacy.exportDownload" }));
 
@@ -73,7 +93,7 @@ describe("ProfilePrivacyView", () => {
   it("toasts an error when export fails", async () => {
     exportMe.mockResolvedValue({ data: undefined, error: { error: { code: "INTERNAL_ERROR" } } });
 
-    render(<ProfilePrivacyView onBack={onBack} />);
+    renderPrivacy();
 
     await userEvent.click(screen.getByRole("button", { name: "privacy.exportDownload" }));
 
@@ -86,12 +106,22 @@ describe("ProfilePrivacyView", () => {
   });
 
   it("links to the privacy policy and legal notice pages", () => {
-    render(<ProfilePrivacyView onBack={onBack} />);
+    renderPrivacy();
 
     expect(screen.getByRole("link", { name: "legal.privacy" })).toHaveAttribute("href", "/privacy");
     expect(screen.getByRole("link", { name: "legal.mentions" })).toHaveAttribute(
       "href",
       "/mentions"
     );
+  });
+
+  it("reopens the cookie dialog from Manage cookies", async () => {
+    renderPrivacy();
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "manage" }));
+
+    expect(await screen.findByRole("dialog")).toBeInTheDocument();
   });
 });

@@ -8,7 +8,7 @@
     "metaTitle": "Privacy policy | Nirby",
     "metaDescription": "Privacy policy of the Nirby service (sample content)",
     "title": "Privacy policy",
-    "updatedAt": "Last updated: 29 March 2026",
+    "updatedAt": "Last updated: 14 August 2026",
     "s1Title": "1. Data controller",
     "s1Body": "RNCP demonstration project “Nirby” (fictitious publisher: Société Exemple SARL), fictitious registered office: 12 rue du Parchemin, 75000 Paris, France.",
     "s1Contact": "Personal data contact:",
@@ -26,7 +26,12 @@
     "s7Title": "7. Your rights",
     "s7Body": "Access, rectification, erasure, restriction, objection where provided by the GDPR, and a complaint to the CNIL (<cnil>cnil.fr</cnil>). To exercise your rights: use the contact in section 1.",
     "s8Title": "8. Security",
-    "s8Body": "Technical measures described in the project report (authentication, input validation, development practices). Details: “Technical specifications — security”."
+    "s8Body": "Technical measures described in the project report (authentication, input validation, development practices). Details: “Technical specifications — security”.",
+    "s9Title": "9. Cookies and trackers",
+    "s9Body": "Nirby uses strictly necessary cookies to run the service. Optional error monitoring is loaded only with your consent. You can change this choice at any time from your profile (Privacy).",
+    "s9Necessary": "Strictly necessary (no prior consent): the httpOnly refreshToken cookie (authentication, SameSite=strict); the NEXT_LOCALE cookie (language preference, 1 year, SameSite=lax). Display theme is stored in localStorage (next-themes) and is not a tracker.",
+    "s9Mapbox": "Mapbox GL loads map tiles required for the product. It is not gated by the consent banner: refusing it would break the map. Google Places is called only through the Nirby API; the browser does not set a Google cookie for place search.",
+    "s9Sentry": "Optional: the Sentry client SDK (error telemetry). It is initialised only if you accept it in the cookie banner. Server-side Sentry does not set a browser cookie."
   },
   "mentions": {
     "metaTitle": "Legal notice | Nirby",

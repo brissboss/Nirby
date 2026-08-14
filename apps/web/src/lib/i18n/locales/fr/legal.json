@@ -8,7 +8,7 @@
     "metaTitle": "Politique de confidentialité | Nirby",
     "metaDescription": "Politique de confidentialité du service Nirby (contenu d'exemple)",
     "title": "Politique de confidentialité",
-    "updatedAt": "Dernière mise à jour : 29 mars 2026",
+    "updatedAt": "Dernière mise à jour : 14 août 2026",
     "s1Title": "1. Responsable du traitement",
     "s1Body": "Projet de démonstration RNCP « Nirby » (éditeur fictif : Société Exemple SARL), siège social fictif : 12 rue du Parchemin, 75000 Paris, France.",
     "s1Contact": "Contact données personnelles :",
@@ -26,7 +26,12 @@
     "s7Title": "7. Vos droits",
     "s7Body": "Accès, rectification, effacement, limitation, opposition dans les cas prévus par le RGPD, et réclamation auprès de la CNIL (<cnil>cnil.fr</cnil>). Pour exercer vos droits : contact indiqué en section 1.",
     "s8Title": "8. Sécurité",
-    "s8Body": "Mesures techniques décrites dans le mémoire du projet (authentification, validation des entrées, bonnes pratiques de développement). Détail : document « Spécifications techniques — sécurité »."
+    "s8Body": "Mesures techniques décrites dans le mémoire du projet (authentification, validation des entrées, bonnes pratiques de développement). Détail : document « Spécifications techniques — sécurité ».",
+    "s9Title": "9. Cookies et traceurs",
+    "s9Body": "Nirby utilise des cookies strictement nécessaires au fonctionnement du service. La télémétrie d’erreurs optionnelle n’est chargée qu’avec votre consentement. Vous pouvez modifier ce choix à tout moment depuis le profil (Confidentialité).",
+    "s9Necessary": "Strictement nécessaires (pas de consentement préalable) : le cookie httpOnly refreshToken (authentification, SameSite=strict) ; le cookie NEXT_LOCALE (préférence de langue, 1 an, SameSite=lax). Le thème d’affichage est stocké dans localStorage (next-themes) et n’est pas un traceur.",
+    "s9Mapbox": "Mapbox GL charge les tuiles indispensables au produit carte. Il n’est pas soumis au bandeau : le refuser casserait la carte. Google Places est appelé uniquement via l’API Nirby ; le navigateur ne dépose pas de cookie Google pour la recherche de lieux.",
+    "s9Sentry": "Optionnel : le SDK Sentry côté client (télémétrie d’erreurs). Il n’est initialisé que si vous l’acceptez dans le bandeau. Sentry serveur ne dépose pas de cookie navigateur."
   },
   "mentions": {
     "metaTitle": "Mentions légales | Nirby",

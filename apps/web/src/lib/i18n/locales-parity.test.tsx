@@ -2,12 +2,14 @@ import { createTranslator } from "next-intl";
 import { describe, expect, it } from "vitest";
 
 import enCommon from "./locales/en/common.json";
+import enConsent from "./locales/en/consent.json";
 import enExplore from "./locales/en/explore.json";
 import enLegal from "./locales/en/legal.json";
 import enLists from "./locales/en/lists.json";
 import enPoi from "./locales/en/poi.json";
 import enShell from "./locales/en/shell.json";
 import frCommon from "./locales/fr/common.json";
+import frConsent from "./locales/fr/consent.json";
 import frExplore from "./locales/fr/explore.json";
 import frLegal from "./locales/fr/legal.json";
 import frLists from "./locales/fr/lists.json";
@@ -101,6 +103,11 @@ const NEW_LEGAL_KEYS = [
   "privacy.title",
   "privacy.s6Body",
   "privacy.s7Body",
+  "privacy.s9Title",
+  "privacy.s9Body",
+  "privacy.s9Necessary",
+  "privacy.s9Mapbox",
+  "privacy.s9Sentry",
   "mentions.metaTitle",
   "mentions.title",
   "mentions.s3Body",
@@ -129,6 +136,22 @@ const NEW_POI_KEYS = [
 ] as const;
 
 const NEW_SHELL_KEYS = ["tabs.navLabel"] as const;
+
+const NEW_CONSENT_KEYS = [
+  "title",
+  "description",
+  "privacyLink",
+  "accept",
+  "refuse",
+  "customize",
+  "save",
+  "back",
+  "necessaryTitle",
+  "necessaryDescription",
+  "sentryTitle",
+  "sentryDescription",
+  "manage",
+] as const;
 
 function expectNonEmptyStrings(obj: JsonObject, keys: readonly string[], locale: string) {
   for (const key of keys) {
@@ -163,6 +186,10 @@ describe("locales parity", () => {
     expectLocaleParity(enShell, frShell, "shell");
   });
 
+  it("consent.json has the same keys in en and fr", () => {
+    expectLocaleParity(enConsent, frConsent, "consent");
+  });
+
   it("new lists keys are non-empty strings in both locales", () => {
     expectNonEmptyStrings(enLists, NEW_LISTS_KEYS, "en");
     expectNonEmptyStrings(frLists, NEW_LISTS_KEYS, "fr");
@@ -191,6 +218,11 @@ describe("locales parity", () => {
   it("new shell keys are non-empty strings in both locales", () => {
     expectNonEmptyStrings(enShell, NEW_SHELL_KEYS, "en");
     expectNonEmptyStrings(frShell, NEW_SHELL_KEYS, "fr");
+  });
+
+  it("new consent keys are non-empty strings in both locales", () => {
+    expectNonEmptyStrings(enConsent, NEW_CONSENT_KEYS, "en");
+    expectNonEmptyStrings(frConsent, NEW_CONSENT_KEYS, "fr");
   });
 
   it("does not keep the removed detail.poisComingSoon key", () => {
@@ -230,6 +262,18 @@ describe("message resolution", () => {
     expect(tLegal("privacy.title")).toBe("Privacy policy");
     expect(tLegal("mentions.title")).toBe("Legal notice");
     expect(tLegal("disclaimer.title")).toBe("Sample content");
+    expect(tLegal("privacy.s9Title")).toBe("9. Cookies and trackers");
+  });
+
+  it("resolves consent namespace", () => {
+    const tConsent = createTranslator({
+      locale: "en",
+      messages: { consent: enConsent },
+      namespace: "consent",
+    });
+
+    expect(tConsent("title")).toBe("Cookies and tracking");
+    expect(tConsent("manage")).toBe("Manage cookies");
   });
 
   it("resolves skip link and global error keys", () => {
