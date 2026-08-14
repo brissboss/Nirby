@@ -1,11 +1,29 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from "vitest";
 import crypto from "crypto";
 import request from "supertest";
+
+vi.mock("../../src/upload/service", async () => {
+  const actual = await vi.importActual<typeof import("../../src/upload/service")>(
+    "../../src/upload/service"
+  );
+  return {
+    ...actual,
+    deleteFile: vi.fn().mockResolvedValue(undefined),
+  };
+});
+
+vi.mock("../../src/email/service", () => ({
+  sendAccountDeletedEmail: vi.fn().mockResolvedValue(undefined),
+  sendPasswordResetEmail: vi.fn().mockResolvedValue(undefined),
+  sendVerificationEmail: vi.fn().mockResolvedValue(undefined),
+}));
+
 import { createServer } from "../../src/server";
 import { prisma } from "../../src/db";
 import { ErrorCodes } from "../../src/utils/error-codes";
 import { hashPassword } from "../../src/auth/hash";
 import { signAccessToken } from "../../src/auth/token";
+import { deleteFile } from "../../src/upload/service";
 
 const app = createServer();
 
@@ -1026,9 +1044,18 @@ describe("DELETE /auth/account", () => {
   let accessToken: string;
   let userId: string;
 
-  beforeEach(async () => {
+  async function resetAccountDeletionFixtures() {
+    await prisma.listCollaborator.deleteMany();
+    await prisma.savedPoi.deleteMany();
+    await prisma.poiList.deleteMany();
+    await prisma.poi.deleteMany();
     await prisma.session.deleteMany();
     await prisma.user.deleteMany();
+  }
+
+  beforeEach(async () => {
+    await resetAccountDeletionFixtures();
+    vi.mocked(deleteFile).mockClear();
 
     const passwordHash = await hashPassword("password123");
     const user = await prisma.user.create({
@@ -1041,6 +1068,10 @@ describe("DELETE /auth/account", () => {
 
     userId = user.id;
     accessToken = signAccessToken({ userId: user.id, email: user.email });
+  });
+
+  afterAll(async () => {
+    await resetAccountDeletionFixtures();
   });
 
   it("should delete account successfully", async () => {
@@ -1056,6 +1087,89 @@ describe("DELETE /auth/account", () => {
     expect(deletedUser).toBeNull();
   });
 
+  it("should delete account that owns a POI and a list", async () => {
+    await prisma.user.update({
+      where: { id: userId },
+      data: { avatarUrl: "https://s3.example.com/avatar.jpg" },
+    });
+
+    const poi = await prisma.poi.create({
+      data: {
+        name: "Owned POI",
+        latitude: 48.8566,
+        longitude: 2.3522,
+        createdBy: userId,
+        photoUrls: ["https://s3.example.com/poi.jpg"],
+      },
+    });
+
+    const list = await prisma.poiList.create({
+      data: {
+        name: "Owned list",
+        createdBy: userId,
+        imageUrl: "https://s3.example.com/list.jpg",
+      },
+    });
+
+    await prisma.savedPoi.create({
+      data: { listId: list.id, poiId: poi.id },
+    });
+
+    await prisma.session.create({
+      data: {
+        userId,
+        refreshToken: "owner-refresh-token",
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      },
+    });
+
+    const res = await request(app)
+      .delete("/auth/account")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .send({ password: "password123", language: "en" });
+
+    expect(res.status).toBe(200);
+
+    expect(await prisma.user.findUnique({ where: { id: userId } })).toBeNull();
+    expect(await prisma.poi.findUnique({ where: { id: poi.id } })).toBeNull();
+    expect(await prisma.poiList.findUnique({ where: { id: list.id } })).toBeNull();
+    expect(await prisma.savedPoi.findMany({ where: { listId: list.id } })).toHaveLength(0);
+    expect(await prisma.session.findMany({ where: { userId } })).toHaveLength(0);
+
+    expect(deleteFile).toHaveBeenCalledWith("https://s3.example.com/avatar.jpg");
+    expect(deleteFile).toHaveBeenCalledWith("https://s3.example.com/poi.jpg");
+    expect(deleteFile).toHaveBeenCalledWith("https://s3.example.com/list.jpg");
+  });
+
+  it("should keep a third-party list when a collaborator deletes their account", async () => {
+    const owner = await prisma.user.create({
+      data: {
+        email: "list-owner@example.com",
+        passwordHash: await hashPassword("password123"),
+        emailVerified: true,
+      },
+    });
+
+    const list = await prisma.poiList.create({
+      data: { name: "Shared list", createdBy: owner.id },
+    });
+
+    await prisma.listCollaborator.create({
+      data: { listId: list.id, userId, role: "EDITOR" },
+    });
+
+    const res = await request(app)
+      .delete("/auth/account")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .send({ password: "password123", language: "en" });
+
+    expect(res.status).toBe(200);
+    expect(await prisma.user.findUnique({ where: { id: userId } })).toBeNull();
+    expect(await prisma.poiList.findUnique({ where: { id: list.id } })).not.toBeNull();
+    expect(await prisma.listCollaborator.findMany({ where: { userId } })).toHaveLength(0);
+    expect(await prisma.listCollaborator.findMany({ where: { listId: list.id } })).toHaveLength(0);
+  });
+
   it("should reject invalid password", async () => {
     const res = await request(app)
       .delete("/auth/account")
@@ -1067,6 +1181,28 @@ describe("DELETE /auth/account", () => {
 
     const deletedUser = await prisma.user.findUnique({ where: { id: userId } });
     expect(deletedUser).not.toBeNull();
+  });
+
+  it("should not delete sessions when password is invalid", async () => {
+    await prisma.session.create({
+      data: {
+        userId,
+        refreshToken: "keep-refresh-token",
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      },
+    });
+
+    const res = await request(app)
+      .delete("/auth/account")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .send({ password: "wrongpassword", language: "en" });
+
+    expect(res.status).toBe(401);
+    expect(res.body.error.code).toBe(ErrorCodes.INVALID_CREDENTIALS);
+
+    const sessions = await prisma.session.findMany({ where: { userId } });
+    expect(sessions).toHaveLength(1);
+    expect(await prisma.user.findUnique({ where: { id: userId } })).not.toBeNull();
   });
 
   it("should reject request without token", async () => {
@@ -1106,5 +1242,51 @@ describe("DELETE /auth/account", () => {
 
     const sessions = await prisma.session.findMany({ where: { userId } });
     expect(sessions).toHaveLength(0);
+  });
+
+  it("should roll back the transaction if user delete fails", async () => {
+    await prisma.session.create({
+      data: {
+        userId,
+        refreshToken: "rollback-refresh-token",
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      },
+    });
+
+    const originalTransaction = prisma.$transaction.bind(prisma);
+    const spy = vi.spyOn(prisma, "$transaction").mockImplementationOnce((async (fn: unknown) => {
+      return originalTransaction(async (tx) => {
+        const callback = fn as (client: typeof tx) => Promise<unknown>;
+        const failingTx = new Proxy(tx, {
+          get(target, prop, receiver) {
+            if (prop === "user") {
+              return new Proxy(target.user, {
+                get(userTarget, userProp, userReceiver) {
+                  if (userProp === "delete") {
+                    return () => Promise.reject(new Error("simulated db failure"));
+                  }
+                  return Reflect.get(userTarget, userProp, userReceiver);
+                },
+              });
+            }
+            return Reflect.get(target, prop, receiver);
+          },
+        });
+        return callback(failingTx);
+      });
+    }) as typeof prisma.$transaction);
+
+    const res = await request(app)
+      .delete("/auth/account")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .send({ password: "password123", language: "en" });
+
+    spy.mockRestore();
+
+    expect(res.status).toBe(500);
+    expect(res.body.error.code).toBe(ErrorCodes.ACCOUNT_DELETION_FAILED);
+    expect(await prisma.user.findUnique({ where: { id: userId } })).not.toBeNull();
+    expect(await prisma.session.findMany({ where: { userId } })).toHaveLength(1);
+    expect(deleteFile).not.toHaveBeenCalled();
   });
 });

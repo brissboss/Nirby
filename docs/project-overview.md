@@ -20,3 +20,4 @@ Nirby est une webapp « spatial IA » centrée sur la cartographie personnal
 - Interface front en React + Tailwind + shadcn/ui.
 - Backend actuel Express/Prisma/PostgreSQL (PostGIS) + Redis.
 - Projet de validation RNCP : stabilité, traçabilité et couverture fonctionnelle démontrables.
+- Droit à l’effacement (RGPD art. 17) : voir [gdpr-account-deletion.md](./gdpr-account-deletion.md).

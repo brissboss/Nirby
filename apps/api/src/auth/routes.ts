@@ -16,6 +16,7 @@ import {
   authSpamRateLimiter,
 } from "../middleware/rate-limit";
 import { SUPPORTED_LANGUAGES } from "../types";
+import { deleteFile } from "../upload/service";
 import { ErrorCodes } from "../utils/error-codes";
 import { formatError, handleZodError } from "../utils/errors";
 
@@ -76,6 +77,26 @@ const deleteAccountSchema = z.object({
   password: z.string({ required_error: ErrorCodes.PASSWORD_REQUIRED }),
   language: z.enum(SUPPORTED_LANGUAGES).optional().default("en"),
 });
+
+function collectAccountFileUrls(user: {
+  avatarUrl: string | null;
+  pois: { photoUrls: string[] }[];
+  poiLists: { imageUrl: string | null }[];
+}): string[] {
+  const urls: string[] = [];
+  if (user.avatarUrl) {
+    urls.push(user.avatarUrl);
+  }
+  for (const poi of user.pois) {
+    urls.push(...poi.photoUrls);
+  }
+  for (const list of user.poiLists) {
+    if (list.imageUrl) {
+      urls.push(list.imageUrl);
+    }
+  }
+  return urls;
+}
 
 const updateProfileSchema = z.object({
   name: z
@@ -962,7 +983,7 @@ authRouter.post("/change-password", requireAuth, async (req, res) => {
  *   delete:
  *     operationId: deleteAccount
  *     summary: Delete user account
- *     description: Permanently deletes the authenticated user's account and all associated data. A confirmation email will be sent.
+ *     description: Permanently deletes the authenticated user's account and all associated personal data (sessions, owned POIs, owned lists). Object-storage files are removed best-effort after the database commit. A confirmation email is sent after a successful deletion.
  *     tags:
  *       - 🔐 Auth
  *     security:
@@ -1010,7 +1031,7 @@ authRouter.post("/change-password", requireAuth, async (req, res) => {
  *             schema:
  *               $ref: '#/components/schemas/Error'
  *       500:
- *         description: Internal server error
+ *         description: Account deletion failed
  *         content:
  *           application/json:
  *             schema:
@@ -1020,7 +1041,13 @@ authRouter.delete("/account", requireAuth, async (req, res) => {
   try {
     const { password, language } = deleteAccountSchema.parse(req.body);
 
-    const user = await prisma.user.findUnique({ where: { id: req.user?.id } });
+    const user = await prisma.user.findUnique({
+      where: { id: req.user?.id },
+      include: {
+        pois: { select: { photoUrls: true } },
+        poiLists: { select: { imageUrl: true } },
+      },
+    });
     if (!user) {
       return res.status(404).json(formatError(ErrorCodes.NOT_FOUND, "User not found"));
     }
@@ -1031,11 +1058,33 @@ authRouter.delete("/account", requireAuth, async (req, res) => {
     }
 
     const email = user.email;
+    const fileUrls = collectAccountFileUrls(user);
 
-    await prisma.session.deleteMany({ where: { userId: user.id } });
-    await prisma.user.delete({ where: { id: user.id } });
+    try {
+      await prisma.$transaction(async (tx) => {
+        await tx.session.deleteMany({ where: { userId: user.id } });
+        await tx.user.delete({ where: { id: user.id } });
+      });
+    } catch (err) {
+      req.log?.error({ err }, "Account deletion transaction failed");
+      return res
+        .status(500)
+        .json(formatError(ErrorCodes.ACCOUNT_DELETION_FAILED, "Account deletion failed"));
+    }
 
-    await sendAccountDeletedEmail(email, language || "en");
+    for (const url of fileUrls) {
+      try {
+        await deleteFile(url);
+      } catch (err) {
+        req.log?.warn({ err, url }, "Failed to delete account file from S3");
+      }
+    }
+
+    try {
+      await sendAccountDeletedEmail(email, language || "en");
+    } catch (err) {
+      req.log?.warn({ err }, "Failed to send account deletion confirmation email");
+    }
 
     res.json({ message: "Account deleted successfully" });
   } catch (err) {
@@ -1046,7 +1095,9 @@ authRouter.delete("/account", requireAuth, async (req, res) => {
         .json(formatError(ErrorCodes.VALIDATION_ERROR, "Invalid input", details));
     }
     req.log?.error({ err });
-    return res.status(500).json(formatError(ErrorCodes.INTERNAL_ERROR, "Internal server error"));
+    return res
+      .status(500)
+      .json(formatError(ErrorCodes.ACCOUNT_DELETION_FAILED, "Account deletion failed"));
   }
 });
 
