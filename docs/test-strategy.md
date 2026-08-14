@@ -16,16 +16,17 @@ Complète les slides Figma et sert de base si le jury demande les plans de tests
 
 ## 2. Pyramide et outils
 
-| Niveau                   | Outil                                | Périmètre                                                         | Statut                   |
-| ------------------------ | ------------------------------------ | ----------------------------------------------------------------- | ------------------------ |
-| Unitaires                | Vitest                               | Règles métier (`list-policy`, `poi-policy`), schémas, utils front | ✅ Implémenté            |
-| Intégration API          | Vitest + Supertest                   | Routes Express, middleware auth, base PostgreSQL de test          | ✅ Implémenté            |
-| Composants / pages front | Vitest + Testing Library + jsdom     | Vues listes, hooks, formulaires                                   | ✅ Implémenté            |
-| Smoke / health check     | Docker + `curl` (CI) + `HEALTHCHECK` | Conteneurs API et web non-root, `/health` et `/` répondent        | ✅ Implémenté            |
-| Sécurité (OWASP)         | Vitest + Supertest                   | Injection, IDOR, XSS stocké, upload malveillant                   | ✅ Implémenté            |
-| Audit dépendances (SCA)  | `pnpm audit` + Dependabot            | CVE dans `pnpm-lock.yaml`, PRs de mise à jour hebdomadaires       | ✅ Implémenté            |
-| DAST                     | OWASP ZAP Baseline (CI)              | Scan passif/actif sur l’API Docker en CI                          | ✅ Implémenté            |
-| E2E                      | Playwright                           | Parcours utilisateur complets                                     | ⏳ Prévu, non implémenté |
+| Niveau                   | Outil                                | Périmètre                                                                  | Statut                   |
+| ------------------------ | ------------------------------------ | -------------------------------------------------------------------------- | ------------------------ |
+| Unitaires                | Vitest                               | Règles métier (`list-policy`, `poi-policy`), schémas, utils front          | ✅ Implémenté            |
+| Intégration API          | Vitest + Supertest                   | Routes Express, middleware auth, base PostgreSQL de test                   | ✅ Implémenté            |
+| Composants / pages front | Vitest + Testing Library + jsdom     | Vues listes, hooks, formulaires                                            | ✅ Implémenté            |
+| Accessibilité            | ESLint `jsx-a11y` recommended + axe  | Login, index/détail listes, create POI (jsdom ; pas les primitives shadcn) | ✅ Implémenté            |
+| Smoke / health check     | Docker + `curl` (CI) + `HEALTHCHECK` | Conteneurs API et web non-root, `/health` et `/` répondent                 | ✅ Implémenté            |
+| Sécurité (OWASP)         | Vitest + Supertest                   | Injection, IDOR, XSS stocké, upload malveillant                            | ✅ Implémenté            |
+| Audit dépendances (SCA)  | `pnpm audit` + Dependabot            | CVE dans `pnpm-lock.yaml`, PRs de mise à jour hebdomadaires                | ✅ Implémenté            |
+| DAST                     | OWASP ZAP Baseline (CI)              | Scan passif/actif sur l’API Docker en CI                                   | ✅ Implémenté            |
+| E2E                      | Playwright                           | Parcours utilisateur complets                                              | ⏳ Prévu, non implémenté |
 
 **Rapports de tests :**
 
@@ -40,14 +41,15 @@ Complète les slides Figma et sert de base si le jury demande les plans de tests
 ### Local
 
 - API : PostgreSQL `nirby_test`, Redis, variables définies dans `apps/api/vitest.config.ts`.
-- Web : jsdom, mocks Next.js (`next/navigation`, `next-intl`) dans `apps/web/src/test/setup.ts`.
+- Web : jsdom, mocks Next.js (`next/navigation`, `next-intl`) et matchers axe (`vitest-axe`) dans `apps/web/src/test/setup.ts`.
 - Lancement : `pnpm test` (racine, via Turbo) ou `pnpm -C apps/api test` / `pnpm -C apps/web test`.
 
 ### CI (GitHub Actions)
 
 - Déclenchement : **pull request** et **push** sur `main` / `staging`.
 - Job `ci-api` : PostGIS 16, base `nirby_test`, migrations Prisma, Redis, secrets factices (`JWT_SECRET`, `GOOGLE_PLACES_API_KEY`, …), tests + couverture (seuils 70 %) + artifact `api-coverage-report`.
-- Job `ci-web` : tests + couverture (seuils 36 / 30 / 26) + artifact `web-coverage-report` + build de vérification.
+- Job `ci-web` : tests + couverture (seuils 36 / 30 / 26) + assertions axe (login, listes, create POI) + artifact `web-coverage-report` + build de vérification.
+- Job `setup` : `pnpm lint` (dont `jsx-a11y` recommended sur `apps/web`).
 - Job `api-docker` : image API (`USER node`), health check HTTP + assert uid ≠ 0, scan OWASP ZAP Baseline (rapport artifact).
 - Job `security-audit` : `pnpm audit --audit-level=high` (rapport artifact, non bloquant).
 - Job `web-docker` : image web (`USER node`), health check HTTP + assert uid ≠ 0.

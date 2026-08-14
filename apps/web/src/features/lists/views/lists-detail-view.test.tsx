@@ -11,6 +11,7 @@ import { ListsDetailView } from "./lists-detail-view";
 import type { MapPoi } from "@/features/pois";
 import type { ListWithRole } from "@/lib/api";
 import { getErrorCode } from "@/lib/api/errors";
+import { expectNoAxeViolations } from "@/test/axe";
 
 vi.mock("../hooks/use-list", () => ({
   useList: vi.fn(),
@@ -332,5 +333,15 @@ describe("ListsDetailView", () => {
     render(<ListsDetailView listId="list-1" onBack={onBack} onEdit={onEdit} onDelete={onDelete} />);
 
     expect(screen.getByTestId("poi-markers-layer")).toHaveAttribute("data-ids", "");
+  });
+
+  it("has no axe violations when the list is loaded", async () => {
+    mockListQuery();
+
+    const { container } = render(
+      <ListsDetailView listId="list-1" onBack={onBack} onEdit={onEdit} onDelete={onDelete} />
+    );
+
+    await expectNoAxeViolations(container);
   });
 });
