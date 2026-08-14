@@ -2,7 +2,7 @@ import { CollaboratorRole, PoiVisibility } from "@prisma/client";
 import { Router } from "express";
 import { z } from "zod";
 
-import { requireAuth } from "../auth/middleware";
+import { requireAuth, requireVerifiedEmail } from "../auth/middleware";
 import { prisma } from "../db";
 import { ErrorCodes } from "../utils/error-codes";
 import { formatError, handleZodError } from "../utils/errors";
@@ -125,6 +125,12 @@ const updateListSchema = z.object({
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Error'
+ *       403:
+ *         description: Email not verified
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       500:
  *         description: Internal server error
  *         content:
@@ -132,7 +138,7 @@ const updateListSchema = z.object({
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-listRouter.post("/", requireAuth, async (req, res) => {
+listRouter.post("/", requireAuth, requireVerifiedEmail, async (req, res) => {
   try {
     const data = createListSchema.parse(req.body);
 
