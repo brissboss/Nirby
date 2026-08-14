@@ -12,6 +12,7 @@ import {
 import { env } from "../env";
 import {
   authBrutForceRateLimiter,
+  authDataExportRateLimiter,
   authEmailVerificationRateLimiter,
   authSpamRateLimiter,
 } from "../middleware/rate-limit";
@@ -1104,6 +1105,149 @@ authRouter.delete("/account", requireAuth, async (req, res) => {
     return res
       .status(500)
       .json(formatError(ErrorCodes.ACCOUNT_DELETION_FAILED, "Account deletion failed"));
+  }
+});
+
+/**
+ * @openapi
+ * /auth/me/export:
+ *   get:
+ *     operationId: exportMe
+ *     summary: Export current user personal data
+ *     description: >
+ *       GDPR Art. 20 portability export. Aggregates profile, created POIs, owned lists,
+ *       saved places and collaborations. Secrets (password hash, verification/reset tokens,
+ *       session refresh tokens, list share/edit tokens) are never included.
+ *     tags:
+ *       - 🔐 Auth
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Structured JSON export of the authenticated user's personal data
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ExportMeResponse'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       429:
+ *         description: Rate limit exceeded
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+authRouter.get("/me/export", requireAuth, authDataExportRateLimiter, async (req, res) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.user?.id },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        avatarUrl: true,
+        bio: true,
+        emailVerified: true,
+        createdAt: true,
+        updatedAt: true,
+        pois: {
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            descriptionLang: true,
+            address: true,
+            latitude: true,
+            longitude: true,
+            category: true,
+            website: true,
+            phone: true,
+            priceLevel: true,
+            openingHours: true,
+            photoUrls: true,
+            createdBy: true,
+            visibility: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        },
+        poiLists: {
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            imageUrl: true,
+            visibility: true,
+            createdAt: true,
+            updatedAt: true,
+            savedPois: {
+              select: {
+                id: true,
+                poiId: true,
+                googlePlaceId: true,
+                createdAt: true,
+              },
+            },
+          },
+        },
+        collaborations: {
+          select: {
+            id: true,
+            role: true,
+            joinedAt: true,
+            list: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        },
+        sessions: {
+          select: {
+            id: true,
+            expiresAt: true,
+            createdAt: true,
+          },
+        },
+      },
+    });
+
+    if (!user) {
+      return res.status(404).json(formatError(ErrorCodes.NOT_FOUND, "User not found"));
+    }
+
+    const { pois, poiLists, collaborations, sessions, ...profile } = user;
+
+    res.setHeader("Content-Disposition", 'attachment; filename="nirby-export.json"');
+    return res.json({
+      exportedAt: new Date().toISOString(),
+      profile,
+      createdPois: pois,
+      ownedLists: poiLists,
+      collaborations,
+      sessions,
+    });
+  } catch (err) {
+    req.log?.error({ err });
+    return res.status(500).json(formatError(ErrorCodes.INTERNAL_ERROR, "Internal server error"));
   }
 });
 

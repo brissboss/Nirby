@@ -393,6 +393,200 @@ describe("Auth routes", () => {
     });
   });
 
+  describe("GET /auth/me/export", () => {
+    let accessToken: string;
+    let userId: string;
+
+    beforeEach(async () => {
+      const passwordHash = await hashPassword("password123");
+      const user = await prisma.user.create({
+        data: {
+          email: "alice-export@example.com",
+          passwordHash,
+          emailVerified: true,
+          name: "Export User",
+          avatarUrl: "https://example.com/avatar.jpg",
+          bio: "Export bio",
+          emailVerificationToken: "verify-secret-token",
+          passwordResetToken: "reset-secret-token",
+        },
+      });
+
+      userId = user.id;
+      accessToken = signAccessToken({ userId: user.id, email: user.email });
+    });
+
+    it("should export profile, POIs, lists, saved places and collaborations", async () => {
+      const poi = await prisma.poi.create({
+        data: {
+          name: "Owned POI",
+          latitude: 48.8566,
+          longitude: 2.3522,
+          createdBy: userId,
+          description: "A custom place",
+        },
+      });
+
+      const ownedList = await prisma.poiList.create({
+        data: {
+          name: "Owned list",
+          createdBy: userId,
+          shareToken: "share-secret-token",
+          editToken: "edit-secret-token",
+        },
+      });
+
+      const savedPoi = await prisma.savedPoi.create({
+        data: { listId: ownedList.id, poiId: poi.id },
+      });
+
+      const owner = await prisma.user.create({
+        data: {
+          email: "list-owner@example.com",
+          passwordHash: await hashPassword("password123"),
+          emailVerified: true,
+        },
+      });
+
+      const sharedList = await prisma.poiList.create({
+        data: { name: "Shared list", createdBy: owner.id },
+      });
+
+      await prisma.listCollaborator.create({
+        data: { listId: sharedList.id, userId, role: "EDITOR" },
+      });
+
+      await prisma.session.create({
+        data: {
+          userId,
+          refreshToken: "export-refresh-secret",
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        },
+      });
+
+      const res = await request(app)
+        .get("/auth/me/export")
+        .set("Authorization", `Bearer ${accessToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.headers["content-disposition"]).toBe('attachment; filename="nirby-export.json"');
+      expect(res.body.exportedAt).toBeDefined();
+      expect(res.body.profile).toMatchObject({
+        id: userId,
+        email: "alice-export@example.com",
+        name: "Export User",
+        avatarUrl: "https://example.com/avatar.jpg",
+        bio: "Export bio",
+        emailVerified: true,
+      });
+      expect(res.body.createdPois).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            id: poi.id,
+            name: "Owned POI",
+            createdBy: userId,
+          }),
+        ])
+      );
+      expect(res.body.ownedLists).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            id: ownedList.id,
+            name: "Owned list",
+            savedPois: expect.arrayContaining([
+              expect.objectContaining({ id: savedPoi.id, poiId: poi.id }),
+            ]),
+          }),
+        ])
+      );
+      expect(res.body.collaborations).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            role: "EDITOR",
+            list: { id: sharedList.id, name: "Shared list" },
+          }),
+        ])
+      );
+      expect(res.body.sessions).toHaveLength(1);
+      expect(res.body.sessions[0]).toEqual(
+        expect.objectContaining({
+          id: expect.any(String),
+          expiresAt: expect.any(String),
+          createdAt: expect.any(String),
+        })
+      );
+
+      const payload = JSON.stringify(res.body);
+      expect(payload).not.toContain("passwordHash");
+      expect(payload).not.toContain("emailVerificationToken");
+      expect(payload).not.toContain("passwordResetToken");
+      expect(payload).not.toContain("refreshToken");
+      expect(payload).not.toContain("shareToken");
+      expect(payload).not.toContain("editToken");
+      expect(payload).not.toContain("verify-secret-token");
+      expect(payload).not.toContain("reset-secret-token");
+      expect(payload).not.toContain("export-refresh-secret");
+      expect(payload).not.toContain("share-secret-token");
+      expect(payload).not.toContain("edit-secret-token");
+
+      expect(res.body.profile).not.toHaveProperty("passwordHash");
+      expect(res.body.profile).not.toHaveProperty("emailVerificationToken");
+      expect(res.body.profile).not.toHaveProperty("passwordResetToken");
+      expect(res.body.sessions[0]).not.toHaveProperty("refreshToken");
+      expect(res.body.ownedLists[0]).not.toHaveProperty("shareToken");
+      expect(res.body.ownedLists[0]).not.toHaveProperty("editToken");
+    });
+
+    it("should not export another user's data", async () => {
+      await prisma.poi.create({
+        data: {
+          name: "Secret A",
+          latitude: 48.8566,
+          longitude: 2.3522,
+          createdBy: userId,
+        },
+      });
+
+      const other = await prisma.user.create({
+        data: {
+          email: "bob-export@example.com",
+          passwordHash: await hashPassword("password123"),
+          emailVerified: true,
+          name: "Other User",
+        },
+      });
+
+      const otherToken = signAccessToken({ userId: other.id, email: other.email });
+      const res = await request(app)
+        .get("/auth/me/export")
+        .set("Authorization", `Bearer ${otherToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.profile.id).toBe(other.id);
+      expect(res.body.profile.email).toBe("bob-export@example.com");
+      expect(res.body.profile.email).not.toBe("alice-export@example.com");
+      expect(res.body.createdPois).toHaveLength(0);
+      expect(JSON.stringify(res.body)).not.toContain("Secret A");
+      expect(JSON.stringify(res.body)).not.toContain("alice-export@example.com");
+    });
+
+    it("should reject request without token", async () => {
+      const res = await request(app).get("/auth/me/export");
+
+      expect(res.status).toBe(401);
+      expect(res.body.error.code).toBe(ErrorCodes.UNAUTHORIZED);
+    });
+
+    it("should reject request with invalid token", async () => {
+      const res = await request(app)
+        .get("/auth/me/export")
+        .set("Authorization", "Bearer invalid-token");
+
+      expect(res.status).toBe(401);
+      expect(res.body.error.code).toBe(ErrorCodes.UNAUTHORIZED);
+    });
+  });
+
   describe("PUT /auth/me", () => {
     let accessToken: string;
     let userId: string;
