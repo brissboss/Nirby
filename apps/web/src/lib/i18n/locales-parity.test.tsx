@@ -1,10 +1,14 @@
 import { createTranslator } from "next-intl";
 import { describe, expect, it } from "vitest";
 
+import enCommon from "./locales/en/common.json";
 import enExplore from "./locales/en/explore.json";
+import enLegal from "./locales/en/legal.json";
 import enLists from "./locales/en/lists.json";
 import enPoi from "./locales/en/poi.json";
+import frCommon from "./locales/fr/common.json";
 import frExplore from "./locales/fr/explore.json";
+import frLegal from "./locales/fr/legal.json";
 import frLists from "./locales/fr/lists.json";
 import frPoi from "./locales/fr/poi.json";
 
@@ -76,6 +80,27 @@ const NEW_EXPLORE_KEYS = [
   "addToList.picker.alreadyInList",
 ] as const;
 
+const NEW_COMMON_KEYS = [
+  "legal.navLabel",
+  "legal.home",
+  "legal.privacy",
+  "legal.mentions",
+] as const;
+
+const NEW_LEGAL_KEYS = [
+  "disclaimer.title",
+  "disclaimer.privacy",
+  "disclaimer.mentions",
+  "privacy.metaTitle",
+  "privacy.title",
+  "privacy.s6Body",
+  "privacy.s7Body",
+  "mentions.metaTitle",
+  "mentions.title",
+  "mentions.s3Body",
+  "mentions.s5Body",
+] as const;
+
 const NEW_POI_KEYS = [
   "create.title",
   "create.submit",
@@ -118,6 +143,14 @@ describe("locales parity", () => {
     expectLocaleParity(enPoi, frPoi, "poi");
   });
 
+  it("legal.json has the same keys in en and fr", () => {
+    expectLocaleParity(enLegal, frLegal, "legal");
+  });
+
+  it("common.json has the same keys in en and fr", () => {
+    expectLocaleParity(enCommon, frCommon, "common");
+  });
+
   it("new lists keys are non-empty strings in both locales", () => {
     expectNonEmptyStrings(enLists, NEW_LISTS_KEYS, "en");
     expectNonEmptyStrings(frLists, NEW_LISTS_KEYS, "fr");
@@ -131,6 +164,16 @@ describe("locales parity", () => {
   it("new poi keys are non-empty strings in both locales", () => {
     expectNonEmptyStrings(enPoi, NEW_POI_KEYS, "en");
     expectNonEmptyStrings(frPoi, NEW_POI_KEYS, "fr");
+  });
+
+  it("new legal keys are non-empty strings in both locales", () => {
+    expectNonEmptyStrings(enLegal, NEW_LEGAL_KEYS, "en");
+    expectNonEmptyStrings(frLegal, NEW_LEGAL_KEYS, "fr");
+  });
+
+  it("new common legal keys are non-empty strings in both locales", () => {
+    expectNonEmptyStrings(enCommon, NEW_COMMON_KEYS, "en");
+    expectNonEmptyStrings(frCommon, NEW_COMMON_KEYS, "fr");
   });
 
   it("does not keep the removed detail.poisComingSoon key", () => {
@@ -158,5 +201,17 @@ describe("message resolution", () => {
 
     expect(tPoi("select", { name: "Secret garden" })).toBe("Select Secret garden");
     expect(tPoi("create.title")).toBe("New place");
+  });
+
+  it("resolves legal namespace", () => {
+    const tLegal = createTranslator({
+      locale: "en",
+      messages: { legal: enLegal },
+      namespace: "legal",
+    });
+
+    expect(tLegal("privacy.title")).toBe("Privacy policy");
+    expect(tLegal("mentions.title")).toBe("Legal notice");
+    expect(tLegal("disclaimer.title")).toBe("Sample content");
   });
 });

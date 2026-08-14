@@ -1,103 +1,103 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 
-export const metadata: Metadata = {
-  title: "Mentions légales | Nirby",
-  description: "Mentions légales du site Nirby (contenu d'exemple)",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("legal");
+  return {
+    title: t("mentions.metaTitle"),
+    description: t("mentions.metaDescription"),
+  };
+}
 
-export default function MentionsPage() {
+export default async function MentionsPage() {
+  const t = await getTranslations("legal");
+  const tCommon = await getTranslations("common");
+
   return (
     <div className="bg-background text-foreground min-h-screen">
       <div className="mx-auto max-w-2xl px-4 py-10 sm:py-14">
         <p className="text-muted-foreground mb-8 rounded-lg border border-border bg-muted/30 px-4 py-3 text-sm">
-          <strong className="text-foreground">Contenu fictif</strong> — conformément à l’article 6
-          de la loi n° 2004-575 du 21 juin 2004, les mentions ci-dessous sont des{" "}
-          <strong>exemples</strong> pour le cadre du projet. À substituer par des informations
-          exactes avant diffusion publique.
+          <strong className="text-foreground">{t("disclaimer.title")}</strong> —{" "}
+          {t("disclaimer.mentions")}
         </p>
 
         <header className="mb-10">
-          <h1 className="font-display text-3xl font-semibold tracking-tight">Mentions légales</h1>
-          <p className="text-muted-foreground mt-2 text-sm">Dernière mise à jour : 29 mars 2026</p>
+          <h1 className="font-display text-3xl font-semibold tracking-tight">
+            {t("mentions.title")}
+          </h1>
+          <p className="text-muted-foreground mt-2 text-sm">{t("mentions.updatedAt")}</p>
         </header>
 
         <article className="space-y-8 text-sm leading-relaxed sm:text-base">
           <section className="space-y-3">
-            <h2 className="font-display text-lg font-semibold">1. Éditeur du site</h2>
+            <h2 className="font-display text-lg font-semibold">{t("mentions.s1Title")}</h2>
             <p>
-              <strong>Société Exemple SARL</strong>
+              <strong>{t("mentions.s1Name")}</strong>
               <br />
-              Capital social : 10 000 € (fictif)
+              {t("mentions.s1Capital")}
               <br />
-              RCS Paris : 000 000 000 (fictif)
+              {t("mentions.s1Rcs")}
               <br />
-              Siège : 12 rue du Parchemin, 75000 Paris, France
+              {t("mentions.s1Address")}
               <br />
-              Représentant légal : <strong>Jean Exemple</strong> (fictif)
+              {t("mentions.s1RepLabel")} <strong>{t("mentions.s1Rep")}</strong>
               <br />
-              Contact :{" "}
+              {t("mentions.s1Contact")}{" "}
               <a
                 className="text-primary underline underline-offset-4 hover:no-underline"
-                href="mailto:contact-exemple@nirby.dev"
+                href={`mailto:${t("mentions.s1Email")}`}
               >
-                contact-exemple@nirby.dev
+                {t("mentions.s1Email")}
               </a>
             </p>
           </section>
 
           <section className="space-y-3">
-            <h2 className="font-display text-lg font-semibold">2. Directeur de la publication</h2>
-            <p>
-              <strong>Jean Exemple</strong>, en qualité de gérant fictif de Société Exemple SARL.
-            </p>
+            <h2 className="font-display text-lg font-semibold">{t("mentions.s2Title")}</h2>
+            <p>{t("mentions.s2Body")}</p>
           </section>
 
           <section className="space-y-3">
-            <h2 className="font-display text-lg font-semibold">3. Hébergement</h2>
+            <h2 className="font-display text-lg font-semibold">{t("mentions.s3Title")}</h2>
+            <p>{t("mentions.s3Body")}</p>
             <p>
-              <strong>Hébergeur Exemple SAS</strong>
+              <strong>{t("mentions.s3Host")}</strong>
               <br />
-              Adresse : 8 avenue du Datacenter, 69000 Lyon, France (fictif)
+              {t("mentions.s3Address")}
               <br />
-              Site web :{" "}
-              <span className="text-muted-foreground">https://hebergeur-exemple.fr (fictif)</span>
+              <span className="text-muted-foreground">{t("mentions.s3Site")}</span>
             </p>
           </section>
 
           <section className="space-y-3">
-            <h2 className="font-display text-lg font-semibold">
-              4. Propriété intellectuelle (rappel)
-            </h2>
-            <p>
-              L’ensemble du site et de ses éléments (structure, textes, logos de démonstration) sont
-              la propriété de l’éditeur fictif ou de ses partenaires, sauf mention contraire. Toute
-              reproduction non autorisée est interdite sous peine de poursuites (formulation type —
-              adaptée au statut réel du projet).
-            </p>
+            <h2 className="font-display text-lg font-semibold">{t("mentions.s4Title")}</h2>
+            <p>{t("mentions.s4Body")}</p>
           </section>
 
           <section className="space-y-3">
-            <h2 className="font-display text-lg font-semibold">5. Données personnelles</h2>
+            <h2 className="font-display text-lg font-semibold">{t("mentions.s5Title")}</h2>
             <p>
-              Le traitement des données à caractère personnel est décrit dans la{" "}
-              <Link
-                className="text-primary underline underline-offset-4 hover:no-underline"
-                href="/privacy"
-              >
-                politique de confidentialité
-              </Link>
-              .
+              {t.rich("mentions.s5Body", {
+                privacy: (chunks) => (
+                  <Link
+                    className="text-primary underline underline-offset-4 hover:no-underline"
+                    href="/privacy"
+                  >
+                    {chunks}
+                  </Link>
+                ),
+              })}
             </p>
           </section>
         </article>
 
         <footer className="text-muted-foreground mt-12 flex flex-wrap gap-x-4 gap-y-2 border-t border-border pt-8 text-sm">
           <Link className="text-primary hover:underline" href="/">
-            Accueil
+            {tCommon("legal.home")}
           </Link>
           <Link className="text-primary hover:underline" href="/privacy">
-            Politique de confidentialité
+            {tCommon("legal.privacy")}
           </Link>
         </footer>
       </div>
