@@ -6,9 +6,9 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
   useState,
+  useSyncExternalStore,
   type ReactNode,
 } from "react";
 
@@ -23,7 +23,11 @@ import {
   Label,
 } from "@/components/ui";
 import { applySentryConsent } from "@/lib/consent/apply-sentry-consent";
-import { readConsent, writeConsent } from "@/lib/consent/consent";
+import { readConsent, subscribeConsent, writeConsent } from "@/lib/consent/consent";
+
+function subscribeNever() {
+  return () => {};
+}
 
 type CookieConsentContextValue = {
   openPreferences: () => void;
@@ -43,35 +47,29 @@ type Step = "main" | "customize";
 
 export function CookieConsent({ children }: { children: ReactNode }) {
   const t = useTranslations("consent");
-  const [ready, setReady] = useState(false);
-  const [open, setOpen] = useState(false);
-  const [required, setRequired] = useState(true);
+  const isClient = useSyncExternalStore(
+    subscribeNever,
+    () => true,
+    () => false
+  );
+  const consent = useSyncExternalStore(subscribeConsent, readConsent, () => null);
+  const required = isClient && consent === null;
+  const [preferencesOpen, setPreferencesOpen] = useState(false);
   const [step, setStep] = useState<Step>("main");
   const [sentryDraft, setSentryDraft] = useState(false);
-
-  useEffect(() => {
-    const existing = readConsent();
-    setRequired(!existing);
-    setOpen(!existing);
-    setSentryDraft(existing?.sentry ?? false);
-    setReady(true);
-  }, []);
 
   const persist = useCallback((sentry: boolean) => {
     writeConsent(sentry);
     applySentryConsent(sentry);
     setSentryDraft(sentry);
-    setRequired(false);
     setStep("main");
-    setOpen(false);
+    setPreferencesOpen(false);
   }, []);
 
   const openPreferences = useCallback(() => {
-    const existing = readConsent();
-    setSentryDraft(existing?.sentry ?? false);
-    setRequired(false);
+    setSentryDraft(readConsent()?.sentry ?? false);
     setStep("main");
-    setOpen(true);
+    setPreferencesOpen(true);
   }, []);
 
   const value = useMemo(() => ({ openPreferences }), [openPreferences]);
@@ -80,7 +78,7 @@ export function CookieConsent({ children }: { children: ReactNode }) {
     if (!next && required) {
       return;
     }
-    setOpen(next);
+    setPreferencesOpen(next);
     if (!next) {
       setStep("main");
     }
@@ -89,8 +87,8 @@ export function CookieConsent({ children }: { children: ReactNode }) {
   return (
     <CookieConsentContext.Provider value={value}>
       {children}
-      {ready ? (
-        <Dialog open={open} onOpenChange={handleOpenChange}>
+      {isClient ? (
+        <Dialog open={required || preferencesOpen} onOpenChange={handleOpenChange}>
           <DialogContent
             showCloseButton={!required}
             onPointerDownOutside={(event) => {
