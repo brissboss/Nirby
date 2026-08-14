@@ -27,6 +27,10 @@ vi.mock("../hooks/use-remove-poi-from-list", () => ({
   }),
 }));
 
+vi.mock("@/features/auth/hooks", () => ({
+  useAuth: () => ({ user: { id: "user-1" } }),
+}));
+
 const customSavedPoi: SavedPoiListItem = {
   id: "sp-1",
   listId: "list-1",
