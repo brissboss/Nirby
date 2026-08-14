@@ -5,6 +5,8 @@ Complète le ticket [NIR-89](https://linear.app/nirbyfr/issue/NIR-89/fix-account
 
 Endpoint : `DELETE /auth/account` (`apps/api/src/auth/routes.ts`).
 
+Le droit à la portabilité (art. 20) est décrit dans [gdpr-data-export.md](./gdpr-data-export.md).
+
 ---
 
 ## 1. Cadre RGPD (art. 17)

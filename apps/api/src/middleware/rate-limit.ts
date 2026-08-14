@@ -108,3 +108,13 @@ export const authEmailVerificationRateLimiter = createRateLimiter(
   1,
   "Too many requests, please try again in 1 minute"
 );
+
+/**
+ * Rate limiter for GDPR data export (costly aggregation across user-owned records)
+ * 5 requests per 1 hour
+ */
+export const authDataExportRateLimiter = createRateLimiter(
+  1 * 60 * 60 * 1000, // 1 hour
+  5,
+  "Too many requests, please try again in 1 hour"
+);

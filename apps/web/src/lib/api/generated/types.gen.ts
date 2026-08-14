@@ -39,6 +39,82 @@ export type RefreshTokenResponse = {
     accessToken: string;
 };
 
+export type ExportMeProfile = {
+    id: string;
+    email: string;
+    name?: string | null;
+    avatarUrl?: string | null;
+    bio?: string | null;
+    emailVerified: boolean;
+    createdAt: string;
+    updatedAt: string;
+};
+
+export type ExportMePoi = {
+    id: string;
+    name: string;
+    description?: string | null;
+    descriptionLang?: string | null;
+    address?: string | null;
+    latitude: number;
+    longitude: number;
+    category?: string | null;
+    website?: string | null;
+    phone?: string | null;
+    priceLevel?: number | null;
+    openingHours?: {
+        [key: string]: unknown;
+    } | null;
+    photoUrls?: Array<string>;
+    createdBy: string;
+    visibility: 'PRIVATE' | 'SHARED' | 'PUBLIC';
+    createdAt: string;
+    updatedAt: string;
+};
+
+export type ExportMeSavedPoi = {
+    id: string;
+    poiId?: string | null;
+    googlePlaceId?: string | null;
+    createdAt: string;
+};
+
+export type ExportMeOwnedList = {
+    id: string;
+    name: string;
+    description?: string | null;
+    imageUrl?: string | null;
+    visibility: 'PRIVATE' | 'SHARED' | 'PUBLIC';
+    createdAt: string;
+    updatedAt: string;
+    savedPois: Array<ExportMeSavedPoi>;
+};
+
+export type ExportMeCollaboration = {
+    id: string;
+    role: 'VIEWER' | 'EDITOR' | 'ADMIN' | 'OWNER';
+    joinedAt?: string | null;
+    list: {
+        id: string;
+        name: string;
+    };
+};
+
+export type ExportMeSession = {
+    id: string;
+    expiresAt: string;
+    createdAt: string;
+};
+
+export type ExportMeResponse = {
+    exportedAt: string;
+    profile: ExportMeProfile;
+    createdPois: Array<ExportMePoi>;
+    ownedLists: Array<ExportMeOwnedList>;
+    collaborations: Array<ExportMeCollaboration>;
+    sessions: Array<ExportMeSession>;
+};
+
 export type SingleMessageResponse = {
     message: string;
 };
@@ -724,6 +800,43 @@ export type GetMeResponses = {
 };
 
 export type GetMeResponse2 = GetMeResponses[keyof GetMeResponses];
+
+export type ExportMeData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/auth/me/export';
+};
+
+export type ExportMeErrors = {
+    /**
+     * Unauthorized
+     */
+    401: Error;
+    /**
+     * User not found
+     */
+    404: Error;
+    /**
+     * Rate limit exceeded
+     */
+    429: Error;
+    /**
+     * Internal server error
+     */
+    500: Error;
+};
+
+export type ExportMeError = ExportMeErrors[keyof ExportMeErrors];
+
+export type ExportMeResponses = {
+    /**
+     * Structured JSON export of the authenticated user's personal data
+     */
+    200: ExportMeResponse;
+};
+
+export type ExportMeResponse2 = ExportMeResponses[keyof ExportMeResponses];
 
 export type UpdateMeData = {
     body: {
