@@ -84,4 +84,14 @@ describe("ProfilePrivacyView", () => {
     });
     expect(click).not.toHaveBeenCalled();
   });
+
+  it("links to the privacy policy and legal notice pages", () => {
+    render(<ProfilePrivacyView onBack={onBack} />);
+
+    expect(screen.getByRole("link", { name: "legal.privacy" })).toHaveAttribute("href", "/privacy");
+    expect(screen.getByRole("link", { name: "legal.mentions" })).toHaveAttribute(
+      "href",
+      "/mentions"
+    );
+  });
 });

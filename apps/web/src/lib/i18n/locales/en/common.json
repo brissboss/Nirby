@@ -26,5 +26,11 @@
     "email": "Email",
     "emailPlaceholder": "example@email.com",
     "password": "Password"
+  },
+  "legal": {
+    "navLabel": "Legal",
+    "home": "Home",
+    "privacy": "Privacy policy",
+    "mentions": "Legal notice"
   }
 }

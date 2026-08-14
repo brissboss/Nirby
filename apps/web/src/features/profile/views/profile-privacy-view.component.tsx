@@ -7,6 +7,7 @@ import { toast } from "sonner";
 
 import { ProfileSectionLayout } from "../components/ui/profile-section-layout.component";
 
+import { LegalLinks } from "@/components/legal-links";
 import { Button, Card, CardInset } from "@/components/ui";
 import { useAuth } from "@/features/auth";
 import { useErrorMessage } from "@/hooks/use-error-message";
@@ -78,6 +79,7 @@ export function ProfilePrivacyView({ onBack }: ProfilePrivacyViewProps) {
           <Download className="mr-2 size-4" />
           {t("privacy.exportDownload")}
         </Button>
+        <LegalLinks variant="stack" />
         <Button
           type="button"
           variant="destructive"

@@ -24,3 +24,4 @@ Nirby est une webapp « spatial IA » centrée sur la cartographie personnal
 - Droit à la portabilité (RGPD art. 20) : voir [gdpr-data-export.md](./gdpr-data-export.md).
 - Transactions Prisma (écritures multi-étapes, rollback) : voir [prisma-transactions.md](./prisma-transactions.md).
 - Vérification d’email sur les routes d’écriture : voir [email-verification.md](./email-verification.md).
+- Pages légales `/privacy` et `/mentions` (bandeau d’exemple assumé), liées depuis l’auth et le profil.
