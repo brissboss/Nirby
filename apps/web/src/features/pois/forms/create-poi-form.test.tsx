@@ -33,6 +33,8 @@ vi.mock("sonner", () => ({
   },
 }));
 
+const coordinates = { latitude: 48.8566, longitude: 2.3522 };
+
 describe("CreatePoiForm", () => {
   const closeDialog = vi.fn();
   const createPoi = vi.fn();
@@ -58,27 +60,27 @@ describe("CreatePoiForm", () => {
     } as unknown as ReturnType<typeof useAddPoiToList>);
   });
 
-  it("shows validation messages for required fields", async () => {
+  it("shows validation messages for required fields without lat/lng inputs", async () => {
     const user = userEvent.setup();
 
-    render(<CreatePoiForm closeDialog={closeDialog} />);
+    render(<CreatePoiForm coordinates={coordinates} closeDialog={closeDialog} />);
 
     await user.click(screen.getByRole("button", { name: "create.submit" }));
 
     expect(await screen.findByText("validation.requiredName")).toBeInTheDocument();
-    expect(screen.getByText("validation.latitudeInvalid")).toBeInTheDocument();
+    expect(screen.queryByText("validation.latitudeInvalid")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("fields.latitude")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("fields.longitude")).not.toBeInTheDocument();
     expect(createPoi).not.toHaveBeenCalled();
     expect(uploadPoiPhoto).not.toHaveBeenCalled();
   });
 
-  it("submits createPoi without uploading when no photo is selected", async () => {
+  it("submits createPoi with map coordinates when no photo is selected", async () => {
     const user = userEvent.setup();
 
-    render(<CreatePoiForm closeDialog={closeDialog} />);
+    render(<CreatePoiForm coordinates={coordinates} closeDialog={closeDialog} />);
 
     await user.type(screen.getByLabelText("fields.name"), "Secret spot");
-    await user.type(screen.getByLabelText("fields.latitude"), "48.8566");
-    await user.type(screen.getByLabelText("fields.longitude"), "2.3522");
     await user.click(screen.getByRole("button", { name: "create.submit" }));
 
     await waitFor(() => {
@@ -103,11 +105,9 @@ describe("CreatePoiForm", () => {
     const user = userEvent.setup();
     const file = new File(["photo"], "spot.webp", { type: "image/webp" });
 
-    render(<CreatePoiForm closeDialog={closeDialog} />);
+    render(<CreatePoiForm coordinates={coordinates} closeDialog={closeDialog} />);
 
     await user.type(screen.getByLabelText("fields.name"), "Secret spot");
-    await user.type(screen.getByLabelText("fields.latitude"), "48.8566");
-    await user.type(screen.getByLabelText("fields.longitude"), "2.3522");
 
     const photoInput = document.querySelector('input[type="file"]');
     expect(photoInput).toBeInstanceOf(HTMLInputElement);
@@ -138,11 +138,9 @@ describe("CreatePoiForm", () => {
     const user = userEvent.setup();
     createPoi.mockRejectedValue({ message: "Forbidden" });
 
-    render(<CreatePoiForm closeDialog={closeDialog} />);
+    render(<CreatePoiForm coordinates={coordinates} closeDialog={closeDialog} />);
 
     await user.type(screen.getByLabelText("fields.name"), "Secret spot");
-    await user.type(screen.getByLabelText("fields.latitude"), "48.8566");
-    await user.type(screen.getByLabelText("fields.longitude"), "2.3522");
     await user.click(screen.getByRole("button", { name: "create.submit" }));
 
     await waitFor(() => {
@@ -157,11 +155,9 @@ describe("CreatePoiForm", () => {
   it("adds the created POI to the list when listId is provided", async () => {
     const user = userEvent.setup();
 
-    render(<CreatePoiForm listId="list-1" closeDialog={closeDialog} />);
+    render(<CreatePoiForm coordinates={coordinates} listId="list-1" closeDialog={closeDialog} />);
 
     await user.type(screen.getByLabelText("fields.name"), "Secret spot");
-    await user.type(screen.getByLabelText("fields.latitude"), "48.8566");
-    await user.type(screen.getByLabelText("fields.longitude"), "2.3522");
     await user.click(screen.getByRole("button", { name: "create.submit" }));
 
     await waitFor(() => {
@@ -183,11 +179,9 @@ describe("CreatePoiForm", () => {
     const user = userEvent.setup();
     addPoiToList.mockRejectedValue({ message: "Forbidden" });
 
-    render(<CreatePoiForm listId="list-1" closeDialog={closeDialog} />);
+    render(<CreatePoiForm coordinates={coordinates} listId="list-1" closeDialog={closeDialog} />);
 
     await user.type(screen.getByLabelText("fields.name"), "Secret spot");
-    await user.type(screen.getByLabelText("fields.latitude"), "48.8566");
-    await user.type(screen.getByLabelText("fields.longitude"), "2.3522");
     await user.click(screen.getByRole("button", { name: "create.submit" }));
 
     await waitFor(() => {

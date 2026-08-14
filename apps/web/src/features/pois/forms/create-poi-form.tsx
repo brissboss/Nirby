@@ -26,9 +26,11 @@ export type CreatePoiFormProps = {
   onCreated?: (poiId: string) => void;
   /** When set, the created POI is added to this list after create. */
   listId?: string;
+  /** Map-picked coordinates; never shown in the form UI. */
+  coordinates: { latitude: number; longitude: number };
 };
 
-export function CreatePoiForm({ closeDialog, onCreated, listId }: CreatePoiFormProps) {
+export function CreatePoiForm({ closeDialog, onCreated, listId, coordinates }: CreatePoiFormProps) {
   const tPoi = useTranslations("poi");
   const tLists = useTranslations("lists");
   const t = useTranslations();
@@ -45,8 +47,8 @@ export function CreatePoiForm({ closeDialog, onCreated, listId }: CreatePoiFormP
       name: "",
       description: "",
       address: "",
-      latitude: undefined,
-      longitude: undefined,
+      latitude: coordinates.latitude,
+      longitude: coordinates.longitude,
       visibility: DEFAULT_POI_VISIBILITY,
       category: undefined,
     },

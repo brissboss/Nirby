@@ -37,16 +37,7 @@ type PoiFormFieldsProps = {
   onPhotoChange: (file: File | null) => void;
 };
 
-function parseOptionalNumber(value: string): number | undefined {
-  if (value === "") {
-    return undefined;
-  }
-
-  const parsed = Number(value);
-  return Number.isNaN(parsed) ? undefined : parsed;
-}
-
-/** Shared fields for custom POI create (and future edit) forms. */
+/** Shared fields for custom POI create (and future edit) forms. Lat/lng are map-picked, not shown. */
 export function PoiFormFields({
   control,
   disabled = false,
@@ -77,56 +68,6 @@ export function PoiFormFields({
           </FormItem>
         )}
       />
-
-      <div className="grid grid-cols-2 gap-3">
-        <FormField
-          control={control}
-          name="latitude"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel className="text-md lg:text-sm">{tPoi("fields.latitude")}</FormLabel>
-              <FormControl>
-                <Input
-                  type="number"
-                  step="any"
-                  inputMode="decimal"
-                  disabled={disabled}
-                  value={field.value ?? ""}
-                  onChange={(event) => field.onChange(parseOptionalNumber(event.target.value))}
-                  onBlur={field.onBlur}
-                  name={field.name}
-                  ref={field.ref}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={control}
-          name="longitude"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel className="text-md lg:text-sm">{tPoi("fields.longitude")}</FormLabel>
-              <FormControl>
-                <Input
-                  type="number"
-                  step="any"
-                  inputMode="decimal"
-                  disabled={disabled}
-                  value={field.value ?? ""}
-                  onChange={(event) => field.onChange(parseOptionalNumber(event.target.value))}
-                  onBlur={field.onBlur}
-                  name={field.name}
-                  ref={field.ref}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-      </div>
 
       <FormField
         control={control}

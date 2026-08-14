@@ -18,11 +18,17 @@ import {
 } from "@/components/ui";
 import { useMediaQuery } from "@/hooks/use-media-query";
 
+export type CreatePoiCoordinates = {
+  latitude: number;
+  longitude: number;
+};
+
 export type CreatePoiDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCreated?: (poiId: string) => void;
   listId?: string;
+  coordinates: CreatePoiCoordinates;
 };
 
 /** Create custom POI: Dialog on desktop, Drawer on mobile. */
@@ -32,7 +38,13 @@ export function CreatePoiDialog(props: CreatePoiDialogProps) {
   return isMobile ? <CreatePoiDrawer {...props} /> : <CreatePoiDesktopDialog {...props} />;
 }
 
-function CreatePoiDesktopDialog({ open, onOpenChange, onCreated, listId }: CreatePoiDialogProps) {
+function CreatePoiDesktopDialog({
+  open,
+  onOpenChange,
+  onCreated,
+  listId,
+  coordinates,
+}: CreatePoiDialogProps) {
   const tPoi = useTranslations("poi");
 
   return (
@@ -43,6 +55,8 @@ function CreatePoiDesktopDialog({ open, onOpenChange, onCreated, listId }: Creat
           <DialogDescription className="sr-only">{tPoi("create.title")}</DialogDescription>
         </DialogHeader>
         <CreatePoiForm
+          key={`${coordinates.latitude},${coordinates.longitude}`}
+          coordinates={coordinates}
           listId={listId}
           closeDialog={() => onOpenChange(false)}
           onCreated={onCreated}
@@ -52,7 +66,13 @@ function CreatePoiDesktopDialog({ open, onOpenChange, onCreated, listId }: Creat
   );
 }
 
-function CreatePoiDrawer({ open, onOpenChange, onCreated, listId }: CreatePoiDialogProps) {
+function CreatePoiDrawer({
+  open,
+  onOpenChange,
+  onCreated,
+  listId,
+  coordinates,
+}: CreatePoiDialogProps) {
   const tPoi = useTranslations("poi");
 
   return (
@@ -64,6 +84,8 @@ function CreatePoiDrawer({ open, onOpenChange, onCreated, listId }: CreatePoiDia
         </DrawerHeader>
         <div className="overflow-y-auto px-4 pb-4">
           <CreatePoiForm
+            key={`${coordinates.latitude},${coordinates.longitude}`}
+            coordinates={coordinates}
             listId={listId}
             closeDialog={() => onOpenChange(false)}
             onCreated={onCreated}

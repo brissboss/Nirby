@@ -86,7 +86,7 @@
     },
     "empty": {
       "title": "Aucun lieu pour l'instant",
-      "description": "Recherche dans Explorer ou crée un lieu personnalisé pour l’ajouter ici."
+      "description": "Recherche dans Explorer ou fais un clic long / clic droit sur la carte pour ajouter un lieu personnalisé."
     },
     "loading": "Chargement des lieux…",
     "loadingMore": "Chargement…",
