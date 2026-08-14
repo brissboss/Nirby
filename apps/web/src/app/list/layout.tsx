@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { Logo } from "@/components/logo";
 import { LanguageSelector } from "@/components/ui/language-selector";
+import { MAIN_CONTENT_ID } from "@/lib/a11y/landmarks";
 
 export default function ListJoinLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -15,7 +16,9 @@ export default function ListJoinLayout({ children }: { children: React.ReactNode
           <LanguageSelector />
         </div>
       </header>
-      <main className="mx-auto max-w-2xl px-4 py-8">{children}</main>
+      <main id={MAIN_CONTENT_ID} tabIndex={-1} className="mx-auto max-w-2xl px-4 py-8">
+        {children}
+      </main>
     </div>
   );
 }

@@ -85,6 +85,10 @@ const NEW_COMMON_KEYS = [
   "legal.home",
   "legal.privacy",
   "legal.mentions",
+  "skipLink",
+  "globalError.title",
+  "globalError.description",
+  "globalError.retry",
 ] as const;
 
 const NEW_LEGAL_KEYS = [
@@ -213,5 +217,17 @@ describe("message resolution", () => {
     expect(tLegal("privacy.title")).toBe("Privacy policy");
     expect(tLegal("mentions.title")).toBe("Legal notice");
     expect(tLegal("disclaimer.title")).toBe("Sample content");
+  });
+
+  it("resolves skip link and global error keys", () => {
+    const tCommon = createTranslator({
+      locale: "en",
+      messages: { common: enCommon },
+      namespace: "common",
+    });
+
+    expect(tCommon("skipLink")).toBe("Skip to content");
+    expect(tCommon("globalError.title")).toBe("Something went wrong");
+    expect(tCommon("globalError.retry")).toBe("Try again");
   });
 });

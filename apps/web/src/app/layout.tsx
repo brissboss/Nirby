@@ -1,9 +1,10 @@
 import type { Metadata, Viewport } from "next";
 import { Poppins, Quicksand } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
-import { getMessages, getLocale } from "next-intl/server";
+import { getMessages, getLocale, getTranslations } from "next-intl/server";
 import { ThemeProvider } from "next-themes";
 
+import { SkipLink } from "@/components/skip-link";
 import { ToasterWrapper } from "@/components/ui";
 import { AuthProvider } from "@/features/auth";
 import { QueryProvider } from "@/lib/query-client";
@@ -36,7 +37,6 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
   viewportFit: "cover",
 };
 
@@ -47,6 +47,7 @@ export default async function RootLayout({
 }>) {
   const locale = await getLocale();
   const messages = await getMessages();
+  const t = await getTranslations("common");
 
   return (
     <html lang={locale} suppressHydrationWarning>
@@ -54,6 +55,7 @@ export default async function RootLayout({
         className={`${poppins.variable} ${quicksand.variable} font-sans antialiased`}
         suppressHydrationWarning
       >
+        <SkipLink>{t("skipLink")}</SkipLink>
         <NextIntlClientProvider messages={messages}>
           <ThemeProvider
             attribute="class"

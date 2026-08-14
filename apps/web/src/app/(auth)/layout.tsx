@@ -5,6 +5,7 @@ import { LegalLinks } from "@/components/legal-links";
 import { Logo } from "@/components/logo";
 import { LanguageSelector } from "@/components/ui/language-selector";
 import { isAuthenticated } from "@/features/auth/server";
+import { MAIN_CONTENT_ID } from "@/lib/a11y/landmarks";
 
 export default async function AuthLayout({ children }: { children: React.ReactNode }) {
   const authenticated = await isAuthenticated();
@@ -33,7 +34,9 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
         </div>
       </div>
       <div className="flex min-h-screen flex-col">
-        <div className="flex flex-1 flex-col">{children}</div>
+        <main id={MAIN_CONTENT_ID} tabIndex={-1} className="flex flex-1 flex-col">
+          {children}
+        </main>
         <footer className="px-6 py-4">
           <LegalLinks />
         </footer>
