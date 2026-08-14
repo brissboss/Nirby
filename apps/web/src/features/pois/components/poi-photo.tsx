@@ -15,6 +15,15 @@ type PoiPhotoProps = {
   className?: string;
 };
 
+function isLocalUploadUrl(src: string): boolean {
+  try {
+    const { hostname } = new URL(src);
+    return hostname === "localhost" || hostname === "127.0.0.1";
+  } catch {
+    return false;
+  }
+}
+
 export function PoiPhoto({ photo, alt, className }: PoiPhotoProps) {
   if (photo.kind === "url") {
     return (
@@ -24,6 +33,8 @@ export function PoiPhoto({ photo, alt, className }: PoiPhotoProps) {
         width={400}
         height={400}
         loading="lazy"
+        // Next.js 16 image optimizer rejects private IPs (local MinIO).
+        unoptimized={isLocalUploadUrl(photo.url)}
         className={cn("size-full object-cover", className)}
       />
     );

@@ -2,6 +2,7 @@ import {
   GetCollaboratorsData,
   GetListPoisData,
   GetListsData,
+  GetPoisData,
   GetSharedListPoisData,
 } from "./generated/types.gen";
 
@@ -12,6 +13,7 @@ import type { ListsInfiniteFilters } from "@/features/lists/hooks/use-lists-infi
 // initializer makes TypeScript infer `any`, which silently widens every `useQuery` result.
 const GOOGLE_PLACES_ROOT = ["google-places"] as const;
 const LISTS_ROOT = ["lists"] as const;
+const POIS_ROOT = ["pois"] as const;
 const SHARED_ROOT = ["shared"] as const;
 
 const listPoisRoot = (listId: string) => [...LISTS_ROOT, "pois", listId] as const;
@@ -46,6 +48,11 @@ export const queryKeys = {
       list: (listId: string, filters?: GetCollaboratorsData["query"]) =>
         [...listCollaboratorsRoot(listId), filters] as const,
     },
+  },
+  pois: {
+    all: POIS_ROOT,
+    list: (filters?: GetPoisData["query"]) => [...POIS_ROOT, "list", filters] as const,
+    detail: (poiId: string) => [...POIS_ROOT, "detail", poiId] as const,
   },
   shared: {
     all: SHARED_ROOT,

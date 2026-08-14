@@ -28,7 +28,7 @@ export function ListPoisSection({
   selectedPoiId,
   onSelectPoi,
 }: ListPoisSectionProps) {
-  const canRemove = canEditList(role);
+  const canEdit = canEditList(role);
   const tLists = useTranslations("lists");
   const getErrorMessage = useErrorMessage();
 
@@ -113,7 +113,7 @@ export function ListPoisSection({
                   <ListPoiRow
                     savedPoi={savedPoi}
                     listId={listId}
-                    canRemove={canRemove}
+                    canRemove={canEdit}
                     isSelected={mapId !== null && selectedPoiId === mapId}
                     onSelect={onSelectPoi}
                   />

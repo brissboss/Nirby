@@ -102,3 +102,24 @@ describe("queryKeys.lists", () => {
     expect(queryKeys.lists.poiMembership.byPlaces(["a"])[0]).toBe(queryKeys.lists.all[0]);
   });
 });
+
+describe("queryKeys.pois", () => {
+  it("all is stable root", () => {
+    expect(queryKeys.pois.all).toEqual(["pois"]);
+  });
+
+  it("list includes filters", () => {
+    const filters = { page: 1, limit: 10 };
+    expect(queryKeys.pois.list(filters)).toEqual(["pois", "list", filters]);
+    expect(queryKeys.pois.list()).toEqual(["pois", "list", undefined]);
+  });
+
+  it("detail includes poiId", () => {
+    expect(queryKeys.pois.detail("poi-1")).toEqual(["pois", "detail", "poi-1"]);
+  });
+
+  it("keys are prefixed by all", () => {
+    expect(queryKeys.pois.list()[0]).toBe(queryKeys.pois.all[0]);
+    expect(queryKeys.pois.detail("id")[0]).toBe(queryKeys.pois.all[0]);
+  });
+});
