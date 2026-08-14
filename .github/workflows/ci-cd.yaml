@@ -142,8 +142,8 @@ jobs:
       - name: Type Check API
         run: pnpm -C apps/api exec tsc --noEmit
 
-      - name: Test API
-        run: pnpm -C apps/api test -- --reporter=verbose
+      - name: Test API with Coverage
+        run: pnpm -C apps/api test:coverage -- --reporter=verbose
         env:
           DATABASE_URL: postgresql://nirby:nirby@localhost:5432/nirby_test
           REDIS_URL: redis://localhost:6379
@@ -152,6 +152,13 @@ jobs:
           ACCESS_TOKEN_TTL: 900
           REFRESH_TOKEN_TTL: 604800
           NODE_ENV: test
+
+      - name: Upload API coverage report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: api-coverage-report
+          path: apps/api/coverage
 
   ci-web:
     runs-on: ubuntu-latest
@@ -192,6 +199,13 @@ jobs:
 
       - name: Test Web with Coverage
         run: pnpm -C apps/web test:coverage
+
+      - name: Upload Web coverage report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: web-coverage-report
+          path: apps/web/coverage
 
       - name: Build Web
         run: pnpm -C apps/web build
