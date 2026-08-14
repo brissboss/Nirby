@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { useRef } from "react";
 import type { Control } from "react-hook-form";
 
+import { PoiPhoto } from "../components/poi-photo";
 import {
   POI_CATEGORY_VALUES,
   POI_VISIBILITY_VALUES,
@@ -46,16 +47,19 @@ type PoiFormFieldsProps = {
   disabled?: boolean;
   photoFile: File | null;
   onPhotoChange: (file: File | null) => void;
+  /** Current POI photo shown while editing, until a new file is picked. */
+  existingPhotoUrl?: string;
   /** When set, the user picks a destination list (no list is currently open). */
   listSelect?: PoiFormListSelect;
 };
 
-/** Shared fields for custom POI create (and future edit) forms. Lat/lng are map-picked, not shown. */
+/** Shared fields for custom POI create and edit forms. Lat/lng are map-picked, not shown. */
 export function PoiFormFields({
   control,
   disabled = false,
   photoFile,
   onPhotoChange,
+  existingPhotoUrl,
   listSelect,
 }: PoiFormFieldsProps) {
   const tPoi = useTranslations("poi");
@@ -202,6 +206,14 @@ export function PoiFormFields({
             event.target.value = "";
           }}
         />
+        {existingPhotoUrl && !photoFile ? (
+          <div className="relative size-20 overflow-hidden rounded-md">
+            <PoiPhoto
+              photo={{ kind: "url", url: existingPhotoUrl }}
+              alt={tPoi("photo.title")}
+            />
+          </div>
+        ) : null}
         <div className="flex flex-wrap items-center gap-2">
           <Button
             type="button"
@@ -211,7 +223,7 @@ export function PoiFormFields({
             onClick={() => photoInputRef.current?.click()}
           >
             <ImagePlusIcon className="size-4" />
-            {tPoi("photo.hint")}
+            {existingPhotoUrl ? tPoi("photo.replaceHint") : tPoi("photo.hint")}
           </Button>
           {photoFile ? (
             <span className="text-sm text-muted-foreground">{photoFile.name}</span>

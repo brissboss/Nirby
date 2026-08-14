@@ -111,6 +111,7 @@ export function EditPoiForm({ poi, listId, closeDialog }: EditPoiFormProps) {
           disabled={isPending}
           photoFile={photoFile}
           onPhotoChange={setPhotoFile}
+          existingPhotoUrl={poi.photoUrls?.[0]}
         />
 
         <div className={cn("mt-2 flex flex-col gap-2 md:flex-row md:justify-end")}>

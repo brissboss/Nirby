@@ -77,6 +77,7 @@
   "photo": {
     "title": "Photo",
     "hint": "Appuyer pour ajouter une photo",
+    "replaceHint": "Appuyer pour remplacer la photo",
     "formats": "JPEG, PNG ou WebP · 5 Mo max.",
     "uploadSuccess": "Photo envoyée avec succès",
     "uploadError": "Impossible d’envoyer la photo"

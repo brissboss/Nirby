@@ -18,6 +18,10 @@ vi.mock("../hooks/use-upload-poi-photo", () => ({
   useUploadPoiPhoto: vi.fn(),
 }));
 
+vi.mock("../components/poi-photo", () => ({
+  PoiPhoto: ({ alt }: { alt: string }) => <div data-testid="existing-poi-photo">{alt}</div>,
+}));
+
 vi.mock("@/hooks/use-error-message", () => ({
   useErrorMessage: () => () => "API error message",
 }));
@@ -69,6 +73,31 @@ describe("EditPoiForm", () => {
     expect(screen.getByLabelText("fields.address")).toHaveValue("12 rue Example");
     expect(screen.queryByLabelText("fields.latitude")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("fields.longitude")).not.toBeInTheDocument();
+  });
+
+  it("shows the existing photo and omits photoUrls when none is added", async () => {
+    const user = userEvent.setup();
+    const poiWithPhoto = {
+      ...poi,
+      photoUrls: ["https://cdn.example.com/existing.jpg"],
+    };
+
+    render(<EditPoiForm poi={poiWithPhoto} listId="list-1" closeDialog={closeDialog} />);
+
+    expect(screen.getByTestId("existing-poi-photo")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "photo.replaceHint" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "edit.submit" }));
+
+    await waitFor(() => {
+      expect(updatePoi).toHaveBeenCalledWith({
+        poiId: "poi-1",
+        listId: "list-1",
+        body: expect.not.objectContaining({ photoUrls: expect.anything() }),
+      });
+    });
+
+    expect(uploadPoiPhoto).not.toHaveBeenCalled();
   });
 
   it("submits updatePoi with existing coordinates and no photo", async () => {

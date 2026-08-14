@@ -223,6 +223,50 @@ describe("POI Routes", () => {
       expect(res.body.poi.name).toBe("Updated POI");
     });
 
+    it("should keep existing photoUrls when they are omitted", async () => {
+      const poi = await prisma.poi.create({
+        data: {
+          name: "Test POI",
+          latitude: 40.7128,
+          longitude: -74.006,
+          createdBy: userId,
+          photoUrls: ["https://cdn.example.com/existing.jpg"],
+        },
+      });
+
+      const res = await request(app)
+        .put(`/poi/${poi.id}`)
+        .set("Authorization", `Bearer ${accessToken}`)
+        .send({
+          name: "Updated POI",
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.poi.photoUrls).toEqual(["https://cdn.example.com/existing.jpg"]);
+    });
+
+    it("should replace photoUrls when they are provided", async () => {
+      const poi = await prisma.poi.create({
+        data: {
+          name: "Test POI",
+          latitude: 40.7128,
+          longitude: -74.006,
+          createdBy: userId,
+          photoUrls: ["https://cdn.example.com/existing.jpg"],
+        },
+      });
+
+      const res = await request(app)
+        .put(`/poi/${poi.id}`)
+        .set("Authorization", `Bearer ${accessToken}`)
+        .send({
+          photoUrls: ["https://cdn.example.com/new.jpg"],
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.poi.photoUrls).toEqual(["https://cdn.example.com/new.jpg"]);
+    });
+
     it("should deny update to another user's POI", async () => {
       const otherUser = await prisma.user.create({
         data: {
