@@ -1,3 +1,11 @@
 /// <reference types="vitest/globals" />
-/// <reference types="vitest-axe/extend-expect" />
 import "@testing-library/jest-dom";
+
+declare module "vitest" {
+  interface Assertion {
+    toHaveNoViolations(): void;
+  }
+  interface AsymmetricMatchersContaining {
+    toHaveNoViolations(): void;
+  }
+}
