@@ -14,7 +14,10 @@
   },
   "create": {
     "title": "New place",
-    "submit": "Create"
+    "submit": "Create",
+    "listLoading": "Loading your lists…",
+    "listEmpty": "Create a list first to save this place",
+    "listError": "Could not load lists"
   },
   "edit": {
     "title": "Edit place",
@@ -28,12 +31,14 @@
     "latitude": "Latitude",
     "longitude": "Longitude",
     "visibility": "Visibility",
-    "category": "Category"
+    "category": "Category",
+    "list": "List"
   },
   "placeholders": {
     "name": "e.g. Secret garden",
     "description": "Optional notes about this place",
-    "address": "Street, city"
+    "address": "Street, city",
+    "list": "Choose a list"
   },
   "visibility": {
     "PRIVATE": { "label": "Private" },
@@ -90,6 +95,7 @@
     "descriptionTooLong": "Description cannot be longer than 1000 characters",
     "addressTooLong": "Address cannot be longer than 500 characters",
     "latitudeInvalid": "Latitude must be between -90 and 90",
-    "longitudeInvalid": "Longitude must be between -180 and 180"
+    "longitudeInvalid": "Longitude must be between -180 and 180",
+    "requiredList": "Choose a list to save this place"
   }
 }

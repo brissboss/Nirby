@@ -33,7 +33,7 @@ export function PoiCard({ poi, actions, badge, isSelected, onSelect }: PoiCardPr
     <article
       ref={cardRef}
       className={cn(
-        "group relative flex flex-col items-start rounded-md border border-border",
+        "group relative flex flex-col items-start rounded-md border border-border shadow-sm",
         isSelected && "ring-2 ring-primary",
         onSelect && "cursor-pointer"
       )}
@@ -54,10 +54,14 @@ export function PoiCard({ poi, actions, badge, isSelected, onSelect }: PoiCardPr
           ) : null}
         </div>
 
-        <p className="flex min-w-0 items-center gap-1.5 text-sm text-muted-foreground">
-          <MapPinIcon className="size-3.5 shrink-0" aria-hidden />
-          <span className="min-w-0 wrap-break-words">{poi.address ?? tPoi("addressUnknown")}</span>
-        </p>
+        {poi.address ? (
+          <p className="flex min-w-0 items-center gap-1.5 text-sm text-muted-foreground">
+            <MapPinIcon className="size-3.5 shrink-0" aria-hidden />
+            <span className="min-w-0 wrap-break-words">
+              {poi.address ?? tPoi("addressUnknown")}
+            </span>
+          </p>
+        ) : null}
 
         {poi.openingHours ? (
           <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">

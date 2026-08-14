@@ -8,7 +8,7 @@ import { useUploadPoiPhoto } from "../hooks/use-upload-poi-photo";
 
 import { CreatePoiForm } from "./create-poi-form";
 
-import { useAddPoiToList } from "@/features/lists/hooks/use-add-poi-to-list";
+import { useAddPoiToList, useLists } from "@/features/lists";
 
 vi.mock("../hooks/use-create-poi", () => ({
   useCreatePoi: vi.fn(),
@@ -18,9 +18,24 @@ vi.mock("../hooks/use-upload-poi-photo", () => ({
   useUploadPoiPhoto: vi.fn(),
 }));
 
-vi.mock("@/features/lists/hooks/use-add-poi-to-list", () => ({
-  useAddPoiToList: vi.fn(),
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({
+    push: vi.fn(),
+    replace: vi.fn(),
+    prefetch: vi.fn(),
+    back: vi.fn(),
+  }),
+  useSearchParams: () => new URLSearchParams(),
 }));
+
+vi.mock("@/features/lists", async () => {
+  const actual = await vi.importActual<typeof import("@/features/lists")>("@/features/lists");
+  return {
+    ...actual,
+    useLists: vi.fn(),
+    useAddPoiToList: vi.fn(),
+  };
+});
 
 vi.mock("@/hooks/use-error-message", () => ({
   useErrorMessage: () => () => "API error message",
@@ -34,6 +49,28 @@ vi.mock("sonner", () => ({
 }));
 
 const coordinates = { latitude: 48.8566, longitude: 2.3522 };
+
+function mockLists(
+  lists: Array<{ id: string; name: string; role: string; visibility?: string }> = [
+    { id: "list-1", name: "Paris", role: "OWNER", visibility: "PRIVATE" },
+    { id: "list-2", name: "Shared", role: "VIEWER", visibility: "SHARED" },
+  ]
+) {
+  vi.mocked(useLists).mockReturnValue({
+    data: {
+      lists,
+      pagination: { page: 1, limit: 100, total: lists.length, totalPages: 1 },
+    },
+    isPending: false,
+    isError: false,
+  } as unknown as ReturnType<typeof useLists>);
+}
+
+function listNativeSelect() {
+  const combobox = screen.getByRole("combobox", { name: "fields.list" });
+  const item = combobox.closest('[data-slot="form-item"]');
+  return item?.querySelector("select") as HTMLSelectElement;
+}
 
 describe("CreatePoiForm", () => {
   const closeDialog = vi.fn();
@@ -58,12 +95,13 @@ describe("CreatePoiForm", () => {
       mutateAsync: addPoiToList,
       isPending: false,
     } as unknown as ReturnType<typeof useAddPoiToList>);
+    mockLists();
   });
 
   it("shows validation messages for required fields without lat/lng inputs", async () => {
     const user = userEvent.setup();
 
-    render(<CreatePoiForm coordinates={coordinates} closeDialog={closeDialog} />);
+    render(<CreatePoiForm coordinates={coordinates} listId="list-1" closeDialog={closeDialog} />);
 
     await user.click(screen.getByRole("button", { name: "create.submit" }));
 
@@ -75,10 +113,72 @@ describe("CreatePoiForm", () => {
     expect(uploadPoiPhoto).not.toHaveBeenCalled();
   });
 
-  it("submits createPoi with map coordinates when no photo is selected", async () => {
+  it("hides the list field when a list is already selected", () => {
+    render(<CreatePoiForm coordinates={coordinates} listId="list-1" closeDialog={closeDialog} />);
+
+    expect(screen.queryByLabelText("fields.list")).not.toBeInTheDocument();
+  });
+
+  it("shows a list picker and only editable lists when no list is selected", () => {
+    render(<CreatePoiForm coordinates={coordinates} closeDialog={closeDialog} />);
+
+    expect(screen.getByRole("combobox", { name: "fields.list" })).toBeInTheDocument();
+    const optionLabels = [...listNativeSelect().options].map((option) => option.textContent);
+    expect(optionLabels).toContain("Paris");
+    expect(optionLabels).not.toContain("Shared");
+  });
+
+  it("requires a list when none is preselected", async () => {
     const user = userEvent.setup();
 
     render(<CreatePoiForm coordinates={coordinates} closeDialog={closeDialog} />);
+
+    await user.type(screen.getByLabelText("fields.name"), "Secret spot");
+    await user.click(screen.getByRole("button", { name: "create.submit" }));
+
+    expect(await screen.findByText("validation.requiredList")).toBeInTheDocument();
+    expect(createPoi).not.toHaveBeenCalled();
+  });
+
+  it("adds the created POI to the list picked in the form", async () => {
+    const user = userEvent.setup();
+
+    render(<CreatePoiForm coordinates={coordinates} closeDialog={closeDialog} />);
+
+    await user.type(screen.getByLabelText("fields.name"), "Secret spot");
+    await user.selectOptions(listNativeSelect(), "list-1");
+    await user.click(screen.getByRole("button", { name: "create.submit" }));
+
+    await waitFor(() => {
+      expect(createPoi).toHaveBeenCalled();
+      expect(addPoiToList).toHaveBeenCalledWith({
+        listId: "list-1",
+        body: { poiId: "poi-1" },
+      });
+    });
+
+    expect(toast.success).toHaveBeenCalledWith(
+      "addPoi.success",
+      expect.objectContaining({
+        action: expect.objectContaining({ label: "addPoi.viewList" }),
+      })
+    );
+    expect(closeDialog).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows an empty state when there is no editable list", () => {
+    mockLists([{ id: "list-2", name: "Shared", role: "VIEWER", visibility: "SHARED" }]);
+
+    render(<CreatePoiForm coordinates={coordinates} closeDialog={closeDialog} />);
+
+    expect(screen.getByText("create.listEmpty")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "create.submit" })).toBeDisabled();
+  });
+
+  it("submits createPoi with map coordinates when no photo is selected", async () => {
+    const user = userEvent.setup();
+
+    render(<CreatePoiForm coordinates={coordinates} listId="list-1" closeDialog={closeDialog} />);
 
     await user.type(screen.getByLabelText("fields.name"), "Secret spot");
     await user.click(screen.getByRole("button", { name: "create.submit" }));
@@ -96,8 +196,11 @@ describe("CreatePoiForm", () => {
     });
 
     expect(uploadPoiPhoto).not.toHaveBeenCalled();
-    expect(addPoiToList).not.toHaveBeenCalled();
-    expect(toast.success).toHaveBeenCalledWith("createPoi.success");
+    expect(addPoiToList).toHaveBeenCalledWith({
+      listId: "list-1",
+      body: { poiId: "poi-1" },
+    });
+    expect(toast.success).toHaveBeenCalledWith("addPoi.success");
     expect(closeDialog).toHaveBeenCalledTimes(1);
   });
 
@@ -105,7 +208,7 @@ describe("CreatePoiForm", () => {
     const user = userEvent.setup();
     const file = new File(["photo"], "spot.webp", { type: "image/webp" });
 
-    render(<CreatePoiForm coordinates={coordinates} closeDialog={closeDialog} />);
+    render(<CreatePoiForm coordinates={coordinates} listId="list-1" closeDialog={closeDialog} />);
 
     await user.type(screen.getByLabelText("fields.name"), "Secret spot");
 
@@ -138,7 +241,7 @@ describe("CreatePoiForm", () => {
     const user = userEvent.setup();
     createPoi.mockRejectedValue({ message: "Forbidden" });
 
-    render(<CreatePoiForm coordinates={coordinates} closeDialog={closeDialog} />);
+    render(<CreatePoiForm coordinates={coordinates} listId="list-1" closeDialog={closeDialog} />);
 
     await user.type(screen.getByLabelText("fields.name"), "Secret spot");
     await user.click(screen.getByRole("button", { name: "create.submit" }));

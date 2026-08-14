@@ -30,11 +30,24 @@ import {
   Textarea,
 } from "@/components/ui";
 
+export type PoiFormListOption = {
+  id: string;
+  name: string;
+};
+
+type PoiFormListSelect = {
+  lists: PoiFormListOption[];
+  isLoading: boolean;
+  isError: boolean;
+};
+
 type PoiFormFieldsProps = {
   control: Control<CreatePoiFormData>;
   disabled?: boolean;
   photoFile: File | null;
   onPhotoChange: (file: File | null) => void;
+  /** When set, the user picks a destination list (no list is currently open). */
+  listSelect?: PoiFormListSelect;
 };
 
 /** Shared fields for custom POI create (and future edit) forms. Lat/lng are map-picked, not shown. */
@@ -43,12 +56,17 @@ export function PoiFormFields({
   disabled = false,
   photoFile,
   onPhotoChange,
+  listSelect,
 }: PoiFormFieldsProps) {
   const tPoi = useTranslations("poi");
   const photoInputRef = useRef<HTMLInputElement>(null);
 
   return (
     <>
+      {listSelect ? (
+        <PoiListField control={control} disabled={disabled} listSelect={listSelect} />
+      ) : null}
+
       <FormField
         control={control}
         name="name"
@@ -201,5 +219,60 @@ export function PoiFormFields({
         </div>
       </div>
     </>
+  );
+}
+
+function PoiListField({
+  control,
+  disabled,
+  listSelect,
+}: {
+  control: Control<CreatePoiFormData>;
+  disabled: boolean;
+  listSelect: PoiFormListSelect;
+}) {
+  const tPoi = useTranslations("poi");
+  const hasLists = listSelect.lists.length > 0;
+  const showEmpty = !listSelect.isLoading && (listSelect.isError || !hasLists);
+
+  return (
+    <FormField
+      control={control}
+      name="listId"
+      render={({ field }) => (
+        <FormItem>
+          <FormLabel className="text-md lg:text-sm">{tPoi("fields.list")}</FormLabel>
+          {showEmpty ? (
+            <p className="text-sm text-muted-foreground">
+              {listSelect.isError ? tPoi("create.listError") : tPoi("create.listEmpty")}
+            </p>
+          ) : (
+            <Select
+              value={field.value || undefined}
+              onValueChange={field.onChange}
+              disabled={disabled || listSelect.isLoading}
+            >
+              <FormControl>
+                <SelectTrigger disabled={disabled || listSelect.isLoading}>
+                  <SelectValue
+                    placeholder={
+                      listSelect.isLoading ? tPoi("create.listLoading") : tPoi("placeholders.list")
+                    }
+                  />
+                </SelectTrigger>
+              </FormControl>
+              <SelectContent>
+                {listSelect.lists.map((list) => (
+                  <SelectItem key={list.id} value={list.id}>
+                    {list.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          <FormMessage />
+        </FormItem>
+      )}
+    />
   );
 }

@@ -1,8 +1,9 @@
 "use client";
 
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
@@ -16,10 +17,18 @@ import { poiFormValuesToBody } from "../utils/poi-form.utils";
 import { PoiFormFields } from "./poi-form-fields";
 
 import { Button, Form } from "@/components/ui";
-import { useAddPoiToList } from "@/features/lists/hooks/use-add-poi-to-list";
+import {
+  buildListsNavigationSearchParams,
+  canEditList,
+  useAddPoiToList,
+  useLists,
+} from "@/features/lists";
 import { poiPhotoFileSchema } from "@/features/upload";
 import { useErrorMessage } from "@/hooks/use-error-message";
 import { cn } from "@/lib/utils";
+
+/** The picker is not paginated: lists are fetched in a single page. */
+const MAX_PICKER_LISTS = 100;
 
 export type CreatePoiFormProps = {
   closeDialog?: () => void;
@@ -34,12 +43,25 @@ export function CreatePoiForm({ closeDialog, onCreated, listId, coordinates }: C
   const tPoi = useTranslations("poi");
   const tLists = useTranslations("lists");
   const t = useTranslations();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const getErrorMessage = useErrorMessage();
   const { mutateAsync: createPoi, isPending: isCreating } = useCreatePoi();
   const { mutateAsync: uploadPoiPhoto, isPending: isUploading } = useUploadPoiPhoto();
   const { mutateAsync: addPoiToList, isPending: isAdding } = useAddPoiToList();
-  const poiFormSchema = usePoiFormSchema();
+  const shouldPickList = !listId;
+  const poiFormSchema = usePoiFormSchema({ requireListId: shouldPickList });
   const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const {
+    data: listsData,
+    isPending: isListsPending,
+    isError: isListsError,
+  } = useLists({ limit: MAX_PICKER_LISTS });
+
+  const editableLists = useMemo(
+    () => (listsData?.lists ?? []).filter((list) => canEditList(list.role)),
+    [listsData?.lists]
+  );
 
   const form = useForm<CreatePoiFormData>({
     resolver: standardSchemaResolver(poiFormSchema),
@@ -51,10 +73,14 @@ export function CreatePoiForm({ closeDialog, onCreated, listId, coordinates }: C
       longitude: coordinates.longitude,
       visibility: DEFAULT_POI_VISIBILITY,
       category: undefined,
+      listId: listId ?? "",
     },
   });
 
   const isPending = isCreating || isUploading || isAdding;
+  const canSubmit =
+    !isPending &&
+    (!shouldPickList || (!isListsPending && !isListsError && editableLists.length > 0));
 
   async function onSubmit(values: CreatePoiFormData) {
     try {
@@ -85,9 +111,11 @@ export function CreatePoiForm({ closeDialog, onCreated, listId, coordinates }: C
         ...(photoUrls ? { photoUrls } : {}),
       });
 
-      if (listId && poi.id) {
+      const targetListId = listId ?? values.listId?.trim();
+
+      if (targetListId && poi.id) {
         try {
-          await addPoiToList({ listId, body: { poiId: poi.id } });
+          await addPoiToList({ listId: targetListId, body: { poiId: poi.id } });
         } catch (error) {
           toast.error(tLists("addPoi.error"), {
             description: getErrorMessage(error),
@@ -95,7 +123,17 @@ export function CreatePoiForm({ closeDialog, onCreated, listId, coordinates }: C
           return;
         }
 
-        toast.success(tLists("addPoi.success"));
+        if (shouldPickList) {
+          toast.success(tLists("addPoi.success"), {
+            action: {
+              label: tLists("addPoi.viewList"),
+              onClick: () =>
+                router.push(buildListsNavigationSearchParams(searchParams, targetListId)),
+            },
+          });
+        } else {
+          toast.success(tLists("addPoi.success"));
+        }
       } else {
         toast.success(tPoi("createPoi.success"));
       }
@@ -121,6 +159,15 @@ export function CreatePoiForm({ closeDialog, onCreated, listId, coordinates }: C
           disabled={isPending}
           photoFile={photoFile}
           onPhotoChange={setPhotoFile}
+          listSelect={
+            shouldPickList
+              ? {
+                  lists: editableLists.map((list) => ({ id: list.id, name: list.name })),
+                  isLoading: isListsPending,
+                  isError: isListsError,
+                }
+              : undefined
+          }
         />
 
         <div className={cn("mt-2 flex flex-col gap-2 md:flex-row md:justify-end")}>
@@ -129,7 +176,7 @@ export function CreatePoiForm({ closeDialog, onCreated, listId, coordinates }: C
               {t("common.buttons.cancel")}
             </Button>
           ) : null}
-          <Button type="submit" disabled={isPending} loading={isPending}>
+          <Button type="submit" disabled={!canSubmit} loading={isPending}>
             {tPoi("create.submit")}
           </Button>
         </div>

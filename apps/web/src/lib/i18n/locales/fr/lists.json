@@ -113,7 +113,8 @@
   },
   "addPoi": {
     "success": "Lieu ajouté à la liste",
-    "error": "Impossible d’ajouter le lieu"
+    "error": "Impossible d’ajouter le lieu",
+    "viewList": "Voir la liste"
   },
   "share": {
     "action": "Partager",

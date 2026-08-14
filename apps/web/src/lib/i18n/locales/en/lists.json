@@ -113,7 +113,8 @@
   },
   "addPoi": {
     "success": "Place added to the list",
-    "error": "Could not add the place"
+    "error": "Could not add the place",
+    "viewList": "View list"
   },
   "share": {
     "action": "Share",
