@@ -16,16 +16,16 @@ Complète les slides Figma et sert de base si le jury demande les plans de tests
 
 ## 2. Pyramide et outils
 
-| Niveau                   | Outil                            | Périmètre                                                         | Statut                   |
-| ------------------------ | -------------------------------- | ----------------------------------------------------------------- | ------------------------ |
-| Unitaires                | Vitest                           | Règles métier (`list-policy`, `poi-policy`), schémas, utils front | ✅ Implémenté            |
-| Intégration API          | Vitest + Supertest               | Routes Express, middleware auth, base PostgreSQL de test          | ✅ Implémenté            |
-| Composants / pages front | Vitest + Testing Library + jsdom | Vues listes, hooks, formulaires                                   | ✅ Implémenté            |
-| Smoke / health check     | Docker + `curl` (CI)             | Conteneurs API et web démarrent, `/health` et `/` répondent       | ✅ Implémenté            |
-| Sécurité (OWASP)         | Vitest + Supertest               | Injection, IDOR, XSS stocké, upload malveillant                   | ✅ Implémenté            |
-| Audit dépendances (SCA)  | `pnpm audit` + Dependabot        | CVE dans `pnpm-lock.yaml`, PRs de mise à jour hebdomadaires       | ✅ Implémenté            |
-| DAST                     | OWASP ZAP Baseline (CI)          | Scan passif/actif sur l’API Docker en CI                          | ✅ Implémenté            |
-| E2E                      | Playwright                       | Parcours utilisateur complets                                     | ⏳ Prévu, non implémenté |
+| Niveau                   | Outil                                | Périmètre                                                         | Statut                   |
+| ------------------------ | ------------------------------------ | ----------------------------------------------------------------- | ------------------------ |
+| Unitaires                | Vitest                               | Règles métier (`list-policy`, `poi-policy`), schémas, utils front | ✅ Implémenté            |
+| Intégration API          | Vitest + Supertest                   | Routes Express, middleware auth, base PostgreSQL de test          | ✅ Implémenté            |
+| Composants / pages front | Vitest + Testing Library + jsdom     | Vues listes, hooks, formulaires                                   | ✅ Implémenté            |
+| Smoke / health check     | Docker + `curl` (CI) + `HEALTHCHECK` | Conteneurs API et web non-root, `/health` et `/` répondent        | ✅ Implémenté            |
+| Sécurité (OWASP)         | Vitest + Supertest                   | Injection, IDOR, XSS stocké, upload malveillant                   | ✅ Implémenté            |
+| Audit dépendances (SCA)  | `pnpm audit` + Dependabot            | CVE dans `pnpm-lock.yaml`, PRs de mise à jour hebdomadaires       | ✅ Implémenté            |
+| DAST                     | OWASP ZAP Baseline (CI)              | Scan passif/actif sur l’API Docker en CI                          | ✅ Implémenté            |
+| E2E                      | Playwright                           | Parcours utilisateur complets                                     | ⏳ Prévu, non implémenté |
 
 **Rapports de tests :**
 
@@ -48,9 +48,9 @@ Complète les slides Figma et sert de base si le jury demande les plans de tests
 - Déclenchement : **pull request** et **push** sur `main` / `staging`.
 - Job `ci-api` : PostGIS 16, base `nirby_test`, migrations Prisma, Redis, secrets factices (`JWT_SECRET`, `GOOGLE_PLACES_API_KEY`, …), tests + couverture (seuils 70 %) + artifact `api-coverage-report`.
 - Job `ci-web` : tests + couverture (seuils 36 / 30 / 26) + artifact `web-coverage-report` + build de vérification.
-- Job `api-docker` : image API, health check, scan OWASP ZAP Baseline (rapport artifact).
+- Job `api-docker` : image API (`USER node`), health check HTTP + assert uid ≠ 0, scan OWASP ZAP Baseline (rapport artifact).
 - Job `security-audit` : `pnpm audit --audit-level=high` (rapport artifact, non bloquant).
-- Job `web-docker` : image web, health check HTTP.
+- Job `web-docker` : image web (`USER node`), health check HTTP + assert uid ≠ 0.
 - **Dependabot** : PRs hebdomadaires npm, Docker et GitHub Actions (`.github/dependabot.yml`).
 
 Chaque run CI recrée un environnement isolé ; les tests API nettoient les données (`deleteMany` en `beforeEach` / `afterAll`).
@@ -237,7 +237,8 @@ _(Adapter la formulation à l’oral si le bug a été trouvé manuellement avan
 | Upload : validation MIME seulement            | Un binaire malveillant avec `Content-Type: image/jpeg` passerait | Ajouter une détection par magic bytes (ex. `file-type`)        |
 | Rate limiting non exercé en tests intégration | `NODE_ENV=test` désactive le blocage réel                        | Tests dédiés avec `NODE_ENV=production` ou tests de charge     |
 | CSRF / SSRF non couverts explicitement        | API stateless JWT ; proxy Google Places côté serveur             | Tests ciblés refresh cookie + validation stricte des URLs      |
-| Monitoring prod                               | Health check CI uniquement                                       | Prometheus / alertes HTTP 5xx                                  |
+| Conteneurs : pas de drop de capabilities      | `USER node` + HEALTHCHECK suffisent pour le MVP ANSSI            | `cap_drop: ALL` Compose / distroless plus tard                 |
+| Monitoring prod                               | Health check CI + HEALTHCHECK image ; pas d’alerting 5xx         | Prometheus / alertes HTTP 5xx                                  |
 | Mapbox / carte                                | Non couvert par tests automatisés                                | Tests manuels ou E2E visuels                                   |
 | Pentest manuel absent                         | Pas d’audit humain ni de fuzzing avancé                          | Audit externe avant mise en prod réelle                        |
 
