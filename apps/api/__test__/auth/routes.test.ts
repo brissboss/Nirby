@@ -401,7 +401,7 @@ describe("Auth routes", () => {
       const passwordHash = await hashPassword("password123");
       const user = await prisma.user.create({
         data: {
-          email: "export@example.com",
+          email: "alice-export@example.com",
           passwordHash,
           emailVerified: true,
           name: "Export User",
@@ -473,7 +473,7 @@ describe("Auth routes", () => {
       expect(res.body.exportedAt).toBeDefined();
       expect(res.body.profile).toMatchObject({
         id: userId,
-        email: "export@example.com",
+        email: "alice-export@example.com",
         name: "Export User",
         avatarUrl: "https://example.com/avatar.jpg",
         bio: "Export bio",
@@ -549,7 +549,7 @@ describe("Auth routes", () => {
 
       const other = await prisma.user.create({
         data: {
-          email: "other-export@example.com",
+          email: "bob-export@example.com",
           passwordHash: await hashPassword("password123"),
           emailVerified: true,
           name: "Other User",
@@ -563,11 +563,11 @@ describe("Auth routes", () => {
 
       expect(res.status).toBe(200);
       expect(res.body.profile.id).toBe(other.id);
-      expect(res.body.profile.email).toBe("other-export@example.com");
-      expect(res.body.profile.email).not.toBe("export@example.com");
+      expect(res.body.profile.email).toBe("bob-export@example.com");
+      expect(res.body.profile.email).not.toBe("alice-export@example.com");
       expect(res.body.createdPois).toHaveLength(0);
       expect(JSON.stringify(res.body)).not.toContain("Secret A");
-      expect(JSON.stringify(res.body)).not.toContain("export@example.com");
+      expect(JSON.stringify(res.body)).not.toContain("alice-export@example.com");
     });
 
     it("should reject request without token", async () => {
