@@ -11,6 +11,7 @@ const messages = {
   addressTooLong: "address too long",
   latitudeInvalid: "lat invalid",
   longitudeInvalid: "lng invalid",
+  requiredList: "list required",
 };
 
 function schema() {
@@ -175,5 +176,26 @@ describe("createPoiFormSchema", () => {
       category: "not-a-category",
     });
     expect(result.success).toBe(false);
+  });
+
+  it("does not require listId by default", () => {
+    const result = schema().safeParse(validInput);
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects missing listId when requireListId is set", () => {
+    const result = createPoiFormSchema(messages, { requireListId: true }).safeParse(validInput);
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues[0].message).toBe(messages.requiredList);
+    }
+  });
+
+  it("accepts listId when requireListId is set", () => {
+    const result = createPoiFormSchema(messages, { requireListId: true }).safeParse({
+      ...validInput,
+      listId: "list-1",
+    });
+    expect(result.success).toBe(true);
   });
 });

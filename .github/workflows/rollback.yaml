@@ -68,6 +68,7 @@ jobs:
             --build-arg NEXT_PUBLIC_API_URL=${{ steps.env.outputs.web_api_url }} \
             --build-arg NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN=${{ secrets.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN }} \
             --build-arg NEXT_PUBLIC_SENTRY_DSN=${{ secrets.NEXT_PUBLIC_SENTRY_DSN }} \
+            --build-arg NEXT_PUBLIC_S3_PUBLIC_URL=${{ vars.S3_PUBLIC_URL }} \
             -f apps/web/Dockerfile .
 
       - name: Save Web image

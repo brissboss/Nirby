@@ -14,7 +14,10 @@
   },
   "create": {
     "title": "Nouveau lieu",
-    "submit": "Créer"
+    "submit": "Créer",
+    "listLoading": "Chargement de tes listes…",
+    "listEmpty": "Crée d’abord une liste pour enregistrer ce lieu",
+    "listError": "Impossible de charger les listes"
   },
   "edit": {
     "title": "Modifier le lieu",
@@ -28,12 +31,14 @@
     "latitude": "Latitude",
     "longitude": "Longitude",
     "visibility": "Visibilité",
-    "category": "Catégorie"
+    "category": "Catégorie",
+    "list": "Liste"
   },
   "placeholders": {
     "name": "ex. Jardin secret",
     "description": "Notes optionnelles sur ce lieu",
-    "address": "Rue, ville"
+    "address": "Rue, ville",
+    "list": "Choisir une liste"
   },
   "visibility": {
     "PRIVATE": { "label": "Privé" },
@@ -90,6 +95,7 @@
     "descriptionTooLong": "La description ne peut pas dépasser 1000 caractères",
     "addressTooLong": "L’adresse ne peut pas dépasser 500 caractères",
     "latitudeInvalid": "La latitude doit être comprise entre -90 et 90",
-    "longitudeInvalid": "La longitude doit être comprise entre -180 et 180"
+    "longitudeInvalid": "La longitude doit être comprise entre -180 et 180",
+    "requiredList": "Choisis une liste pour enregistrer ce lieu"
   }
 }

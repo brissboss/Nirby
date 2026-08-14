@@ -27,11 +27,6 @@ vi.mock("../hooks/use-remove-poi-from-list", () => ({
   }),
 }));
 
-vi.mock("@/features/pois/components/create-poi-dialog", () => ({
-  CreatePoiDialog: ({ open, listId }: { open: boolean; listId?: string }) =>
-    open ? <div data-testid="create-poi-dialog" data-list-id={listId} /> : null,
-}));
-
 const customSavedPoi: SavedPoiListItem = {
   id: "sp-1",
   listId: "list-1",
@@ -122,24 +117,10 @@ describe("ListPoisSection", () => {
     expect(screen.queryByRole("button", { name: "create.title" })).not.toBeInTheDocument();
   });
 
-  it("shows empty-state create CTA for EDITOR", async () => {
-    const user = userEvent.setup();
+  it("does not show a create CTA for EDITOR", () => {
     mockListPoisInfiniteQuery();
 
     render(<ListPoisSection listId="list-1" role="EDITOR" />);
-
-    const createButton = screen.getByRole("button", { name: "create.title" });
-    expect(createButton).toBeInTheDocument();
-
-    await user.click(createButton);
-
-    expect(screen.getByTestId("create-poi-dialog")).toHaveAttribute("data-list-id", "list-1");
-  });
-
-  it("hides create CTA for VIEWER", () => {
-    mockListPoisInfiniteQuery();
-
-    render(<ListPoisSection listId="list-1" role="VIEWER" />);
 
     expect(screen.queryByRole("button", { name: "create.title" })).not.toBeInTheDocument();
   });
@@ -222,6 +203,6 @@ describe("ListPoisSection", () => {
     render(<ListPoisSection listId="list-1" role="EDITOR" />);
 
     expect(screen.getAllByRole("button", { name: "removePoi.action" })).toHaveLength(2);
-    expect(screen.getByRole("button", { name: "create.title" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "create.title" })).not.toBeInTheDocument();
   });
 });
