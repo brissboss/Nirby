@@ -1,0 +1,15 @@
+{
+  "title": "Cookies et traceurs",
+  "description": "Nous utilisons des cookies strictement nécessaires pour vous connecter et mémoriser la langue. La télémétrie d’erreurs (Sentry) n’est chargée qu’avec votre consentement.",
+  "privacyLink": "Politique de confidentialité",
+  "accept": "Accepter",
+  "refuse": "Refuser",
+  "customize": "Personnaliser",
+  "save": "Enregistrer",
+  "back": "Retour",
+  "necessaryTitle": "Strictement nécessaires",
+  "necessaryDescription": "Authentification, langue et affichage. Toujours actifs.",
+  "sentryTitle": "Suivi des erreurs (Sentry)",
+  "sentryDescription": "Aide à diagnostiquer les pannes. Optionnel ; chargé uniquement si vous l’autorisez.",
+  "manage": "Gérer les cookies"
+}

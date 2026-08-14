@@ -1,12 +1,13 @@
 "use client";
 
-import { Download, LogOut, Shield } from "lucide-react";
+import { Cookie, Download, LogOut, Shield } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { toast } from "sonner";
 
 import { ProfileSectionLayout } from "../components/ui/profile-section-layout.component";
 
+import { useCookieConsent } from "@/components/cookie-consent";
 import { LegalLinks } from "@/components/legal-links";
 import { Button, Card, CardInset } from "@/components/ui";
 import { useAuth } from "@/features/auth";
@@ -32,6 +33,8 @@ function downloadJsonFile(data: unknown, filename: string) {
 export function ProfilePrivacyView({ onBack }: ProfilePrivacyViewProps) {
   const t = useTranslations("profile");
   const tCommon = useTranslations();
+  const tConsent = useTranslations("consent");
+  const { openPreferences } = useCookieConsent();
   const { logout } = useAuth();
   const getErrorMessage = useErrorMessage();
   const [isExporting, setIsExporting] = useState(false);
@@ -78,6 +81,15 @@ export function ProfilePrivacyView({ onBack }: ProfilePrivacyViewProps) {
         >
           <Download className="mr-2 size-4" />
           {t("privacy.exportDownload")}
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full justify-start"
+          onClick={() => openPreferences()}
+        >
+          <Cookie className="mr-2 size-4" />
+          {tConsent("manage")}
         </Button>
         <LegalLinks variant="stack" />
         <Button

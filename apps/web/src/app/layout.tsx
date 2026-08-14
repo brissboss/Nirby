@@ -4,6 +4,7 @@ import { NextIntlClientProvider } from "next-intl";
 import { getMessages, getLocale, getTranslations } from "next-intl/server";
 import { ThemeProvider } from "next-themes";
 
+import { CookieConsent } from "@/components/cookie-consent";
 import { SkipLink } from "@/components/skip-link";
 import { ToasterWrapper } from "@/components/ui";
 import { AuthProvider } from "@/features/auth";
@@ -63,10 +64,12 @@ export default async function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
-            <QueryProvider>
-              <AuthProvider>{children}</AuthProvider>
-            </QueryProvider>
-            <ToasterWrapper />
+            <CookieConsent>
+              <QueryProvider>
+                <AuthProvider>{children}</AuthProvider>
+              </QueryProvider>
+              <ToasterWrapper />
+            </CookieConsent>
           </ThemeProvider>
         </NextIntlClientProvider>
       </body>

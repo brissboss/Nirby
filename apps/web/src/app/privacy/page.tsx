@@ -94,6 +94,14 @@ export default async function PrivacyPage() {
             <h2 className="font-display text-lg font-semibold">{t("privacy.s8Title")}</h2>
             <p>{t("privacy.s8Body")}</p>
           </section>
+
+          <section className="space-y-3">
+            <h2 className="font-display text-lg font-semibold">{t("privacy.s9Title")}</h2>
+            <p>{t("privacy.s9Body")}</p>
+            <p>{t("privacy.s9Necessary")}</p>
+            <p>{t("privacy.s9Mapbox")}</p>
+            <p>{t("privacy.s9Sentry")}</p>
+          </section>
         </article>
 
         <footer className="text-muted-foreground mt-12 flex flex-wrap gap-x-4 gap-y-2 border-t border-border pt-8 text-sm">
