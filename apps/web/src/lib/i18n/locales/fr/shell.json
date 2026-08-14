@@ -9,6 +9,7 @@
   "tabs": {
     "explore": "Explorer",
     "lists": "Listes",
-    "profile": "Profil"
+    "profile": "Profil",
+    "navLabel": "Navigation principale"
   }
 }
