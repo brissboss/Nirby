@@ -3,7 +3,7 @@ import { Router } from "express";
 import jwt from "jsonwebtoken";
 import { z } from "zod";
 
-import { requireAuth } from "../auth/middleware";
+import { requireAuth, requireVerifiedEmail } from "../auth/middleware";
 import { prisma } from "../db";
 import { sendCollaboratorInviteEmail } from "../email/service";
 import { env } from "../env";
@@ -481,7 +481,7 @@ listCollaboratorsRouter.delete(
  *             schema:
  *               $ref: '#/components/schemas/Error'
  *       403:
- *         description: Access denied
+ *         description: Access denied or email not verified
  *         content:
  *           application/json:
  *             schema:
@@ -499,89 +499,99 @@ listCollaboratorsRouter.delete(
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-listCollaboratorsRouter.post("/:listId/collaborators/invite", requireAuth, async (req, res) => {
-  try {
-    const { email, role, language, sendEmail } = inviteCollaboratorSchema.parse(req.body);
+listCollaboratorsRouter.post(
+  "/:listId/collaborators/invite",
+  requireAuth,
+  requireVerifiedEmail,
+  async (req, res) => {
+    try {
+      const { email, role, language, sendEmail } = inviteCollaboratorSchema.parse(req.body);
 
-    const list = await prisma.poiList.findUnique({ where: { id: req.params.listId } });
-    if (!list) {
-      return res.status(404).json(formatError(ErrorCodes.LIST_NOT_FOUND, "List not found"));
-    }
+      const list = await prisma.poiList.findUnique({ where: { id: req.params.listId } });
+      if (!list) {
+        return res.status(404).json(formatError(ErrorCodes.LIST_NOT_FOUND, "List not found"));
+      }
 
-    const ownerRole = await checkListAccess(list, req.user!.id);
-    if (!hasListAccess(ownerRole)) {
-      return res.status(404).json(formatError(ErrorCodes.LIST_NOT_FOUND, "List not found"));
-    }
+      const ownerRole = await checkListAccess(list, req.user!.id);
+      if (!hasListAccess(ownerRole)) {
+        return res.status(404).json(formatError(ErrorCodes.LIST_NOT_FOUND, "List not found"));
+      }
 
-    if (!canManageCollaborators(ownerRole)) {
-      return res.status(403).json(formatError(ErrorCodes.LIST_ACCESS_DENIED, "Access denied"));
-    }
+      if (!canManageCollaborators(ownerRole)) {
+        return res.status(403).json(formatError(ErrorCodes.LIST_ACCESS_DENIED, "Access denied"));
+      }
 
-    if (req.user!.email === email) {
-      return res
-        .status(400)
-        .json(
-          formatError(ErrorCodes.COLLABORATOR_CANNOT_INVITE_YOURSELF, "You cannot invite yourself")
-        );
-    }
-
-    const existingUser = await prisma.user.findUnique({ where: { email } });
-    if (existingUser) {
-      const collaborator = await prisma.listCollaborator.findUnique({
-        where: { listId_userId: { listId: list.id, userId: existingUser.id } },
-      });
-      if (collaborator) {
+      if (req.user!.email === email) {
         return res
           .status(400)
-          .json(formatError(ErrorCodes.COLLABORATOR_ALREADY_EXISTS, "Collaborator already exists"));
+          .json(
+            formatError(
+              ErrorCodes.COLLABORATOR_CANNOT_INVITE_YOURSELF,
+              "You cannot invite yourself"
+            )
+          );
       }
-    }
 
-    const invitationToken = jwt.sign(
-      { listId: list.id, email, role, invitedBy: req.user!.id, type: "collaborator_invite" },
-      env.JWT_SECRET,
-      { expiresIn: "7d" }
-    );
+      const existingUser = await prisma.user.findUnique({ where: { email } });
+      if (existingUser) {
+        const collaborator = await prisma.listCollaborator.findUnique({
+          where: { listId_userId: { listId: list.id, userId: existingUser.id } },
+        });
+        if (collaborator) {
+          return res
+            .status(400)
+            .json(
+              formatError(ErrorCodes.COLLABORATOR_ALREADY_EXISTS, "Collaborator already exists")
+            );
+        }
+      }
 
-    const inviteLink = `${env.FRONTEND_URL}/list/${list.id}/collaborators/accept?token=${invitationToken}`;
+      const invitationToken = jwt.sign(
+        { listId: list.id, email, role, invitedBy: req.user!.id, type: "collaborator_invite" },
+        env.JWT_SECRET,
+        { expiresIn: "7d" }
+      );
 
-    let emailSent = false;
-    if (sendEmail) {
-      const invitedByName = await prisma.user.findUnique({
-        where: { id: req.user!.id },
-        select: { name: true },
+      const inviteLink = `${env.FRONTEND_URL}/list/${list.id}/collaborators/accept?token=${invitationToken}`;
+
+      let emailSent = false;
+      if (sendEmail) {
+        const invitedByName = await prisma.user.findUnique({
+          where: { id: req.user!.id },
+          select: { name: true },
+        });
+
+        try {
+          await sendCollaboratorInviteEmail(
+            email,
+            list.name,
+            invitedByName?.name || req.user!.email,
+            inviteLink,
+            language
+          );
+
+          emailSent = true;
+        } catch (emailError) {
+          req.log?.error({ emailError }, "Failed to send collaborator invite email");
+        }
+      }
+
+      res.json({
+        inviteLink,
+        emailSent,
       });
-
-      try {
-        await sendCollaboratorInviteEmail(
-          email,
-          list.name,
-          invitedByName?.name || req.user!.email,
-          inviteLink,
-          language
-        );
-
-        emailSent = true;
-      } catch (emailError) {
-        req.log?.error({ emailError }, "Failed to send collaborator invite email");
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        const details = handleZodError(err);
+        return res
+          .status(400)
+          .json(formatError(ErrorCodes.VALIDATION_ERROR, "Invalid input", details));
       }
+      req.log?.error({ err }, "Failed to invite collaborator");
+      return res.status(500).json(formatError(ErrorCodes.INTERNAL_ERROR, "Internal server error"));
     }
-
-    res.json({
-      inviteLink,
-      emailSent,
-    });
-  } catch (err) {
-    if (err instanceof z.ZodError) {
-      const details = handleZodError(err);
-      return res
-        .status(400)
-        .json(formatError(ErrorCodes.VALIDATION_ERROR, "Invalid input", details));
-    }
-    req.log?.error({ err }, "Failed to invite collaborator");
-    return res.status(500).json(formatError(ErrorCodes.INTERNAL_ERROR, "Internal server error"));
   }
-});
+);
 
 /**
  * @openapi

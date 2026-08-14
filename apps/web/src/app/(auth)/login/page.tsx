@@ -1,11 +1,11 @@
 "use client";
 
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
-import { Eye, EyeOff } from "lucide-react";
+import { ArrowLeft, Eye, EyeOff, Mail } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useState, useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
@@ -21,6 +21,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useAuth, type LoginSignupFormData, createLoginSignupSchema } from "@/features/auth";
 import { useErrorMessage } from "@/hooks/use-error-message";
+import { getErrorCode } from "@/lib/api/errors";
 import {
   RETURN_URL_PARAM,
   buildSignupHref,
@@ -29,7 +30,9 @@ import {
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
-  const { login } = useAuth();
+  const [needsVerification, setNeedsVerification] = useState(false);
+  const [isResending, setIsResending] = useState(false);
+  const { login, resendEmail } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const t = useTranslations();
@@ -59,107 +62,163 @@ export default function LoginPage() {
       await login(values.email, values.password);
       router.push(safeReturnPath ?? "/");
     } catch (error) {
+      if (getErrorCode(error) === "EMAIL_NOT_VERIFIED") {
+        setNeedsVerification(true);
+        return;
+      }
       toast.error(t("auth.login.loginError"), {
         description: getErrorMessage(error),
       });
     }
   }
 
+  async function handleResendEmail() {
+    setIsResending(true);
+    try {
+      await resendEmail(form.getValues("email"));
+      toast.success(t("auth.verifyEmail.emailResent"));
+    } catch (err) {
+      toast.error(t("auth.verifyEmail.emailResendError"), {
+        description: getErrorMessage(err),
+      });
+    } finally {
+      setIsResending(false);
+    }
+  }
+
   return (
-    <div className="flex flex-col items-center justify-center p-6 bg-background">
+    <div className="flex flex-col items-center justify-center p-6 bg-background relative">
+      {needsVerification && (
+        <Button
+          variant="ghost"
+          className="absolute top-11 left-4"
+          onClick={() => setNeedsVerification(false)}
+        >
+          <ArrowLeft className="w-4 h-4" />
+          {t("common.buttons.back")}
+        </Button>
+      )}
+
       <div className="w-full max-w-md lg:max-w-sm space-y-8 lg:space-y-6">
-        <div className="space-y-2 text-center">
-          <h1 className="text-2xl font-bold tracking-tight">{t("auth.login.title")}</h1>
-          <p className="text-muted-foreground text-md lg:text-sm">{t("auth.login.description")}</p>
-        </div>
-
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 lg:space-y-4">
-            <FormField
-              control={form.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-md lg:text-sm">{t("common.labels.email")}</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder={t("common.labels.emailPlaceholder")}
-                      {...field}
-                      className="px-4 lg:px-3"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="password"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-md lg:text-sm">
-                    {t("common.labels.password")}
-                  </FormLabel>
-                  <FormControl>
-                    <div className="relative">
-                      <Input
-                        type={showPassword ? "text" : "password"}
-                        placeholder="••••••••"
-                        {...field}
-                        className="px-4 lg:px-3 pr-12 lg:pr-10"
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="absolute right-0 lg:right-2 top-0 lg:top-1.5 h-full lg:h-6 w-12 lg:w-6 hover:bg-transparent"
-                        onClick={() => setShowPassword((prev) => !prev)}
-                      >
-                        {showPassword ? (
-                          <EyeOff className="size-5 lg:size-4 text-muted-foreground" />
-                        ) : (
-                          <Eye className="size-5 lg:size-4 text-muted-foreground" />
-                        )}
-                        <span className="sr-only">
-                          {showPassword
-                            ? t("auth.general.hidePassword")
-                            : t("auth.general.showPassword")}
-                        </span>
-                      </Button>
-                    </div>
-                  </FormControl>
-                  <FormMessage />
-                  <div className="flex justify-end pt-2 lg:pt-1">
-                    <Link
-                      href="/forgot-password"
-                      className="text-sm font-medium text-primary hover:underline"
-                    >
-                      {t("auth.login.forgotPassword")}
-                    </Link>
-                  </div>
-                </FormItem>
-              )}
-            />
+        {needsVerification ? (
+          <div className="space-y-2 text-center">
+            <Mail className="w-10 h-10 mx-auto text-primary" />
+            <h1 className="text-2xl font-bold tracking-tight">
+              {t("auth.login.emailNotVerifiedTitle")}
+            </h1>
+            <p className="text-muted-foreground text-md lg:text-sm">
+              {t("auth.login.emailNotVerifiedDescription")}
+            </p>
             <Button
-              type="submit"
+              variant="outline"
+              onClick={handleResendEmail}
               className="w-full mt-4"
-              disabled={form.formState.isSubmitting}
-              loading={form.formState.isSubmitting}
+              disabled={isResending}
+              loading={isResending}
             >
-              {t("auth.login.login")}
+              {t("auth.verifyEmail.resendEmail")}
             </Button>
-          </form>
-        </Form>
+          </div>
+        ) : (
+          <>
+            <div className="space-y-2 text-center">
+              <h1 className="text-2xl font-bold tracking-tight">{t("auth.login.title")}</h1>
+              <p className="text-muted-foreground text-md lg:text-sm">
+                {t("auth.login.description")}
+              </p>
+            </div>
 
-        <div className="text-center text-base lg:text-sm pt-4">
-          <span className="text-muted-foreground">{t("auth.login.noAccount")} </span>
-          <Link
-            href={safeReturnPath ? buildSignupHref(safeReturnPath) : "/signup"}
-            className="font-semibold text-primary hover:underline"
-          >
-            {t("auth.login.signup")}
-          </Link>
-        </div>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 lg:space-y-4">
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-md lg:text-sm">
+                        {t("common.labels.email")}
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder={t("common.labels.emailPlaceholder")}
+                          {...field}
+                          className="px-4 lg:px-3"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-md lg:text-sm">
+                        {t("common.labels.password")}
+                      </FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Input
+                            type={showPassword ? "text" : "password"}
+                            placeholder="••••••••"
+                            {...field}
+                            className="px-4 lg:px-3 pr-12 lg:pr-10"
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="absolute right-0 lg:right-2 top-0 lg:top-1.5 h-full lg:h-6 w-12 lg:w-6 hover:bg-transparent"
+                            onClick={() => setShowPassword((prev) => !prev)}
+                          >
+                            {showPassword ? (
+                              <EyeOff className="size-5 lg:size-4 text-muted-foreground" />
+                            ) : (
+                              <Eye className="size-5 lg:size-4 text-muted-foreground" />
+                            )}
+                            <span className="sr-only">
+                              {showPassword
+                                ? t("auth.general.hidePassword")
+                                : t("auth.general.showPassword")}
+                            </span>
+                          </Button>
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                      <div className="flex justify-end pt-2 lg:pt-1">
+                        <Link
+                          href="/forgot-password"
+                          className="text-sm font-medium text-primary hover:underline"
+                        >
+                          {t("auth.login.forgotPassword")}
+                        </Link>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+                <Button
+                  type="submit"
+                  className="w-full mt-4"
+                  disabled={form.formState.isSubmitting}
+                  loading={form.formState.isSubmitting}
+                >
+                  {t("auth.login.login")}
+                </Button>
+              </form>
+            </Form>
+
+            <div className="text-center text-base lg:text-sm pt-4">
+              <span className="text-muted-foreground">{t("auth.login.noAccount")} </span>
+              <Link
+                href={safeReturnPath ? buildSignupHref(safeReturnPath) : "/signup"}
+                className="font-semibold text-primary hover:underline"
+              >
+                {t("auth.login.signup")}
+              </Link>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

@@ -123,6 +123,9 @@ Ci-dessous : **extraits représentatifs** au format attendu par la checklist (en
 | Token JWT invalide                | `Authorization: Bearer invalid-token-123` | HTTP 401                      | ✅ Pass  | idem                                        |
 | Token valide, user existant       | Bearer token signé + user en BDD          | HTTP 200, `user` dans body    | ✅ Pass  | idem                                        |
 | Email non vérifié                 | user `emailVerified: false`               | HTTP 403 sur route protégée   | ✅ Pass  | idem                                        |
+| POST /poi sans email vérifié      | JWT user `emailVerified: false`           | HTTP 403, aucun POI créé      | ✅ Pass  | `apps/api/__test__/poi/routes.test.ts`      |
+| POST /list sans email vérifié     | idem                                      | HTTP 403, aucune liste créée  | ✅ Pass  | `apps/api/__test__/list/routes.test.ts`     |
+| Invite collab. sans email vérifié | idem                                      | HTTP 403                      | ✅ Pass  | idem                                        |
 | Login mot de passe incorrect      | email valide, mauvais password            | HTTP 401                      | ✅ Pass  | `apps/api/__test__/auth/routes.test.ts`     |
 | Refresh token invalide            | cookie `refreshToken=invalid-token`       | HTTP 401                      | ✅ Pass  | idem                                        |
 | Suppression compte + POI et liste | `DELETE /auth/account`, user owner        | HTTP 200, plus de données     | ✅ Pass  | idem                                        |
