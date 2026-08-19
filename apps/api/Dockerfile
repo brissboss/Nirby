@@ -1,4 +1,4 @@
-FROM node:20-alpine AS base
+FROM node:26-alpine AS base
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable
@@ -28,7 +28,7 @@ RUN pnpm install --frozen-lockfile --prod --ignore-scripts
 RUN pnpm -C apps/api exec prisma generate
 
 # Runtime - garde la structure monorepo
-FROM node:20-alpine AS runtime
+FROM node:26-alpine AS runtime
 WORKDIR /repo/apps/api
 ENV NODE_ENV=production
 ENV PNPM_HOME="/pnpm"
