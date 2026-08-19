@@ -1,7 +1,7 @@
 import * as Sentry from "@sentry/nextjs";
 
-import { sentrySharedOptions } from "../sentry.shared";
+import { initClientSentryIfAllowed } from "@/lib/consent/apply-sentry-consent";
 
-Sentry.init(sentrySharedOptions);
+initClientSentryIfAllowed();
 
 export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;

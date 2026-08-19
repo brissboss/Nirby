@@ -86,7 +86,7 @@ export default function VerifyEmailPage() {
 
         {state === "success" && (
           <>
-            <CheckCircle className="w-12 h-12 mx-auto text-green-500" />
+            <CheckCircle className="w-12 h-12 mx-auto text-success" />
             <h1 className="text-2xl font-bold tracking-tight">
               {t("auth.verifyEmail.successTitle")}
             </h1>

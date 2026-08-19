@@ -1,13 +1,59 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from "vitest";
 import crypto from "crypto";
 import request from "supertest";
+
+vi.mock("../../src/upload/service", async () => {
+  const actual = await vi.importActual<typeof import("../../src/upload/service")>(
+    "../../src/upload/service"
+  );
+  return {
+    ...actual,
+    deleteFile: vi.fn().mockResolvedValue(undefined),
+  };
+});
+
+vi.mock("../../src/email/service", () => ({
+  sendAccountDeletedEmail: vi.fn().mockResolvedValue(undefined),
+  sendPasswordResetEmail: vi.fn().mockResolvedValue(undefined),
+  sendVerificationEmail: vi.fn().mockResolvedValue(undefined),
+}));
+
 import { createServer } from "../../src/server";
 import { prisma } from "../../src/db";
 import { ErrorCodes } from "../../src/utils/error-codes";
 import { hashPassword } from "../../src/auth/hash";
 import { signAccessToken } from "../../src/auth/token";
+import { deleteFile } from "../../src/upload/service";
 
 const app = createServer();
+
+function spyTransactionMethodFailure(
+  model: "user" | "session",
+  method: "delete" | "deleteMany" | "update"
+) {
+  const originalTransaction = prisma.$transaction.bind(prisma);
+  return vi.spyOn(prisma, "$transaction").mockImplementationOnce((async (fn: unknown) => {
+    return originalTransaction(async (tx) => {
+      const callback = fn as (client: typeof tx) => Promise<unknown>;
+      const failingTx = new Proxy(tx, {
+        get(target, prop, receiver) {
+          if (prop === model) {
+            return new Proxy(Reflect.get(target, prop, receiver) as object, {
+              get(modelTarget, modelProp, modelReceiver) {
+                if (modelProp === method) {
+                  return () => Promise.reject(new Error("simulated db failure"));
+                }
+                return Reflect.get(modelTarget, modelProp, modelReceiver);
+              },
+            });
+          }
+          return Reflect.get(target, prop, receiver);
+        },
+      });
+      return callback(failingTx);
+    });
+  }) as typeof prisma.$transaction);
+}
 
 describe("Auth routes", () => {
   beforeAll(async () => {
@@ -341,6 +387,200 @@ describe("Auth routes", () => {
 
     it("should reject request with invalid token", async () => {
       const res = await request(app).get("/auth/me").set("Authorization", "Bearer invalid-token");
+
+      expect(res.status).toBe(401);
+      expect(res.body.error.code).toBe(ErrorCodes.UNAUTHORIZED);
+    });
+  });
+
+  describe("GET /auth/me/export", () => {
+    let accessToken: string;
+    let userId: string;
+
+    beforeEach(async () => {
+      const passwordHash = await hashPassword("password123");
+      const user = await prisma.user.create({
+        data: {
+          email: "alice-export@example.com",
+          passwordHash,
+          emailVerified: true,
+          name: "Export User",
+          avatarUrl: "https://example.com/avatar.jpg",
+          bio: "Export bio",
+          emailVerificationToken: "verify-secret-token",
+          passwordResetToken: "reset-secret-token",
+        },
+      });
+
+      userId = user.id;
+      accessToken = signAccessToken({ userId: user.id, email: user.email });
+    });
+
+    it("should export profile, POIs, lists, saved places and collaborations", async () => {
+      const poi = await prisma.poi.create({
+        data: {
+          name: "Owned POI",
+          latitude: 48.8566,
+          longitude: 2.3522,
+          createdBy: userId,
+          description: "A custom place",
+        },
+      });
+
+      const ownedList = await prisma.poiList.create({
+        data: {
+          name: "Owned list",
+          createdBy: userId,
+          shareToken: "share-secret-token",
+          editToken: "edit-secret-token",
+        },
+      });
+
+      const savedPoi = await prisma.savedPoi.create({
+        data: { listId: ownedList.id, poiId: poi.id },
+      });
+
+      const owner = await prisma.user.create({
+        data: {
+          email: "list-owner@example.com",
+          passwordHash: await hashPassword("password123"),
+          emailVerified: true,
+        },
+      });
+
+      const sharedList = await prisma.poiList.create({
+        data: { name: "Shared list", createdBy: owner.id },
+      });
+
+      await prisma.listCollaborator.create({
+        data: { listId: sharedList.id, userId, role: "EDITOR" },
+      });
+
+      await prisma.session.create({
+        data: {
+          userId,
+          refreshToken: "export-refresh-secret",
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        },
+      });
+
+      const res = await request(app)
+        .get("/auth/me/export")
+        .set("Authorization", `Bearer ${accessToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.headers["content-disposition"]).toBe('attachment; filename="nirby-export.json"');
+      expect(res.body.exportedAt).toBeDefined();
+      expect(res.body.profile).toMatchObject({
+        id: userId,
+        email: "alice-export@example.com",
+        name: "Export User",
+        avatarUrl: "https://example.com/avatar.jpg",
+        bio: "Export bio",
+        emailVerified: true,
+      });
+      expect(res.body.createdPois).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            id: poi.id,
+            name: "Owned POI",
+            createdBy: userId,
+          }),
+        ])
+      );
+      expect(res.body.ownedLists).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            id: ownedList.id,
+            name: "Owned list",
+            savedPois: expect.arrayContaining([
+              expect.objectContaining({ id: savedPoi.id, poiId: poi.id }),
+            ]),
+          }),
+        ])
+      );
+      expect(res.body.collaborations).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            role: "EDITOR",
+            list: { id: sharedList.id, name: "Shared list" },
+          }),
+        ])
+      );
+      expect(res.body.sessions).toHaveLength(1);
+      expect(res.body.sessions[0]).toEqual(
+        expect.objectContaining({
+          id: expect.any(String),
+          expiresAt: expect.any(String),
+          createdAt: expect.any(String),
+        })
+      );
+
+      const payload = JSON.stringify(res.body);
+      expect(payload).not.toContain("passwordHash");
+      expect(payload).not.toContain("emailVerificationToken");
+      expect(payload).not.toContain("passwordResetToken");
+      expect(payload).not.toContain("refreshToken");
+      expect(payload).not.toContain("shareToken");
+      expect(payload).not.toContain("editToken");
+      expect(payload).not.toContain("verify-secret-token");
+      expect(payload).not.toContain("reset-secret-token");
+      expect(payload).not.toContain("export-refresh-secret");
+      expect(payload).not.toContain("share-secret-token");
+      expect(payload).not.toContain("edit-secret-token");
+
+      expect(res.body.profile).not.toHaveProperty("passwordHash");
+      expect(res.body.profile).not.toHaveProperty("emailVerificationToken");
+      expect(res.body.profile).not.toHaveProperty("passwordResetToken");
+      expect(res.body.sessions[0]).not.toHaveProperty("refreshToken");
+      expect(res.body.ownedLists[0]).not.toHaveProperty("shareToken");
+      expect(res.body.ownedLists[0]).not.toHaveProperty("editToken");
+    });
+
+    it("should not export another user's data", async () => {
+      await prisma.poi.create({
+        data: {
+          name: "Secret A",
+          latitude: 48.8566,
+          longitude: 2.3522,
+          createdBy: userId,
+        },
+      });
+
+      const other = await prisma.user.create({
+        data: {
+          email: "bob-export@example.com",
+          passwordHash: await hashPassword("password123"),
+          emailVerified: true,
+          name: "Other User",
+        },
+      });
+
+      const otherToken = signAccessToken({ userId: other.id, email: other.email });
+      const res = await request(app)
+        .get("/auth/me/export")
+        .set("Authorization", `Bearer ${otherToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.profile.id).toBe(other.id);
+      expect(res.body.profile.email).toBe("bob-export@example.com");
+      expect(res.body.profile.email).not.toBe("alice-export@example.com");
+      expect(res.body.createdPois).toHaveLength(0);
+      expect(JSON.stringify(res.body)).not.toContain("Secret A");
+      expect(JSON.stringify(res.body)).not.toContain("alice-export@example.com");
+    });
+
+    it("should reject request without token", async () => {
+      const res = await request(app).get("/auth/me/export");
+
+      expect(res.status).toBe(401);
+      expect(res.body.error.code).toBe(ErrorCodes.UNAUTHORIZED);
+    });
+
+    it("should reject request with invalid token", async () => {
+      const res = await request(app)
+        .get("/auth/me/export")
+        .set("Authorization", "Bearer invalid-token");
 
       expect(res.status).toBe(401);
       expect(res.body.error.code).toBe(ErrorCodes.UNAUTHORIZED);
@@ -906,6 +1146,41 @@ describe("Auth routes", () => {
       const sessions = await prisma.session.findMany({ where: { userId: user.id } });
       expect(sessions).toHaveLength(0);
     });
+
+    it("should roll back if session invalidation fails during password reset", async () => {
+      const passwordHash = await hashPassword("oldpassword123");
+      const user = await prisma.user.create({
+        data: {
+          email: "reset-rollback@example.com",
+          passwordHash,
+          emailVerified: true,
+          passwordResetToken: "rollback-reset-token",
+          passwordResetExpiresAt: new Date(Date.now() + 60 * 60 * 1000),
+        },
+      });
+
+      await prisma.session.create({
+        data: {
+          userId: user.id,
+          refreshToken: "reset-rollback-refresh",
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        },
+      });
+
+      const spy = spyTransactionMethodFailure("session", "deleteMany");
+      const res = await request(app)
+        .post("/auth/reset-password")
+        .send({ token: "rollback-reset-token", password: "newpassword123" });
+      spy.mockRestore();
+
+      expect(res.status).toBe(500);
+      expect(res.body.error.code).toBe(ErrorCodes.INTERNAL_ERROR);
+
+      const remaining = await prisma.user.findUnique({ where: { id: user.id } });
+      expect(remaining?.passwordHash).toBe(passwordHash);
+      expect(remaining?.passwordResetToken).toBe("rollback-reset-token");
+      expect(await prisma.session.findMany({ where: { userId: user.id } })).toHaveLength(1);
+    });
   });
 });
 
@@ -1020,15 +1295,52 @@ describe("POST /auth/change-password", () => {
     const sessions = await prisma.session.findMany({ where: { userId } });
     expect(sessions).toHaveLength(0);
   });
+
+  it("should roll back if session invalidation fails during password change", async () => {
+    await prisma.session.create({
+      data: {
+        userId,
+        refreshToken: "change-rollback-refresh",
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      },
+    });
+
+    const before = await prisma.user.findUnique({ where: { id: userId } });
+    const spy = spyTransactionMethodFailure("session", "deleteMany");
+    const res = await request(app)
+      .post("/auth/change-password")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .send({
+        oldPassword: "oldpassword123",
+        newPassword: "newpassword123",
+      });
+    spy.mockRestore();
+
+    expect(res.status).toBe(500);
+    expect(res.body.error.code).toBe(ErrorCodes.INTERNAL_ERROR);
+
+    const remaining = await prisma.user.findUnique({ where: { id: userId } });
+    expect(remaining?.passwordHash).toBe(before?.passwordHash);
+    expect(await prisma.session.findMany({ where: { userId } })).toHaveLength(1);
+  });
 });
 
 describe("DELETE /auth/account", () => {
   let accessToken: string;
   let userId: string;
 
-  beforeEach(async () => {
+  async function resetAccountDeletionFixtures() {
+    await prisma.listCollaborator.deleteMany();
+    await prisma.savedPoi.deleteMany();
+    await prisma.poiList.deleteMany();
+    await prisma.poi.deleteMany();
     await prisma.session.deleteMany();
     await prisma.user.deleteMany();
+  }
+
+  beforeEach(async () => {
+    await resetAccountDeletionFixtures();
+    vi.mocked(deleteFile).mockClear();
 
     const passwordHash = await hashPassword("password123");
     const user = await prisma.user.create({
@@ -1041,6 +1353,10 @@ describe("DELETE /auth/account", () => {
 
     userId = user.id;
     accessToken = signAccessToken({ userId: user.id, email: user.email });
+  });
+
+  afterAll(async () => {
+    await resetAccountDeletionFixtures();
   });
 
   it("should delete account successfully", async () => {
@@ -1056,6 +1372,89 @@ describe("DELETE /auth/account", () => {
     expect(deletedUser).toBeNull();
   });
 
+  it("should delete account that owns a POI and a list", async () => {
+    await prisma.user.update({
+      where: { id: userId },
+      data: { avatarUrl: "https://s3.example.com/avatar.jpg" },
+    });
+
+    const poi = await prisma.poi.create({
+      data: {
+        name: "Owned POI",
+        latitude: 48.8566,
+        longitude: 2.3522,
+        createdBy: userId,
+        photoUrls: ["https://s3.example.com/poi.jpg"],
+      },
+    });
+
+    const list = await prisma.poiList.create({
+      data: {
+        name: "Owned list",
+        createdBy: userId,
+        imageUrl: "https://s3.example.com/list.jpg",
+      },
+    });
+
+    await prisma.savedPoi.create({
+      data: { listId: list.id, poiId: poi.id },
+    });
+
+    await prisma.session.create({
+      data: {
+        userId,
+        refreshToken: "owner-refresh-token",
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      },
+    });
+
+    const res = await request(app)
+      .delete("/auth/account")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .send({ password: "password123", language: "en" });
+
+    expect(res.status).toBe(200);
+
+    expect(await prisma.user.findUnique({ where: { id: userId } })).toBeNull();
+    expect(await prisma.poi.findUnique({ where: { id: poi.id } })).toBeNull();
+    expect(await prisma.poiList.findUnique({ where: { id: list.id } })).toBeNull();
+    expect(await prisma.savedPoi.findMany({ where: { listId: list.id } })).toHaveLength(0);
+    expect(await prisma.session.findMany({ where: { userId } })).toHaveLength(0);
+
+    expect(deleteFile).toHaveBeenCalledWith("https://s3.example.com/avatar.jpg");
+    expect(deleteFile).toHaveBeenCalledWith("https://s3.example.com/poi.jpg");
+    expect(deleteFile).toHaveBeenCalledWith("https://s3.example.com/list.jpg");
+  });
+
+  it("should keep a third-party list when a collaborator deletes their account", async () => {
+    const owner = await prisma.user.create({
+      data: {
+        email: "list-owner@example.com",
+        passwordHash: await hashPassword("password123"),
+        emailVerified: true,
+      },
+    });
+
+    const list = await prisma.poiList.create({
+      data: { name: "Shared list", createdBy: owner.id },
+    });
+
+    await prisma.listCollaborator.create({
+      data: { listId: list.id, userId, role: "EDITOR" },
+    });
+
+    const res = await request(app)
+      .delete("/auth/account")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .send({ password: "password123", language: "en" });
+
+    expect(res.status).toBe(200);
+    expect(await prisma.user.findUnique({ where: { id: userId } })).toBeNull();
+    expect(await prisma.poiList.findUnique({ where: { id: list.id } })).not.toBeNull();
+    expect(await prisma.listCollaborator.findMany({ where: { userId } })).toHaveLength(0);
+    expect(await prisma.listCollaborator.findMany({ where: { listId: list.id } })).toHaveLength(0);
+  });
+
   it("should reject invalid password", async () => {
     const res = await request(app)
       .delete("/auth/account")
@@ -1067,6 +1466,28 @@ describe("DELETE /auth/account", () => {
 
     const deletedUser = await prisma.user.findUnique({ where: { id: userId } });
     expect(deletedUser).not.toBeNull();
+  });
+
+  it("should not delete sessions when password is invalid", async () => {
+    await prisma.session.create({
+      data: {
+        userId,
+        refreshToken: "keep-refresh-token",
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      },
+    });
+
+    const res = await request(app)
+      .delete("/auth/account")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .send({ password: "wrongpassword", language: "en" });
+
+    expect(res.status).toBe(401);
+    expect(res.body.error.code).toBe(ErrorCodes.INVALID_CREDENTIALS);
+
+    const sessions = await prisma.session.findMany({ where: { userId } });
+    expect(sessions).toHaveLength(1);
+    expect(await prisma.user.findUnique({ where: { id: userId } })).not.toBeNull();
   });
 
   it("should reject request without token", async () => {
@@ -1106,5 +1527,51 @@ describe("DELETE /auth/account", () => {
 
     const sessions = await prisma.session.findMany({ where: { userId } });
     expect(sessions).toHaveLength(0);
+  });
+
+  it("should roll back the transaction if user delete fails", async () => {
+    await prisma.session.create({
+      data: {
+        userId,
+        refreshToken: "rollback-refresh-token",
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      },
+    });
+
+    const originalTransaction = prisma.$transaction.bind(prisma);
+    const spy = vi.spyOn(prisma, "$transaction").mockImplementationOnce((async (fn: unknown) => {
+      return originalTransaction(async (tx) => {
+        const callback = fn as (client: typeof tx) => Promise<unknown>;
+        const failingTx = new Proxy(tx, {
+          get(target, prop, receiver) {
+            if (prop === "user") {
+              return new Proxy(target.user, {
+                get(userTarget, userProp, userReceiver) {
+                  if (userProp === "delete") {
+                    return () => Promise.reject(new Error("simulated db failure"));
+                  }
+                  return Reflect.get(userTarget, userProp, userReceiver);
+                },
+              });
+            }
+            return Reflect.get(target, prop, receiver);
+          },
+        });
+        return callback(failingTx);
+      });
+    }) as typeof prisma.$transaction);
+
+    const res = await request(app)
+      .delete("/auth/account")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .send({ password: "password123", language: "en" });
+
+    spy.mockRestore();
+
+    expect(res.status).toBe(500);
+    expect(res.body.error.code).toBe(ErrorCodes.ACCOUNT_DELETION_FAILED);
+    expect(await prisma.user.findUnique({ where: { id: userId } })).not.toBeNull();
+    expect(await prisma.session.findMany({ where: { userId } })).toHaveLength(1);
+    expect(deleteFile).not.toHaveBeenCalled();
   });
 });

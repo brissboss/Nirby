@@ -7,6 +7,7 @@ import { useListsInfinite } from "../hooks/use-lists-infinite";
 import { ListsIndexView } from "./lists-index-view";
 
 import type { ListWithRole } from "@/lib/api";
+import { expectNoAxeViolations } from "@/test/axe";
 
 vi.mock("../hooks/use-lists-infinite", () => ({
   useListsInfinite: vi.fn(),
@@ -167,5 +168,25 @@ describe("ListsIndexView", () => {
     await user.click(screen.getByRole("button", { name: /Paris spots/i }));
 
     expect(onSelectList).toHaveBeenCalledWith("list-1");
+  });
+});
+
+describe("ListsIndexView accessibility", () => {
+  it("has no axe violations with lists loaded", async () => {
+    mockInfiniteQuery({
+      data: {
+        pageParams: [1],
+        pages: [
+          {
+            lists: [mockList, mockList2],
+            pagination: { page: 1, limit: 20, total: 2, totalPages: 1 },
+          },
+        ],
+      },
+    });
+
+    const { container } = render(<ListsIndexView onCreate={vi.fn()} onSelectList={vi.fn()} />);
+
+    await expectNoAxeViolations(container);
   });
 });

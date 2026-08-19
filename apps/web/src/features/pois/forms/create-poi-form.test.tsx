@@ -9,6 +9,7 @@ import { useUploadPoiPhoto } from "../hooks/use-upload-poi-photo";
 import { CreatePoiForm } from "./create-poi-form";
 
 import { useAddPoiToList, useLists } from "@/features/lists";
+import { expectNoAxeViolations } from "@/test/axe";
 
 vi.mock("../hooks/use-create-poi", () => ({
   useCreatePoi: vi.fn(),
@@ -296,5 +297,13 @@ describe("CreatePoiForm", () => {
     expect(createPoi).toHaveBeenCalled();
     expect(closeDialog).not.toHaveBeenCalled();
     expect(toast.success).not.toHaveBeenCalled();
+  });
+
+  it("has no axe violations", async () => {
+    const { container } = render(
+      <CreatePoiForm coordinates={coordinates} closeDialog={closeDialog} />
+    );
+
+    await expectNoAxeViolations(container);
   });
 });

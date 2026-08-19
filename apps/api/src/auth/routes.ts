@@ -12,10 +12,12 @@ import {
 import { env } from "../env";
 import {
   authBrutForceRateLimiter,
+  authDataExportRateLimiter,
   authEmailVerificationRateLimiter,
   authSpamRateLimiter,
 } from "../middleware/rate-limit";
 import { SUPPORTED_LANGUAGES } from "../types";
+import { deleteFile } from "../upload/service";
 import { ErrorCodes } from "../utils/error-codes";
 import { formatError, handleZodError } from "../utils/errors";
 
@@ -76,6 +78,26 @@ const deleteAccountSchema = z.object({
   password: z.string({ required_error: ErrorCodes.PASSWORD_REQUIRED }),
   language: z.enum(SUPPORTED_LANGUAGES).optional().default("en"),
 });
+
+function collectAccountFileUrls(user: {
+  avatarUrl: string | null;
+  pois: { photoUrls: string[] }[];
+  poiLists: { imageUrl: string | null }[];
+}): string[] {
+  const urls: string[] = [];
+  if (user.avatarUrl) {
+    urls.push(user.avatarUrl);
+  }
+  for (const poi of user.pois) {
+    urls.push(...poi.photoUrls);
+  }
+  for (const list of user.poiLists) {
+    if (list.imageUrl) {
+      urls.push(list.imageUrl);
+    }
+  }
+  return urls;
+}
 
 const updateProfileSchema = z.object({
   name: z
@@ -825,16 +847,17 @@ authRouter.post("/reset-password", authBrutForceRateLimiter, async (req, res) =>
 
     const passwordHash = await hashPassword(password);
 
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        passwordHash,
-        passwordResetToken: null,
-        passwordResetExpiresAt: null,
-      },
+    await prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id: user.id },
+        data: {
+          passwordHash,
+          passwordResetToken: null,
+          passwordResetExpiresAt: null,
+        },
+      });
+      await tx.session.deleteMany({ where: { userId: user.id } });
     });
-
-    await prisma.session.deleteMany({ where: { userId: user.id } });
 
     res.json({ message: "Password reset successfully" });
   } catch (err) {
@@ -939,9 +962,14 @@ authRouter.post("/change-password", requireAuth, async (req, res) => {
     }
 
     const newPasswordHash = await hashPassword(newPassword);
-    await prisma.user.update({ where: { id: user.id }, data: { passwordHash: newPasswordHash } });
 
-    await prisma.session.deleteMany({ where: { userId: user.id } });
+    await prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id: user.id },
+        data: { passwordHash: newPasswordHash },
+      });
+      await tx.session.deleteMany({ where: { userId: user.id } });
+    });
 
     res.json({ message: "Password changed successfully" });
   } catch (err) {
@@ -962,7 +990,7 @@ authRouter.post("/change-password", requireAuth, async (req, res) => {
  *   delete:
  *     operationId: deleteAccount
  *     summary: Delete user account
- *     description: Permanently deletes the authenticated user's account and all associated data. A confirmation email will be sent.
+ *     description: Permanently deletes the authenticated user's account and all associated personal data (sessions, owned POIs, owned lists). Object-storage files are removed best-effort after the database commit. A confirmation email is sent after a successful deletion.
  *     tags:
  *       - 🔐 Auth
  *     security:
@@ -1010,7 +1038,7 @@ authRouter.post("/change-password", requireAuth, async (req, res) => {
  *             schema:
  *               $ref: '#/components/schemas/Error'
  *       500:
- *         description: Internal server error
+ *         description: Account deletion failed
  *         content:
  *           application/json:
  *             schema:
@@ -1020,7 +1048,13 @@ authRouter.delete("/account", requireAuth, async (req, res) => {
   try {
     const { password, language } = deleteAccountSchema.parse(req.body);
 
-    const user = await prisma.user.findUnique({ where: { id: req.user?.id } });
+    const user = await prisma.user.findUnique({
+      where: { id: req.user?.id },
+      include: {
+        pois: { select: { photoUrls: true } },
+        poiLists: { select: { imageUrl: true } },
+      },
+    });
     if (!user) {
       return res.status(404).json(formatError(ErrorCodes.NOT_FOUND, "User not found"));
     }
@@ -1031,11 +1065,33 @@ authRouter.delete("/account", requireAuth, async (req, res) => {
     }
 
     const email = user.email;
+    const fileUrls = collectAccountFileUrls(user);
 
-    await prisma.session.deleteMany({ where: { userId: user.id } });
-    await prisma.user.delete({ where: { id: user.id } });
+    try {
+      await prisma.$transaction(async (tx) => {
+        await tx.session.deleteMany({ where: { userId: user.id } });
+        await tx.user.delete({ where: { id: user.id } });
+      });
+    } catch (err) {
+      req.log?.error({ err }, "Account deletion transaction failed");
+      return res
+        .status(500)
+        .json(formatError(ErrorCodes.ACCOUNT_DELETION_FAILED, "Account deletion failed"));
+    }
 
-    await sendAccountDeletedEmail(email, language || "en");
+    for (const url of fileUrls) {
+      try {
+        await deleteFile(url);
+      } catch (err) {
+        req.log?.warn({ err, url }, "Failed to delete account file from S3");
+      }
+    }
+
+    try {
+      await sendAccountDeletedEmail(email, language || "en");
+    } catch (err) {
+      req.log?.warn({ err }, "Failed to send account deletion confirmation email");
+    }
 
     res.json({ message: "Account deleted successfully" });
   } catch (err) {
@@ -1045,6 +1101,151 @@ authRouter.delete("/account", requireAuth, async (req, res) => {
         .status(400)
         .json(formatError(ErrorCodes.VALIDATION_ERROR, "Invalid input", details));
     }
+    req.log?.error({ err });
+    return res
+      .status(500)
+      .json(formatError(ErrorCodes.ACCOUNT_DELETION_FAILED, "Account deletion failed"));
+  }
+});
+
+/**
+ * @openapi
+ * /auth/me/export:
+ *   get:
+ *     operationId: exportMe
+ *     summary: Export current user personal data
+ *     description: >
+ *       GDPR Art. 20 portability export. Aggregates profile, created POIs, owned lists,
+ *       saved places and collaborations. Secrets (password hash, verification/reset tokens,
+ *       session refresh tokens, list share/edit tokens) are never included.
+ *     tags:
+ *       - 🔐 Auth
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Structured JSON export of the authenticated user's personal data
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ExportMeResponse'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       429:
+ *         description: Rate limit exceeded
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+authRouter.get("/me/export", requireAuth, authDataExportRateLimiter, async (req, res) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.user?.id },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        avatarUrl: true,
+        bio: true,
+        emailVerified: true,
+        createdAt: true,
+        updatedAt: true,
+        pois: {
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            descriptionLang: true,
+            address: true,
+            latitude: true,
+            longitude: true,
+            category: true,
+            website: true,
+            phone: true,
+            priceLevel: true,
+            openingHours: true,
+            photoUrls: true,
+            createdBy: true,
+            visibility: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        },
+        poiLists: {
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            imageUrl: true,
+            visibility: true,
+            createdAt: true,
+            updatedAt: true,
+            savedPois: {
+              select: {
+                id: true,
+                poiId: true,
+                googlePlaceId: true,
+                createdAt: true,
+              },
+            },
+          },
+        },
+        collaborations: {
+          select: {
+            id: true,
+            role: true,
+            joinedAt: true,
+            list: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        },
+        sessions: {
+          select: {
+            id: true,
+            expiresAt: true,
+            createdAt: true,
+          },
+        },
+      },
+    });
+
+    if (!user) {
+      return res.status(404).json(formatError(ErrorCodes.NOT_FOUND, "User not found"));
+    }
+
+    const { pois, poiLists, collaborations, sessions, ...profile } = user;
+
+    res.setHeader("Content-Disposition", 'attachment; filename="nirby-export.json"');
+    return res.json({
+      exportedAt: new Date().toISOString(),
+      profile,
+      createdPois: pois,
+      ownedLists: poiLists,
+      collaborations,
+      sessions,
+    });
+  } catch (err) {
     req.log?.error({ err });
     return res.status(500).json(formatError(ErrorCodes.INTERNAL_ERROR, "Internal server error"));
   }

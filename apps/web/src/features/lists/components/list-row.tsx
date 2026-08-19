@@ -29,7 +29,7 @@ export function ListRow({ list, onClick }: ListRowProps) {
         "focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
       )}
     >
-      <div className="rounded-t-md p-4 bg-linear-to-br from-[#EA580C] via-primary to-amber-500 transition-[filter] duration-200 group-hover:brightness-105">
+      <div className="rounded-t-md p-4 bg-linear-to-br from-primary to-primary/70 transition-[filter] duration-200 group-hover:brightness-105">
         <h3 className="line-clamp-1 min-w-0 wrap-break-words text-md font-bold text-white font-display">
           {list.name}
         </h3>

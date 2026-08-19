@@ -10,26 +10,27 @@ Complète les slides Figma et sert de base si le jury demande les plans de tests
 - **Limiter les régressions** sur les zones à fort impact métier : authentification, permissions, CRUD listes/POI.
 - **Automatiser** l’exécution à chaque PR et push sur `main` / `staging` via GitHub Actions.
 - **Documenter** les scénarios dans le code (`describe` / `it`) et consolider les scénarios représentatifs dans ce fichier.
-- **Mesurer** la couverture front (seuils Vitest) et disposer de rapports CI consultables.
+- **Mesurer** la couverture API et web (seuils Vitest bloquants en CI) et disposer de rapports HTML/JSON en artifacts.
 
 ---
 
 ## 2. Pyramide et outils
 
-| Niveau                   | Outil                            | Périmètre                                                         | Statut                   |
-| ------------------------ | -------------------------------- | ----------------------------------------------------------------- | ------------------------ |
-| Unitaires                | Vitest                           | Règles métier (`list-policy`, `poi-policy`), schémas, utils front | ✅ Implémenté            |
-| Intégration API          | Vitest + Supertest               | Routes Express, middleware auth, base PostgreSQL de test          | ✅ Implémenté            |
-| Composants / pages front | Vitest + Testing Library + jsdom | Vues listes, hooks, formulaires                                   | ✅ Implémenté            |
-| Smoke / health check     | Docker + `curl` (CI)             | Conteneurs API et web démarrent, `/health` et `/` répondent       | ✅ Implémenté            |
-| Sécurité (OWASP)         | Vitest + Supertest               | Injection, IDOR, XSS stocké, upload malveillant                   | ✅ Implémenté            |
-| Audit dépendances (SCA)  | `pnpm audit` + Dependabot        | CVE dans `pnpm-lock.yaml`, PRs de mise à jour hebdomadaires       | ✅ Implémenté            |
-| DAST                     | OWASP ZAP Baseline (CI)          | Scan passif/actif sur l’API Docker en CI                          | ✅ Implémenté            |
-| E2E                      | Playwright                       | Parcours utilisateur complets                                     | ⏳ Prévu, non implémenté |
+| Niveau                   | Outil                                | Périmètre                                                                  | Statut                   |
+| ------------------------ | ------------------------------------ | -------------------------------------------------------------------------- | ------------------------ |
+| Unitaires                | Vitest                               | Règles métier (`list-policy`, `poi-policy`), schémas, utils front          | ✅ Implémenté            |
+| Intégration API          | Vitest + Supertest                   | Routes Express, middleware auth, base PostgreSQL de test                   | ✅ Implémenté            |
+| Composants / pages front | Vitest + Testing Library + jsdom     | Vues listes, hooks, formulaires                                            | ✅ Implémenté            |
+| Accessibilité            | ESLint `jsx-a11y` recommended + axe  | Login, index/détail listes, create POI (jsdom ; pas les primitives shadcn) | ✅ Implémenté            |
+| Smoke / health check     | Docker + `curl` (CI) + `HEALTHCHECK` | Conteneurs API et web non-root, `/health` et `/` répondent                 | ✅ Implémenté            |
+| Sécurité (OWASP)         | Vitest + Supertest                   | Injection, IDOR, XSS stocké, upload malveillant                            | ✅ Implémenté            |
+| Audit dépendances (SCA)  | `pnpm audit` + Dependabot            | CVE dans `pnpm-lock.yaml`, PRs de mise à jour hebdomadaires                | ✅ Implémenté            |
+| DAST                     | OWASP ZAP Baseline (CI)              | Scan passif/actif sur l’API Docker en CI                                   | ✅ Implémenté            |
+| E2E                      | Playwright                           | Parcours utilisateur complets                                              | ⏳ Prévu, non implémenté |
 
 **Rapports de tests :**
 
-- **CI GitHub Actions** : [workflow `ci-cd.yaml`](../.github/workflows/ci-cd.yaml) — logs `--reporter=verbose` (API), rapport de couverture (web).
+- **CI GitHub Actions** : [workflow `ci-cd.yaml`](../.github/workflows/ci-cd.yaml) — couverture bloquante API et web (`test:coverage`), artifacts HTML/JSON.
 - **Badge CI** : visible dans le [README](../README.md).
 - **Couverture locale** : `pnpm -C apps/web test:coverage` et `pnpm -C apps/api test:coverage`.
 
@@ -40,17 +41,18 @@ Complète les slides Figma et sert de base si le jury demande les plans de tests
 ### Local
 
 - API : PostgreSQL `nirby_test`, Redis, variables définies dans `apps/api/vitest.config.ts`.
-- Web : jsdom, mocks Next.js (`next/navigation`, `next-intl`) dans `apps/web/src/test/setup.ts`.
+- Web : jsdom, mocks Next.js (`next/navigation`, `next-intl`) et matchers axe (`vitest-axe`) dans `apps/web/src/test/setup.ts`.
 - Lancement : `pnpm test` (racine, via Turbo) ou `pnpm -C apps/api test` / `pnpm -C apps/web test`.
 
 ### CI (GitHub Actions)
 
 - Déclenchement : **pull request** et **push** sur `main` / `staging`.
-- Job `ci-api` : PostGIS 16, base `nirby_test`, migrations Prisma, Redis, secrets factices (`JWT_SECRET`, `GOOGLE_PLACES_API_KEY`, …).
-- Job `ci-web` : tests + couverture + build de vérification.
-- Job `api-docker` : image API, health check, scan OWASP ZAP Baseline (rapport artifact).
+- Job `ci-api` : PostGIS 16, base `nirby_test`, migrations Prisma, Redis, secrets factices (`JWT_SECRET`, `GOOGLE_PLACES_API_KEY`, …), tests + couverture (seuils 70 %) + artifact `api-coverage-report`.
+- Job `ci-web` : tests + couverture (seuils 36 / 30 / 26) + assertions axe (login, listes, create POI) + artifact `web-coverage-report` + build de vérification.
+- Job `setup` : `pnpm lint` (dont `jsx-a11y` recommended sur `apps/web`).
+- Job `api-docker` : image API (`USER node`), health check HTTP + assert uid ≠ 0, scan OWASP ZAP Baseline (rapport artifact).
 - Job `security-audit` : `pnpm audit --audit-level=high` (rapport artifact, non bloquant).
-- Job `web-docker` : image web, health check HTTP.
+- Job `web-docker` : image web (`USER node`), health check HTTP + assert uid ≠ 0.
 - **Dependabot** : PRs hebdomadaires npm, Docker et GitHub Actions (`.github/dependabot.yml`).
 
 Chaque run CI recrée un environnement isolé ; les tests API nettoient les données (`deleteMany` en `beforeEach` / `afterAll`).
@@ -117,14 +119,24 @@ Ci-dessous : **extraits représentatifs** au format attendu par la checklist (en
 
 ### 6.3 Authentification JWT
 
-| Scénario                          | Entrée                                    | Sortie attendue             | Résultat | Fichier                                     |
-| --------------------------------- | ----------------------------------------- | --------------------------- | -------- | ------------------------------------------- |
-| Requête sans header Authorization | `GET /protected` sans token               | HTTP 401, `UNAUTHORIZED`    | ✅ Pass  | `apps/api/__test__/auth/middleware.test.ts` |
-| Token JWT invalide                | `Authorization: Bearer invalid-token-123` | HTTP 401                    | ✅ Pass  | idem                                        |
-| Token valide, user existant       | Bearer token signé + user en BDD          | HTTP 200, `user` dans body  | ✅ Pass  | idem                                        |
-| Email non vérifié                 | user `emailVerified: false`               | HTTP 403 sur route protégée | ✅ Pass  | idem                                        |
-| Login mot de passe incorrect      | email valide, mauvais password            | HTTP 401                    | ✅ Pass  | `apps/api/__test__/auth/routes.test.ts`     |
-| Refresh token invalide            | cookie `refreshToken=invalid-token`       | HTTP 401                    | ✅ Pass  | idem                                        |
+| Scénario                          | Entrée                                    | Sortie attendue               | Résultat | Fichier                                     |
+| --------------------------------- | ----------------------------------------- | ----------------------------- | -------- | ------------------------------------------- |
+| Requête sans header Authorization | `GET /protected` sans token               | HTTP 401, `UNAUTHORIZED`      | ✅ Pass  | `apps/api/__test__/auth/middleware.test.ts` |
+| Token JWT invalide                | `Authorization: Bearer invalid-token-123` | HTTP 401                      | ✅ Pass  | idem                                        |
+| Token valide, user existant       | Bearer token signé + user en BDD          | HTTP 200, `user` dans body    | ✅ Pass  | idem                                        |
+| Email non vérifié                 | user `emailVerified: false`               | HTTP 403 sur route protégée   | ✅ Pass  | idem                                        |
+| POST /poi sans email vérifié      | JWT user `emailVerified: false`           | HTTP 403, aucun POI créé      | ✅ Pass  | `apps/api/__test__/poi/routes.test.ts`      |
+| POST /list sans email vérifié     | idem                                      | HTTP 403, aucune liste créée  | ✅ Pass  | `apps/api/__test__/list/routes.test.ts`     |
+| Invite collab. sans email vérifié | idem                                      | HTTP 403                      | ✅ Pass  | idem                                        |
+| Login mot de passe incorrect      | email valide, mauvais password            | HTTP 401                      | ✅ Pass  | `apps/api/__test__/auth/routes.test.ts`     |
+| Refresh token invalide            | cookie `refreshToken=invalid-token`       | HTTP 401                      | ✅ Pass  | idem                                        |
+| Suppression compte + POI et liste | `DELETE /auth/account`, user owner        | HTTP 200, plus de données     | ✅ Pass  | idem                                        |
+| Collaborateur d’une liste tierce  | delete du non-owner                       | liste intacte, collab. parti  | ✅ Pass  | idem                                        |
+| Mot de passe invalide (delete)    | mauvais password, session existante       | HTTP 401, sessions intactes   | ✅ Pass  | idem                                        |
+| Rollback transaction delete       | `user.delete` lève en cours de TX         | user + sessions intacts       | ✅ Pass  | idem                                        |
+| Rollback reset password           | `session.deleteMany` lève dans la TX      | hash inchangé, session là     | ✅ Pass  | idem                                        |
+| Rollback change password          | idem                                      | hash inchangé, sessions là    | ✅ Pass  | idem                                        |
+| Upload avatar, update SQL échoue  | `user.update` throw après S3              | URL non persistée, S3 nettoyé | ✅ Pass  | `apps/api/__test__/upload/routes.test.ts`   |
 
 ### 6.4 CRUD listes & POI (routes API)
 
@@ -187,17 +199,19 @@ Les scénarios ci-dessous couvrent les risques les plus pertinents pour Nirby (A
 
 ### Volume
 
-- **35 fichiers de test** (`apps/api` + `apps/web`), dont `security/owasp.test.ts`.
+- **91 fichiers de test** (`apps/api` 18 + `apps/web` 73), dont `security/owasp.test.ts`.
 - **CI verte** requise pour merge (lint + tests + smoke Docker sur les chemins modifiés).
 
 ### Couverture (seuils Vitest)
 
-| App | Seuils configurés                           | Commande                                                                            |
-| --- | ------------------------------------------- | ----------------------------------------------------------------------------------- |
-| Web | ~36 % lignes, 30 % fonctions, 26 % branches | `pnpm -C apps/web test:coverage` (exécuté en CI)                                    |
-| API | 70 % (config locale)                        | `pnpm -C apps/api test:coverage` (local ; CI exécute les tests sans seuil coverage) |
+| App | Seuils configurés                            | Commande                                                        |
+| --- | -------------------------------------------- | --------------------------------------------------------------- |
+| Web | ~36 % lignes, 30 % fonctions, 26 % branches  | `pnpm -C apps/web test:coverage` (exécuté en CI, artifact HTML) |
+| API | 70 % lignes, fonctions, branches, statements | `pnpm -C apps/api test:coverage` (exécuté en CI, artifact HTML) |
 
 Les seuils web sont volontairement modestes : exclusion des composants UI génériques et du code généré (OpenAPI). L’effort porte sur les **features métier** (listes, auth).
+
+Constat local (août 2026) : API ~80 % statements / ~71 % branches. Le seuil CI à 70 % est un **plancher** : une régression en dessous fait échouer `ci-api`.
 
 ### Exemple de bug détecté et corrigé
 
@@ -225,8 +239,8 @@ _(Adapter la formulation à l’oral si le bug a été trouvé manuellement avan
 | Upload : validation MIME seulement            | Un binaire malveillant avec `Content-Type: image/jpeg` passerait | Ajouter une détection par magic bytes (ex. `file-type`)        |
 | Rate limiting non exercé en tests intégration | `NODE_ENV=test` désactive le blocage réel                        | Tests dédiés avec `NODE_ENV=production` ou tests de charge     |
 | CSRF / SSRF non couverts explicitement        | API stateless JWT ; proxy Google Places côté serveur             | Tests ciblés refresh cookie + validation stricte des URLs      |
-| Couverture API non bloquante en CI            | Seuils 70 % seulement en local                                   | Activer `test:coverage` dans `ci-api`                          |
-| Monitoring prod                               | Health check CI uniquement                                       | Prometheus / alertes HTTP 5xx                                  |
+| Conteneurs : pas de drop de capabilities      | `USER node` + HEALTHCHECK suffisent pour le MVP ANSSI            | `cap_drop: ALL` Compose / distroless plus tard                 |
+| Monitoring prod                               | Health check CI + HEALTHCHECK image ; pas d’alerting 5xx         | Prometheus / alertes HTTP 5xx                                  |
 | Mapbox / carte                                | Non couvert par tests automatisés                                | Tests manuels ou E2E visuels                                   |
 | Pentest manuel absent                         | Pas d’audit humain ni de fuzzing avancé                          | Audit externe avant mise en prod réelle                        |
 
@@ -238,8 +252,8 @@ _(Adapter la formulation à l’oral si le bug a été trouvé manuellement avan
 # Tous les tests
 pnpm test
 
-# API seule (verbose, comme en CI)
-pnpm -C apps/api test -- --reporter=verbose
+# API seule avec couverture (comme en CI)
+pnpm -C apps/api test:coverage -- --reporter=verbose
 
 # Tests sécurité OWASP uniquement
 pnpm -C apps/api test -- security/owasp
@@ -253,12 +267,13 @@ pnpm -C apps/web test:coverage
 
 **Rapports CI :** GitHub → onglet _Actions_ → workflow _CI/CD_ :
 
-- job `ci-api` / `ci-web` → logs de la step _Test_ ;
+- job `ci-api` → logs + artifact `api-coverage-report` (`apps/api/coverage`) ;
+- job `ci-web` → logs + artifact `web-coverage-report` (`apps/web/coverage`) ;
 - job `security-audit` → artifact `pnpm-audit-report` ;
 - job `api-docker` → artifact `zap-baseline-report` ;
 - onglet _Security_ → alertes **Dependabot**.
 
-**Couverture HTML (local) :** générée dans `apps/web/coverage/` après `test:coverage`.
+**Couverture HTML :** `apps/api/coverage/` et `apps/web/coverage/` après `test:coverage` (local ou artifact CI).
 
 ---
 

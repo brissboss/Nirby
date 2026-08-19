@@ -201,6 +201,7 @@ export function PoiFormFields({
           accept="image/jpeg, image/png, image/webp"
           className="hidden"
           disabled={disabled}
+          aria-label={tPoi("photo.title")}
           onChange={(event) => {
             onPhotoChange(event.target.files?.[0] ?? null);
             event.target.value = "";
@@ -219,7 +220,7 @@ export function PoiFormFields({
             disabled={disabled}
             onClick={() => photoInputRef.current?.click()}
           >
-            <ImagePlusIcon className="size-4" />
+            <ImagePlusIcon className="size-4" aria-hidden />
             {existingPhotoUrl ? tPoi("photo.replaceHint") : tPoi("photo.hint")}
           </Button>
           {photoFile ? (

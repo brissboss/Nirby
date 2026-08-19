@@ -26,5 +26,17 @@
     "email": "Email",
     "emailPlaceholder": "exemple@email.com",
     "password": "Mot de passe"
+  },
+  "legal": {
+    "navLabel": "Mentions légales",
+    "home": "Accueil",
+    "privacy": "Politique de confidentialité",
+    "mentions": "Mentions légales"
+  },
+  "skipLink": "Aller au contenu",
+  "globalError": {
+    "title": "Une erreur est survenue",
+    "description": "Une erreur inattendue s'est produite. Veuillez réessayer.",
+    "retry": "Réessayer"
   }
 }

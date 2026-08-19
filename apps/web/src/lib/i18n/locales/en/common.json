@@ -26,5 +26,17 @@
     "email": "Email",
     "emailPlaceholder": "example@email.com",
     "password": "Password"
+  },
+  "legal": {
+    "navLabel": "Legal",
+    "home": "Home",
+    "privacy": "Privacy policy",
+    "mentions": "Legal notice"
+  },
+  "skipLink": "Skip to content",
+  "globalError": {
+    "title": "Something went wrong",
+    "description": "An unexpected error occurred. Please try again.",
+    "retry": "Try again"
   }
 }

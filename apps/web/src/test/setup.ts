@@ -1,6 +1,9 @@
 import "@testing-library/jest-dom";
 import { cleanup } from "@testing-library/react";
-import { afterEach, vi } from "vitest";
+import { afterEach, expect, vi } from "vitest";
+import * as axeMatchers from "vitest-axe/matchers";
+
+expect.extend(axeMatchers);
 
 afterEach(() => {
   cleanup();
@@ -8,6 +11,10 @@ afterEach(() => {
 
 // jsdom ships no matchMedia: default every media query to "does not match" so components
 // relying on `useMediaQuery` render their base variant instead of throwing.
+if (typeof document !== "undefined") {
+  document.documentElement.lang = "en";
+}
+
 if (typeof window !== "undefined" && !window.matchMedia) {
   window.matchMedia = (query: string) =>
     ({

@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 
-import { requireAuth } from "../auth/middleware";
+import { requireAuth, requireVerifiedEmail } from "../auth/middleware";
 import { prisma } from "../db";
 import { POI_CATEGORIES, SUPPORTED_LANGUAGES } from "../types";
 import { ErrorCodes } from "../utils/error-codes";
@@ -237,6 +237,12 @@ const nearbyPoiSchema = z.object({
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Error'
+ *       403:
+ *         description: Email not verified
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       500:
  *         description: Internal server error
  *         content:
@@ -244,7 +250,7 @@ const nearbyPoiSchema = z.object({
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-poiRouter.post("/", requireAuth, async (req, res) => {
+poiRouter.post("/", requireAuth, requireVerifiedEmail, async (req, res) => {
   try {
     const data = createPoiSchema.parse(req.body);
 

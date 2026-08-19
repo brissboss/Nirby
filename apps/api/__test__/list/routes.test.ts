@@ -71,6 +71,26 @@ describe("List Routes", () => {
       expect(res.status).toBe(401);
     });
 
+    it("should reject unverified email", async () => {
+      const unverified = await prisma.user.create({
+        data: {
+          email: "unverified-list@example.com",
+          passwordHash: await hashPassword("password123"),
+          emailVerified: false,
+        },
+      });
+      const token = signAccessToken({ userId: unverified.id, email: unverified.email });
+
+      const res = await request(app)
+        .post("/list")
+        .set("Authorization", `Bearer ${token}`)
+        .send({ name: "Unverified List" });
+
+      expect(res.status).toBe(403);
+      expect(res.body.error.code).toBe(ErrorCodes.EMAIL_NOT_VERIFIED);
+      expect(await prisma.poiList.count({ where: { createdBy: unverified.id } })).toBe(0);
+    });
+
     it("should fail with missing name", async () => {
       const res = await request(app)
         .post("/list")
@@ -1618,6 +1638,32 @@ describe("List Routes", () => {
         });
 
       expect(res.status).toBe(400);
+    });
+
+    it("should reject unverified email", async () => {
+      const unverified = await prisma.user.create({
+        data: {
+          email: "unverified-invite@example.com",
+          passwordHash: await hashPassword("password123"),
+          emailVerified: false,
+        },
+      });
+      const list = await prisma.poiList.create({
+        data: { name: "Owned List", createdBy: unverified.id },
+      });
+      const token = signAccessToken({ userId: unverified.id, email: unverified.email });
+
+      const res = await request(app)
+        .post(`/list/${list.id}/collaborators/invite`)
+        .set("Authorization", `Bearer ${token}`)
+        .send({
+          email: "invited@example.com",
+          role: "EDITOR",
+          sendEmail: false,
+        });
+
+      expect(res.status).toBe(403);
+      expect(res.body.error.code).toBe(ErrorCodes.EMAIL_NOT_VERIFIED);
     });
   });
 

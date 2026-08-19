@@ -79,6 +79,27 @@ describe("POI Routes", () => {
       expect(res.status).toBe(401);
     });
 
+    it("should reject unverified email", async () => {
+      const unverified = await prisma.user.create({
+        data: {
+          email: "unverified-poi@example.com",
+          passwordHash: await hashPassword("password123"),
+          emailVerified: false,
+        },
+      });
+      const token = signAccessToken({ userId: unverified.id, email: unverified.email });
+
+      const res = await request(app).post("/poi").set("Authorization", `Bearer ${token}`).send({
+        name: "Unverified POI",
+        latitude: 40.7128,
+        longitude: -74.006,
+      });
+
+      expect(res.status).toBe(403);
+      expect(res.body.error.code).toBe("EMAIL_NOT_VERIFIED");
+      expect(await prisma.poi.count({ where: { createdBy: unverified.id } })).toBe(0);
+    });
+
     it("should fail with missing name", async () => {
       const res = await request(app)
         .post("/poi")

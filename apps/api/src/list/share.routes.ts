@@ -1,5 +1,6 @@
 import crypto from "crypto";
 
+import { Prisma } from "@prisma/client";
 import { Router } from "express";
 
 import { requireAuth } from "../auth/middleware";
@@ -411,43 +412,74 @@ listShareRouter.post("/join", requireAuth, async (req, res) => {
       return res.status(400).json(formatError(ErrorCodes.TOKEN_REQUIRED, "Edit token is required"));
     }
 
-    const list = await prisma.poiList.findUnique({ where: { editToken } });
+    const userId = req.user!.id;
 
-    if (!list) {
+    const result = await prisma.$transaction(async (tx) => {
+      const list = await tx.poiList.findUnique({ where: { editToken } });
+
+      if (!list) {
+        return { kind: "not_found" as const };
+      }
+
+      if (list.editTokenExpiresAt && list.editTokenExpiresAt < new Date()) {
+        return { kind: "expired" as const };
+      }
+
+      if (isListOwner(list.createdBy, userId)) {
+        return { kind: "owner" as const, list };
+      }
+
+      const collaborator = await tx.listCollaborator.findUnique({
+        where: { listId_userId: { listId: list.id, userId } },
+      });
+      if (collaborator) {
+        return { kind: "already" as const, list };
+      }
+
+      await tx.listCollaborator.create({
+        data: { listId: list.id, userId, role: "EDITOR" },
+      });
+
+      return { kind: "joined" as const, list };
+    });
+
+    if (result.kind === "not_found") {
       return res.status(404).json(formatError(ErrorCodes.LIST_NOT_FOUND, "List not found"));
     }
 
-    if (list.editTokenExpiresAt && list.editTokenExpiresAt < new Date()) {
+    if (result.kind === "expired") {
       return res
         .status(400)
         .json(formatError(ErrorCodes.LIST_EDIT_TOKEN_EXPIRED, "Edit token expired"));
     }
 
-    if (isListOwner(list.createdBy, req.user!.id)) {
+    if (result.kind === "owner") {
       return res.json({
         message: "You are the owner of this list.",
-        list,
+        list: result.list,
       });
     }
 
-    const collaborator = await prisma.listCollaborator.findUnique({
-      where: { listId_userId: { listId: list.id, userId: req.user!.id } },
+    if (result.kind === "already") {
+      return res.json({
+        message: "You are already a collaborator of this list.",
+        list: result.list,
+      });
+    }
+
+    res.json({
+      list: result.list,
     });
-    if (collaborator) {
+  } catch (err) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+      const list = await prisma.poiList.findUnique({
+        where: { editToken: req.query.editToken as string },
+      });
       return res.json({
         message: "You are already a collaborator of this list.",
         list,
       });
     }
-
-    await prisma.listCollaborator.create({
-      data: { listId: list.id, userId: req.user!.id, role: "EDITOR" },
-    });
-
-    res.json({
-      list,
-    });
-  } catch (err) {
     req.log?.error({ err }, "Failed to join list");
     return res.status(500).json(formatError(ErrorCodes.INTERNAL_ERROR, "Internal server error"));
   }
