@@ -1,0 +1,15 @@
+{
+  "title": "Cookies and tracking",
+  "description": "We use strictly necessary cookies to sign you in and remember your language. Optional error monitoring (Sentry) runs only with your consent.",
+  "privacyLink": "Privacy policy",
+  "accept": "Accept",
+  "refuse": "Refuse",
+  "customize": "Customize",
+  "save": "Save",
+  "back": "Back",
+  "necessaryTitle": "Strictly necessary",
+  "necessaryDescription": "Authentication, language, and display. Always on.",
+  "sentryTitle": "Error monitoring (Sentry)",
+  "sentryDescription": "Helps diagnose crashes. Optional; loaded only if you allow it.",
+  "manage": "Manage cookies"
+}

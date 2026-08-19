@@ -5,6 +5,7 @@ import {
   searchRateLimiter,
   getPlaceRateLimiter,
   photoRateLimiter,
+  authDataExportRateLimiter,
 } from "../../src/middleware/rate-limit";
 import { ErrorCodes } from "../../src/utils/error-codes";
 
@@ -24,6 +25,11 @@ describe("Rate Limit Middleware", () => {
       expect(photoRateLimiter).toBeDefined();
       expect(typeof photoRateLimiter).toBe("function");
     });
+
+    it("should export authDataExportRateLimiter", () => {
+      expect(authDataExportRateLimiter).toBeDefined();
+      expect(typeof authDataExportRateLimiter).toBe("function");
+    });
   });
 
   describe("Rate Limiter Configuration", () => {
@@ -38,6 +44,10 @@ describe("Rate Limit Middleware", () => {
 
     it("photoRateLimiter should be a middleware function", () => {
       expect(photoRateLimiter.length).toBeGreaterThanOrEqual(2);
+    });
+
+    it("authDataExportRateLimiter should be a middleware function", () => {
+      expect(authDataExportRateLimiter.length).toBeGreaterThanOrEqual(2);
     });
   });
 

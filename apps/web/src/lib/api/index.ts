@@ -28,6 +28,7 @@ export const resetPassword = withDefaultClient(sdk.resetPassword);
 export const changePassword = withDefaultClient(sdk.changePassword);
 export const deleteAccount = withDefaultClient(sdk.deleteAccount);
 export const getMe = withDefaultClient(sdk.getMe);
+export const exportMe = withDefaultClient(sdk.exportMe);
 export const updateMe = withDefaultClient(sdk.updateMe);
 export const searchGooglePlaces = withDefaultClient(sdk.searchGooglePlaces);
 export const getGooglePlacePhoto = withDefaultClient(sdk.getGooglePlacePhoto);

@@ -35,7 +35,11 @@
   "privacy": {
     "title": "Confidentialité",
     "description": "Gère ta session et les paramètres sensibles.",
-    "comingSoon": "Plus d'options de confidentialité arrivent bientôt."
+    "exportTitle": "Télécharger tes données",
+    "exportDescription": "Exporte une copie JSON de ton profil, tes lieux, tes listes et tes collaborations (droit à la portabilité RGPD).",
+    "exportDownload": "Télécharger mes données",
+    "exportSuccess": "Tes données ont été téléchargées",
+    "exportError": "Erreur lors de l'export de tes données"
   },
   "changePassword": {
     "title": "Changer mon mot de passe",

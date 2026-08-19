@@ -4,8 +4,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import LoginPage from "./page";
 
+import { expectNoAxeViolations } from "@/test/axe";
+
 const push = vi.fn();
 const login = vi.fn();
+const resendEmail = vi.fn();
 let searchParams = new URLSearchParams();
 
 vi.mock("next/navigation", () => ({
@@ -22,7 +25,7 @@ vi.mock("@/features/auth", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/features/auth")>();
   return {
     ...actual,
-    useAuth: () => ({ login }),
+    useAuth: () => ({ login, resendEmail }),
   };
 });
 
@@ -42,6 +45,8 @@ describe("LoginPage returnUrl", () => {
     push.mockClear();
     login.mockReset();
     login.mockResolvedValue(undefined);
+    resendEmail.mockReset();
+    resendEmail.mockResolvedValue(undefined);
     searchParams = new URLSearchParams();
   });
 
@@ -93,5 +98,54 @@ describe("LoginPage returnUrl", () => {
       "href",
       "/signup?returnUrl=%2Flist%2Flist-1%2Fjoin%3FeditToken%3Dedit-token"
     );
+  });
+});
+
+describe("LoginPage email verification", () => {
+  beforeEach(() => {
+    push.mockClear();
+    login.mockReset();
+    resendEmail.mockReset();
+    resendEmail.mockResolvedValue(undefined);
+    searchParams = new URLSearchParams();
+  });
+
+  it("shows resend email when login fails with EMAIL_NOT_VERIFIED", async () => {
+    login.mockRejectedValue({
+      success: false,
+      error: { code: "EMAIL_NOT_VERIFIED", message: "Please verify your email" },
+    });
+
+    render(<LoginPage />);
+
+    const user = userEvent.setup();
+    await user.type(screen.getByRole("textbox"), "user@example.com");
+    await user.type(screen.getByPlaceholderText("••••••••"), "password1");
+    await user.click(screen.getByRole("button", { name: "auth.login.login" }));
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: "auth.verifyEmail.resendEmail" })
+      ).toBeInTheDocument();
+    });
+    expect(push).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "auth.verifyEmail.resendEmail" }));
+
+    await waitFor(() => {
+      expect(resendEmail).toHaveBeenCalledWith("user@example.com");
+    });
+  });
+});
+
+describe("LoginPage accessibility", () => {
+  beforeEach(() => {
+    searchParams = new URLSearchParams();
+  });
+
+  it("has no axe violations", async () => {
+    const { container } = render(<LoginPage />);
+
+    await expectNoAxeViolations(container);
   });
 });

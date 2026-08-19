@@ -1,12 +1,20 @@
 import { createTranslator } from "next-intl";
 import { describe, expect, it } from "vitest";
 
+import enCommon from "./locales/en/common.json";
+import enConsent from "./locales/en/consent.json";
 import enExplore from "./locales/en/explore.json";
+import enLegal from "./locales/en/legal.json";
 import enLists from "./locales/en/lists.json";
 import enPoi from "./locales/en/poi.json";
+import enShell from "./locales/en/shell.json";
+import frCommon from "./locales/fr/common.json";
+import frConsent from "./locales/fr/consent.json";
 import frExplore from "./locales/fr/explore.json";
+import frLegal from "./locales/fr/legal.json";
 import frLists from "./locales/fr/lists.json";
 import frPoi from "./locales/fr/poi.json";
+import frShell from "./locales/fr/shell.json";
 
 type JsonObject = Record<string, unknown>;
 
@@ -76,6 +84,36 @@ const NEW_EXPLORE_KEYS = [
   "addToList.picker.alreadyInList",
 ] as const;
 
+const NEW_COMMON_KEYS = [
+  "legal.navLabel",
+  "legal.home",
+  "legal.privacy",
+  "legal.mentions",
+  "skipLink",
+  "globalError.title",
+  "globalError.description",
+  "globalError.retry",
+] as const;
+
+const NEW_LEGAL_KEYS = [
+  "disclaimer.title",
+  "disclaimer.privacy",
+  "disclaimer.mentions",
+  "privacy.metaTitle",
+  "privacy.title",
+  "privacy.s6Body",
+  "privacy.s7Body",
+  "privacy.s9Title",
+  "privacy.s9Body",
+  "privacy.s9Necessary",
+  "privacy.s9Mapbox",
+  "privacy.s9Sentry",
+  "mentions.metaTitle",
+  "mentions.title",
+  "mentions.s3Body",
+  "mentions.s5Body",
+] as const;
+
 const NEW_POI_KEYS = [
   "create.title",
   "create.submit",
@@ -95,6 +133,24 @@ const NEW_POI_KEYS = [
   "createPoi.error",
   "updatePoi.success",
   "updatePoi.error",
+] as const;
+
+const NEW_SHELL_KEYS = ["tabs.navLabel"] as const;
+
+const NEW_CONSENT_KEYS = [
+  "title",
+  "description",
+  "privacyLink",
+  "accept",
+  "refuse",
+  "customize",
+  "save",
+  "back",
+  "necessaryTitle",
+  "necessaryDescription",
+  "sentryTitle",
+  "sentryDescription",
+  "manage",
 ] as const;
 
 function expectNonEmptyStrings(obj: JsonObject, keys: readonly string[], locale: string) {
@@ -118,6 +174,22 @@ describe("locales parity", () => {
     expectLocaleParity(enPoi, frPoi, "poi");
   });
 
+  it("legal.json has the same keys in en and fr", () => {
+    expectLocaleParity(enLegal, frLegal, "legal");
+  });
+
+  it("common.json has the same keys in en and fr", () => {
+    expectLocaleParity(enCommon, frCommon, "common");
+  });
+
+  it("shell.json has the same keys in en and fr", () => {
+    expectLocaleParity(enShell, frShell, "shell");
+  });
+
+  it("consent.json has the same keys in en and fr", () => {
+    expectLocaleParity(enConsent, frConsent, "consent");
+  });
+
   it("new lists keys are non-empty strings in both locales", () => {
     expectNonEmptyStrings(enLists, NEW_LISTS_KEYS, "en");
     expectNonEmptyStrings(frLists, NEW_LISTS_KEYS, "fr");
@@ -131,6 +203,26 @@ describe("locales parity", () => {
   it("new poi keys are non-empty strings in both locales", () => {
     expectNonEmptyStrings(enPoi, NEW_POI_KEYS, "en");
     expectNonEmptyStrings(frPoi, NEW_POI_KEYS, "fr");
+  });
+
+  it("new legal keys are non-empty strings in both locales", () => {
+    expectNonEmptyStrings(enLegal, NEW_LEGAL_KEYS, "en");
+    expectNonEmptyStrings(frLegal, NEW_LEGAL_KEYS, "fr");
+  });
+
+  it("new common legal keys are non-empty strings in both locales", () => {
+    expectNonEmptyStrings(enCommon, NEW_COMMON_KEYS, "en");
+    expectNonEmptyStrings(frCommon, NEW_COMMON_KEYS, "fr");
+  });
+
+  it("new shell keys are non-empty strings in both locales", () => {
+    expectNonEmptyStrings(enShell, NEW_SHELL_KEYS, "en");
+    expectNonEmptyStrings(frShell, NEW_SHELL_KEYS, "fr");
+  });
+
+  it("new consent keys are non-empty strings in both locales", () => {
+    expectNonEmptyStrings(enConsent, NEW_CONSENT_KEYS, "en");
+    expectNonEmptyStrings(frConsent, NEW_CONSENT_KEYS, "fr");
   });
 
   it("does not keep the removed detail.poisComingSoon key", () => {
@@ -158,5 +250,52 @@ describe("message resolution", () => {
 
     expect(tPoi("select", { name: "Secret garden" })).toBe("Select Secret garden");
     expect(tPoi("create.title")).toBe("New place");
+  });
+
+  it("resolves legal namespace", () => {
+    const tLegal = createTranslator({
+      locale: "en",
+      messages: { legal: enLegal },
+      namespace: "legal",
+    });
+
+    expect(tLegal("privacy.title")).toBe("Privacy policy");
+    expect(tLegal("mentions.title")).toBe("Legal notice");
+    expect(tLegal("disclaimer.title")).toBe("Sample content");
+    expect(tLegal("privacy.s9Title")).toBe("9. Cookies and trackers");
+  });
+
+  it("resolves consent namespace", () => {
+    const tConsent = createTranslator({
+      locale: "en",
+      messages: { consent: enConsent },
+      namespace: "consent",
+    });
+
+    expect(tConsent("title")).toBe("Cookies and tracking");
+    expect(tConsent("manage")).toBe("Manage cookies");
+  });
+
+  it("resolves skip link and global error keys", () => {
+    const tCommon = createTranslator({
+      locale: "en",
+      messages: { common: enCommon },
+      namespace: "common",
+    });
+
+    expect(tCommon("skipLink")).toBe("Skip to content");
+    expect(tCommon("globalError.title")).toBe("Something went wrong");
+    expect(tCommon("globalError.retry")).toBe("Try again");
+  });
+
+  it("resolves shell namespace", () => {
+    const tShell = createTranslator({
+      locale: "en",
+      messages: { shell: enShell },
+      namespace: "shell",
+    });
+
+    expect(tShell("tabs.navLabel")).toBe("Main navigation");
+    expect(tShell("tabs.explore")).toBe("Explore");
   });
 });

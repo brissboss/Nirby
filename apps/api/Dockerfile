@@ -36,13 +36,18 @@ ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable
 
 # Copie toute la structure pnpm
-COPY --from=prod-deps /repo/pnpm-workspace.yaml /repo/package.json /repo/pnpm-lock.yaml /repo/
-COPY --from=prod-deps /repo/node_modules /repo/node_modules
-COPY --from=prod-deps /repo/apps/api/package.json ./package.json
-COPY --from=prod-deps /repo/apps/api/node_modules ./node_modules
-COPY --from=build /repo/apps/api/dist ./dist
-COPY --from=build /repo/apps/api/prisma ./prisma
-COPY --from=prod-deps /repo/apps/api/prisma.config.ts ./prisma.config.ts
+COPY --from=prod-deps --chown=node:node /repo/pnpm-workspace.yaml /repo/package.json /repo/pnpm-lock.yaml /repo/
+COPY --from=prod-deps --chown=node:node /repo/node_modules /repo/node_modules
+COPY --from=prod-deps --chown=node:node /repo/apps/api/package.json ./package.json
+COPY --from=prod-deps --chown=node:node /repo/apps/api/node_modules ./node_modules
+COPY --from=build --chown=node:node /repo/apps/api/dist ./dist
+COPY --from=build --chown=node:node /repo/apps/api/prisma ./prisma
+COPY --from=prod-deps --chown=node:node /repo/apps/api/prisma.config.ts ./prisma.config.ts
 
+RUN chown -R node:node /repo
+
+USER node
 EXPOSE 4000
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD wget -qO- http://127.0.0.1:4000/health > /dev/null || exit 1
 CMD ["node", "dist/index.js"]

@@ -35,7 +35,11 @@
   "privacy": {
     "title": "Privacy",
     "description": "Manage your session and sensitive settings.",
-    "comingSoon": "More privacy options are coming soon."
+    "exportTitle": "Download your data",
+    "exportDescription": "Export a JSON copy of your profile, places, lists and collaborations (GDPR data portability).",
+    "exportDownload": "Download my data",
+    "exportSuccess": "Your data has been downloaded",
+    "exportError": "Error when exporting your data"
   },
   "changePassword": {
     "title": "Change password",

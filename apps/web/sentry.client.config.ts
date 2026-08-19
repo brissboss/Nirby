@@ -1,5 +1,3 @@
-import * as Sentry from "@sentry/nextjs";
+import { initClientSentryIfAllowed } from "./src/lib/consent/apply-sentry-consent";
 
-import { sentrySharedOptions } from "./sentry.shared";
-
-Sentry.init(sentrySharedOptions);
+initClientSentryIfAllowed();

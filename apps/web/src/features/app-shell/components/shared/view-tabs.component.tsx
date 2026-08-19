@@ -17,7 +17,11 @@ export function ViewTabs({ value, onChange, mobile = false }: ViewTabsProps) {
   const t = useTranslations("shell");
 
   return (
-    <nav className={cn("grid grid-cols-3 gap-2 px-4 pb-4", mobile && "px-0 pb-0")}>
+    // URL-driven app views (`?view=`), not in-page tabpanels — use aria-current, not tablist.
+    <nav
+      aria-label={t("tabs.navLabel")}
+      className={cn("grid grid-cols-3 gap-2 px-4 pb-4", mobile && "px-0 pb-0")}
+    >
       {SHELL_VIEWS.map((item) => {
         const Icon = item.icon;
         const isActive = value === item.id;
@@ -26,6 +30,7 @@ export function ViewTabs({ value, onChange, mobile = false }: ViewTabsProps) {
           <button
             key={item.id}
             type="button"
+            aria-current={isActive ? "page" : undefined}
             onClick={() => onChange(item.id)}
             className={cn(
               "flex items-center justify-center gap-2 rounded-2xl px-3 py-2.5 text-sm font-semibold transition",

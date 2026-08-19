@@ -20,3 +20,9 @@ Nirby est une webapp « spatial IA » centrée sur la cartographie personnal
 - Interface front en React + Tailwind + shadcn/ui.
 - Backend actuel Express/Prisma/PostgreSQL (PostGIS) + Redis.
 - Projet de validation RNCP : stabilité, traçabilité et couverture fonctionnelle démontrables.
+- Conteneurs API et web en utilisateur non-root (`USER node`) avec `HEALTHCHECK` Docker, aligné sur le rôle DB `nirby_app` (moindre privilège ANSSI).
+- Droit à l’effacement (RGPD art. 17) : voir [gdpr-account-deletion.md](./gdpr-account-deletion.md).
+- Droit à la portabilité (RGPD art. 20) : voir [gdpr-data-export.md](./gdpr-data-export.md).
+- Transactions Prisma (écritures multi-étapes, rollback) : voir [prisma-transactions.md](./prisma-transactions.md).
+- Vérification d’email sur les routes d’écriture : voir [email-verification.md](./email-verification.md).
+- Pages légales `/privacy` et `/mentions` (bandeau d’exemple assumé), liées depuis l’auth et le profil.
