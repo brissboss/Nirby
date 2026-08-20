@@ -56,7 +56,7 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center p-6 bg-background relative">
+    <div className="relative flex w-full flex-1 flex-col items-center justify-center bg-background p-6">
       <Button variant="ghost" className="absolute top-11 left-4" onClick={() => router.back()}>
         <ArrowLeft className="w-4 h-4" />
         {t("common.buttons.back")}

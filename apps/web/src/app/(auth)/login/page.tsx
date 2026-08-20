@@ -87,7 +87,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center p-6 bg-background relative">
+    <div className="relative flex w-full flex-1 flex-col items-center justify-center bg-background p-6">
       {needsVerification && (
         <Button
           variant="ghost"
