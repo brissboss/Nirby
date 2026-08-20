@@ -50,7 +50,6 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
           </blockquote>
         </div>
       </div>
-
       <div className="relative z-0 flex min-h-screen flex-col bg-background">
         <main id={MAIN_CONTENT_ID} tabIndex={-1} className="flex min-h-0 flex-1 flex-col">
           {children}
