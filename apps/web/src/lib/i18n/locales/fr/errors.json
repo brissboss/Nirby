@@ -11,6 +11,7 @@
     "PASSWORD_SAME": "Le nouveau mot de passe ne peut pas être le même que le mot de passe actuel",
     "INVALID_CREDENTIALS": "Votre email ou mot de passe est incorrect",
     "INVALID_REFRESH_TOKEN": "Le token de rafraîchissement est invalide",
+    "REFRESH_TOKEN_REQUIRED": "Le token de rafraîchissement est requis",
     "TOKEN_REQUIRED": "Le lien de vérification est requis",
     "TOKEN_EXPIRED": "Le lien de vérification a expiré, veuillez en générer un nouveau",
     "EMAIL_ALREADY_VERIFIED": "Votre email est déjà vérifié",

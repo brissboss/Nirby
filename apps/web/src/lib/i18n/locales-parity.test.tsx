@@ -1,20 +1,28 @@
 import { createTranslator } from "next-intl";
 import { describe, expect, it } from "vitest";
 
+import enAuth from "./locales/en/auth.json";
 import enCommon from "./locales/en/common.json";
 import enConsent from "./locales/en/consent.json";
+import enErrors from "./locales/en/errors.json";
 import enExplore from "./locales/en/explore.json";
 import enLegal from "./locales/en/legal.json";
 import enLists from "./locales/en/lists.json";
 import enPoi from "./locales/en/poi.json";
+import enProfile from "./locales/en/profile.json";
 import enShell from "./locales/en/shell.json";
+import enUpload from "./locales/en/upload.json";
+import frAuth from "./locales/fr/auth.json";
 import frCommon from "./locales/fr/common.json";
 import frConsent from "./locales/fr/consent.json";
+import frErrors from "./locales/fr/errors.json";
 import frExplore from "./locales/fr/explore.json";
 import frLegal from "./locales/fr/legal.json";
 import frLists from "./locales/fr/lists.json";
 import frPoi from "./locales/fr/poi.json";
+import frProfile from "./locales/fr/profile.json";
 import frShell from "./locales/fr/shell.json";
+import frUpload from "./locales/fr/upload.json";
 
 type JsonObject = Record<string, unknown>;
 
@@ -153,6 +161,20 @@ const NEW_CONSENT_KEYS = [
   "manage",
 ] as const;
 
+const NEW_ERRORS_KEYS = [
+  "default",
+  "api.REFRESH_TOKEN_REQUIRED",
+  "api.INVALID_REFRESH_TOKEN",
+  "api.UNAUTHORIZED",
+  "validation.formErrors.requiredEmail",
+] as const;
+
+const NEW_AUTH_KEYS = ["login.title", "signup.title", "required.login"] as const;
+
+const NEW_PROFILE_KEYS = ["hub.title", "update.success", "sections.privacy"] as const;
+
+const NEW_UPLOAD_KEYS = ["uploadError", "fileTooLarge"] as const;
+
 function expectNonEmptyStrings(obj: JsonObject, keys: readonly string[], locale: string) {
   for (const key of keys) {
     const value = getValue(obj, key);
@@ -190,6 +212,22 @@ describe("locales parity", () => {
     expectLocaleParity(enConsent, frConsent, "consent");
   });
 
+  it("auth.json has the same keys in en and fr", () => {
+    expectLocaleParity(enAuth, frAuth, "auth");
+  });
+
+  it("errors.json has the same keys in en and fr", () => {
+    expectLocaleParity(enErrors, frErrors, "errors");
+  });
+
+  it("profile.json has the same keys in en and fr", () => {
+    expectLocaleParity(enProfile, frProfile, "profile");
+  });
+
+  it("upload.json has the same keys in en and fr", () => {
+    expectLocaleParity(enUpload, frUpload, "upload");
+  });
+
   it("new lists keys are non-empty strings in both locales", () => {
     expectNonEmptyStrings(enLists, NEW_LISTS_KEYS, "en");
     expectNonEmptyStrings(frLists, NEW_LISTS_KEYS, "fr");
@@ -223,6 +261,26 @@ describe("locales parity", () => {
   it("new consent keys are non-empty strings in both locales", () => {
     expectNonEmptyStrings(enConsent, NEW_CONSENT_KEYS, "en");
     expectNonEmptyStrings(frConsent, NEW_CONSENT_KEYS, "fr");
+  });
+
+  it("new errors keys are non-empty strings in both locales", () => {
+    expectNonEmptyStrings(enErrors, NEW_ERRORS_KEYS, "en");
+    expectNonEmptyStrings(frErrors, NEW_ERRORS_KEYS, "fr");
+  });
+
+  it("new auth keys are non-empty strings in both locales", () => {
+    expectNonEmptyStrings(enAuth, NEW_AUTH_KEYS, "en");
+    expectNonEmptyStrings(frAuth, NEW_AUTH_KEYS, "fr");
+  });
+
+  it("new profile keys are non-empty strings in both locales", () => {
+    expectNonEmptyStrings(enProfile, NEW_PROFILE_KEYS, "en");
+    expectNonEmptyStrings(frProfile, NEW_PROFILE_KEYS, "fr");
+  });
+
+  it("new upload keys are non-empty strings in both locales", () => {
+    expectNonEmptyStrings(enUpload, NEW_UPLOAD_KEYS, "en");
+    expectNonEmptyStrings(frUpload, NEW_UPLOAD_KEYS, "fr");
   });
 
   it("does not keep the removed detail.poisComingSoon key", () => {

@@ -12,30 +12,12 @@ jobs:
       run_api: ${{ steps.changes.outputs.run_api }}
       run_web: ${{ steps.changes.outputs.run_web }}
     steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - uses: dorny/paths-filter@v3
-        id: filter
-        with:
-          filters: |
-            api:
-              - 'apps/api/**'
-            web:
-              - 'apps/web/**'
-            root:
-              - 'package.json'
-              - 'pnpm-lock.yaml'
-              - 'turbo.json'
-              - '.github/**'
-              - 'eslint.config.mjs'
-              - 'infra/**'
-
       - id: changes
         run: |
-          echo "run_api=${{ steps.filter.outputs.api == 'true' || steps.filter.outputs.root == 'true' }}" >> $GITHUB_OUTPUT
-          echo "run_web=${{ steps.filter.outputs.web == 'true' || steps.filter.outputs.root == 'true' }}" >> $GITHUB_OUTPUT
+          # Always run API and web tests. Path-filtered skips hid API regressions on
+          # web-only pushes to main/staging (ci-api skipped while the workflow stayed green).
+          echo "run_api=true" >> $GITHUB_OUTPUT
+          echo "run_web=true" >> $GITHUB_OUTPUT
 
   setup:
     runs-on: ubuntu-latest

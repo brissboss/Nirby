@@ -10,7 +10,7 @@ export default defineConfig({
       DATABASE_URL: "postgresql://nirby:nirby@localhost:5432/nirby_test",
       REDIS_URL: "redis://localhost:6379",
       PORT: "4000",
-      LOG_LEVEL: "error",
+      LOG_LEVEL: "fatal",
       NODE_ENV: "test",
       JWT_SECRET: "test-secret-min-32-characters-long-for-testing-only",
       ACCESS_TOKEN_TTL: "900",
