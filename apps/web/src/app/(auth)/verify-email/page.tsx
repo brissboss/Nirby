@@ -74,7 +74,7 @@ export default function VerifyEmailPage() {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center p-6 bg-background relative">
+    <div className="relative flex w-full flex-1 flex-col items-center justify-center bg-background p-6">
       <div className="w-full max-w-md lg:max-w-sm space-y-8 lg:space-y-6 text-center">
         {state === "loading" && (
           <>
