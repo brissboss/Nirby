@@ -30,10 +30,12 @@ export default defineConfig({
         "**/lib/auth/index.ts",
       ],
       thresholds: {
-        lines: 36,
-        functions: 30,
-        branches: 26,
-        statements: 36,
+        // Floor ~2–3 points under the Aug 2026 measured run (NIR-110):
+        // 85.34% lines / 83.55% functions / 74.88% branches / 84.26% statements.
+        lines: 82,
+        functions: 80,
+        branches: 72,
+        statements: 81,
       },
     },
   },

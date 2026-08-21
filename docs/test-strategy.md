@@ -50,7 +50,7 @@ Complète les slides Figma et sert de base si le jury demande les plans de tests
 
 - Déclenchement : **pull request** et **push** sur `main` / `staging`.
 - Job `ci-api` : PostGIS 16, base `nirby_test`, migrations Prisma, Redis, secrets factices (`JWT_SECRET`, `GOOGLE_PLACES_API_KEY`, …), tests + couverture (seuils 70 %) + artifact `api-coverage-report`.
-- Job `ci-web` : tests + couverture (seuils 36 / 30 / 26) + assertions axe (login, listes, create POI) + artifact `web-coverage-report` + build de vérification.
+- Job `ci-web` : tests + couverture (seuils 82 / 80 / 72 / 81) + assertions axe (login, listes, create POI) + artifact `web-coverage-report` + build de vérification.
 - Job `e2e` : PostGIS 16 + Redis, migrations Prisma, Chromium, Playwright (login, session, CRUD liste, ajout POI) + artifact `playwright-report`.
 - Job `setup` : `pnpm lint` (dont `jsx-a11y` recommended sur `apps/web`).
 - Job `api-docker` : image API (`USER node`), health check HTTP + assert uid ≠ 0, scan OWASP ZAP Baseline (rapport artifact).
@@ -155,14 +155,19 @@ Ci-dessous : **extraits représentatifs** au format attendu par la checklist (en
 
 ### 6.5 Composants front critiques
 
-| Scénario                              | Entrée                          | Sortie attendue            | Résultat | Fichier                                                        |
-| ------------------------------------- | ------------------------------- | -------------------------- | -------- | -------------------------------------------------------------- |
-| Bouton édition masqué pour VIEWER     | `role: VIEWER` sur détail liste | pas de bouton edit         | ✅ Pass  | `apps/web/src/features/lists/views/lists-detail-view.test.tsx` |
-| Bouton suppression masqué pour VIEWER | `role: VIEWER`                  | pas de bouton delete       | ✅ Pass  | idem                                                           |
-| Bouton suppression visible pour OWNER | `role: OWNER`                   | bouton delete présent      | ✅ Pass  | idem                                                           |
-| État loading                          | API en pending                  | skeleton affiché           | ✅ Pass  | idem                                                           |
-| Liste introuvable                     | erreur `LIST_NOT_FOUND`         | message not found          | ✅ Pass  | idem                                                           |
-| Index listes vide                     | `lists: []`                     | empty state + CTA création | ✅ Pass  | `apps/web/src/features/lists/views/lists-index-view.test.tsx`  |
+| Scénario                              | Entrée                          | Sortie attendue            | Résultat | Fichier                                                                |
+| ------------------------------------- | ------------------------------- | -------------------------- | -------- | ---------------------------------------------------------------------- |
+| Bouton édition masqué pour VIEWER     | `role: VIEWER` sur détail liste | pas de bouton edit         | ✅ Pass  | `apps/web/src/features/lists/views/lists-detail-view.test.tsx`         |
+| Bouton suppression masqué pour VIEWER | `role: VIEWER`                  | pas de bouton delete       | ✅ Pass  | idem                                                                   |
+| Bouton suppression visible pour OWNER | `role: OWNER`                   | bouton delete présent      | ✅ Pass  | idem                                                                   |
+| État loading                          | API en pending                  | skeleton affiché           | ✅ Pass  | idem                                                                   |
+| Liste introuvable                     | erreur `LIST_NOT_FOUND`         | message not found          | ✅ Pass  | idem                                                                   |
+| Index listes vide                     | `lists: []`                     | empty state + CTA création | ✅ Pass  | `apps/web/src/features/lists/views/lists-index-view.test.tsx`          |
+| AuthGate anonyme                      | `user === null`                 | prompt connexion           | ✅ Pass  | `apps/web/src/features/auth/components/auth-gate.component.test.tsx`   |
+| Nouveau mot de passe = ancien         | mêmes valeurs                   | erreur de validation       | ✅ Pass  | `apps/web/src/features/profile/forms/change-password-content.test.tsx` |
+| Suppression de compte                 | mot de passe valide             | `deleteAccount` + toast    | ✅ Pass  | `apps/web/src/features/profile/forms/delete-account-content.test.tsx`  |
+| Horaires POI ouverts                  | `isOpen: true`                  | `openingHours.openNow`     | ✅ Pass  | `apps/web/src/features/pois/components/poi-opening-hours.test.tsx`     |
+| Create POI desktop vs mobile          | `matchMedia.matches` false/true | Dialog / Drawer            | ✅ Pass  | `apps/web/src/features/pois/components/create-poi-dialog.test.tsx`     |
 
 ### 6.6 Sécurité
 
@@ -216,17 +221,17 @@ Les parcours vivent dans `apps/e2e/tests/`. User pré-vérifié via Prisma (`glo
 
 ### Volume
 
-- **91 fichiers de test Vitest** (`apps/api` 18 + `apps/web` 73), dont `security/owasp.test.ts`, plus **5 scénarios Playwright** (`apps/e2e/tests`).
+- **126 fichiers de test Vitest** (`apps/api` 18 + `apps/web` 108), dont `security/owasp.test.ts`, plus **5 scénarios Playwright** (`apps/e2e/tests`).
 - **CI verte** requise pour merge (lint + tests Vitest + e2e Playwright + smoke Docker).
 
 ### Couverture (seuils Vitest)
 
-| App | Seuils configurés                            | Commande                                                        |
-| --- | -------------------------------------------- | --------------------------------------------------------------- |
-| Web | ~36 % lignes, 30 % fonctions, 26 % branches  | `pnpm -C apps/web test:coverage` (exécuté en CI, artifact HTML) |
-| API | 70 % lignes, fonctions, branches, statements | `pnpm -C apps/api test:coverage` (exécuté en CI, artifact HTML) |
+| App | Seuils configurés                                           | Commande                                                        |
+| --- | ----------------------------------------------------------- | --------------------------------------------------------------- |
+| Web | 82 % lignes, 80 % fonctions, 72 % branches, 81 % statements | `pnpm -C apps/web test:coverage` (exécuté en CI, artifact HTML) |
+| API | 70 % lignes, fonctions, branches, statements                | `pnpm -C apps/api test:coverage` (exécuté en CI, artifact HTML) |
 
-Les seuils web sont volontairement modestes : exclusion des composants UI génériques et du code généré (OpenAPI). L’effort porte sur les **features métier** (listes, auth).
+Les seuils web sont un **plancher** ~2–3 points sous le constaté (août 2026 : ~85 % lignes / ~84 % statements / ~84 % fonctions / ~75 % branches). Exclusion des composants UI génériques et du code généré (OpenAPI). L’effort porte sur les **features métier** (auth, listes, profil, horaires POI) ; Mapbox reste hors périmètre.
 
 Constat local (août 2026) : API ~80 % statements / ~71 % branches. Le seuil CI à 70 % est un **plancher** : une régression en dessous fait échouer `ci-api`.
 
