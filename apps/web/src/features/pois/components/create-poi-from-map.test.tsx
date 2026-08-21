@@ -1,7 +1,7 @@
 import { act, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { CreatePoiFromMap } from "./create-poi-from-map";
+import { CreatePoiFromMap, CREATE_POI_AT_EVENT } from "./create-poi-from-map";
 
 import { useList } from "@/features/lists/hooks/use-list";
 
@@ -121,6 +121,22 @@ describe("CreatePoiFromMap", () => {
     expect(screen.queryByLabelText("fields.longitude")).not.toBeInTheDocument();
     expect(markerInstances).toHaveLength(1);
     expect(markerInstances[0].setLngLat).toHaveBeenCalledWith([2.3522, 48.8566]);
+  });
+
+  it("opens the create dialog from the e2e window event without a map gesture", () => {
+    render(<CreatePoiFromMap />);
+
+    act(() => {
+      window.dispatchEvent(
+        new CustomEvent(CREATE_POI_AT_EVENT, {
+          detail: { latitude: 48.85, longitude: 2.35 },
+        })
+      );
+    });
+
+    const dialog = screen.getByTestId("create-poi-dialog");
+    expect(dialog).toHaveAttribute("data-lat", "48.85");
+    expect(dialog).toHaveAttribute("data-lng", "2.35");
   });
 
   it("passes listId when the open list is editable", () => {
