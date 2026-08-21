@@ -16,23 +16,24 @@ Complète les slides Figma et sert de base si le jury demande les plans de tests
 
 ## 2. Pyramide et outils
 
-| Niveau                   | Outil                                | Périmètre                                                                  | Statut                   |
-| ------------------------ | ------------------------------------ | -------------------------------------------------------------------------- | ------------------------ |
-| Unitaires                | Vitest                               | Règles métier (`list-policy`, `poi-policy`), schémas, utils front          | ✅ Implémenté            |
-| Intégration API          | Vitest + Supertest                   | Routes Express, middleware auth, base PostgreSQL de test                   | ✅ Implémenté            |
-| Composants / pages front | Vitest + Testing Library + jsdom     | Vues listes, hooks, formulaires                                            | ✅ Implémenté            |
-| Accessibilité            | ESLint `jsx-a11y` recommended + axe  | Login, index/détail listes, create POI (jsdom ; pas les primitives shadcn) | ✅ Implémenté            |
-| Smoke / health check     | Docker + `curl` (CI) + `HEALTHCHECK` | Conteneurs API et web non-root, `/health` et `/` répondent                 | ✅ Implémenté            |
-| Sécurité (OWASP)         | Vitest + Supertest                   | Injection, IDOR, XSS stocké, upload malveillant                            | ✅ Implémenté            |
-| Audit dépendances (SCA)  | `pnpm audit` + Dependabot            | CVE dans `pnpm-lock.yaml`, PRs de mise à jour hebdomadaires                | ✅ Implémenté            |
-| DAST                     | OWASP ZAP Baseline (CI)              | Scan passif/actif sur l’API Docker en CI                                   | ✅ Implémenté            |
-| E2E                      | Playwright                           | Parcours utilisateur complets                                              | ⏳ Prévu, non implémenté |
+| Niveau                   | Outil                                | Périmètre                                                                  | Statut        |
+| ------------------------ | ------------------------------------ | -------------------------------------------------------------------------- | ------------- |
+| Unitaires                | Vitest                               | Règles métier (`list-policy`, `poi-policy`), schémas, utils front          | ✅ Implémenté |
+| Intégration API          | Vitest + Supertest                   | Routes Express, middleware auth, base PostgreSQL de test                   | ✅ Implémenté |
+| Composants / pages front | Vitest + Testing Library + jsdom     | Vues listes, hooks, formulaires                                            | ✅ Implémenté |
+| Accessibilité            | ESLint `jsx-a11y` recommended + axe  | Login, index/détail listes, create POI (jsdom ; pas les primitives shadcn) | ✅ Implémenté |
+| Smoke / health check     | Docker + `curl` (CI) + `HEALTHCHECK` | Conteneurs API et web non-root, `/health` et `/` répondent                 | ✅ Implémenté |
+| Sécurité (OWASP)         | Vitest + Supertest                   | Injection, IDOR, XSS stocké, upload malveillant                            | ✅ Implémenté |
+| Audit dépendances (SCA)  | `pnpm audit` + Dependabot            | CVE dans `pnpm-lock.yaml`, PRs de mise à jour hebdomadaires                | ✅ Implémenté |
+| DAST                     | OWASP ZAP Baseline (CI)              | Scan passif/actif sur l’API Docker en CI                                   | ✅ Implémenté |
+| E2E                      | Playwright (Chromium)                | Login, session (reload + logout), CRUD liste, ajout POI custom             | ✅ Implémenté |
 
 **Rapports de tests :**
 
-- **CI GitHub Actions** : [workflow `ci-cd.yaml`](../.github/workflows/ci-cd.yaml) — couverture bloquante API et web (`test:coverage`), artifacts HTML/JSON.
+- **CI GitHub Actions** : [workflow `ci-cd.yaml`](../.github/workflows/ci-cd.yaml) — couverture bloquante API et web (`test:coverage`), job `e2e` Playwright, artifacts HTML/JSON.
 - **Badge CI** : visible dans le [README](../README.md).
 - **Couverture locale** : `pnpm -C apps/web test:coverage` et `pnpm -C apps/api test:coverage`.
+- **E2E locale** : `pnpm test:e2e` (Playwright, hors `pnpm test` / Turbo).
 
 ---
 
@@ -43,12 +44,14 @@ Complète les slides Figma et sert de base si le jury demande les plans de tests
 - API : PostgreSQL `nirby_test`, Redis, variables définies dans `apps/api/vitest.config.ts`.
 - Web : jsdom, mocks Next.js (`next/navigation`, `next-intl`) et matchers axe (`vitest-axe`) dans `apps/web/src/test/setup.ts`.
 - Lancement : `pnpm test` (racine, via Turbo) ou `pnpm -C apps/api test` / `pnpm -C apps/web test`.
+- E2E : PostGIS + Redis sur `nirby_test` (pas la base de dev), API Express + Next.js via Playwright `webServer`, user `emailVerified` créé en `globalSetup`. Commande : `pnpm test:e2e`. Ports 3000/4000 doivent être libres (ou `reuseExistingServer` si la stack tourne déjà).
 
 ### CI (GitHub Actions)
 
 - Déclenchement : **pull request** et **push** sur `main` / `staging`.
 - Job `ci-api` : PostGIS 16, base `nirby_test`, migrations Prisma, Redis, secrets factices (`JWT_SECRET`, `GOOGLE_PLACES_API_KEY`, …), tests + couverture (seuils 70 %) + artifact `api-coverage-report`.
 - Job `ci-web` : tests + couverture (seuils 36 / 30 / 26) + assertions axe (login, listes, create POI) + artifact `web-coverage-report` + build de vérification.
+- Job `e2e` : PostGIS 16 + Redis, migrations Prisma, Chromium, Playwright (login, session, CRUD liste, ajout POI) + artifact `playwright-report`.
 - Job `setup` : `pnpm lint` (dont `jsx-a11y` recommended sur `apps/web`).
 - Job `api-docker` : image API (`USER node`), health check HTTP + assert uid ≠ 0, scan OWASP ZAP Baseline (rapport artifact).
 - Job `security-audit` : `pnpm audit --audit-level=high` (rapport artifact, non bloquant).
@@ -66,6 +69,8 @@ Chaque run CI recrée un environnement isolé ; les tests API nettoient les donn
 | Base dédiée `nirby_test`                            | Isolation dev / CI / prod                               |
 | `beforeEach` / `afterAll` + `prisma.*.deleteMany()` | Reset entre scénarios d’intégration                     |
 | Variables d’env de test                             | `vitest.config.ts` (API), env CI dans le workflow       |
+| User E2E unique + `emailVerified: true` (Prisma)    | `apps/e2e/global-setup.ts` ; teardown par email         |
+| `nirby.cookie-consent` (localStorage)               | `addInitScript` Playwright pour ne pas bloquer l’UI     |
 | Mocks front                                         | Router Next, i18n, thème (`apps/web/src/test/setup.ts`) |
 | Secrets factices                                    | JWT, clés API, Resend — jamais de secrets prod en CI    |
 
@@ -83,9 +88,9 @@ Chaque run CI recrée un environnement isolé ; les tests API nettoient les donn
 
 ### Hors périmètre (assumé)
 
-- Intégration **Mapbox** / rendu carte (mock ou non testé en E2E).
+- Intégration **Mapbox** / rendu carte (le formulaire POI est ouvert en e2e sans geste carte).
 - **UI cosmétique** (design system shadcn, styles).
-- **E2E Playwright** (prévu, pas encore en place).
+- Signup complet (token mail Resend) et i18n EN.
 - **Pentest manuel** complet (hors scope projet étudiant).
 
 ### Risque métier ciblé
@@ -193,14 +198,26 @@ Les scénarios ci-dessous couvrent les risques les plus pertinents pour Nirby (A
 
 **Mitigations code associées :** Prisma (requêtes paramétrées), Zod (validation entrées), Helmet + CORS (`server.ts`), cookies `httpOnly` / `sameSite: strict`, rate limiting auth.
 
+### 6.8 E2E Playwright
+
+Les parcours vivent dans `apps/e2e/tests/`. User pré-vérifié via Prisma (`globalSetup`) ; bandeau cookies contourné par `localStorage`. Hors v1 : rendu Mapbox / Google Places, signup mail, collaborateurs.
+
+| Scénario                     | Entrée                               | Sortie attendue                                                     | Résultat | Fichier                          |
+| ---------------------------- | ------------------------------------ | ------------------------------------------------------------------- | -------- | -------------------------------- |
+| Login mot de passe incorrect | email e2e, password `wrong-password` | toast « Erreur de connexion », reste `/login`                       | ✅ CI    | `apps/e2e/tests/auth.spec.ts`    |
+| Session JWT + logout         | login, reload, Profil → Déconnexion  | toujours connecté après reload ; « Connexion requise » après logout | ✅ CI    | `apps/e2e/tests/session.spec.ts` |
+| Login + création de liste    | user `emailVerified`, nom unique     | liste visible dans l’index                                          | ✅ CI    | `apps/e2e/tests/lists.spec.ts`   |
+| Suppression de liste         | liste créée via l’UI, dialog confirm | toast succès, liste absente de l’index                              | ✅ CI    | `apps/e2e/tests/lists.spec.ts`   |
+| Ajout d’un POI à une liste   | formulaire « Nouveau lieu » + liste  | toast « Lieu ajouté à la liste », nom visible dans le détail        | ✅ CI    | `apps/e2e/tests/pois.spec.ts`    |
+
 ---
 
 ## 7. Résultats et couverture
 
 ### Volume
 
-- **91 fichiers de test** (`apps/api` 18 + `apps/web` 73), dont `security/owasp.test.ts`.
-- **CI verte** requise pour merge (lint + tests + smoke Docker sur les chemins modifiés).
+- **91 fichiers de test Vitest** (`apps/api` 18 + `apps/web` 73), dont `security/owasp.test.ts`, plus **5 scénarios Playwright** (`apps/e2e/tests`).
+- **CI verte** requise pour merge (lint + tests Vitest + e2e Playwright + smoke Docker).
 
 ### Couverture (seuils Vitest)
 
@@ -229,20 +246,19 @@ _(Adapter la formulation à l’oral si le bug a été trouvé manuellement avan
 
 ## 8. Limites identifiées
 
-| Limite                                        | Impact                                                           | Piste d’amélioration                                           |
-| --------------------------------------------- | ---------------------------------------------------------------- | -------------------------------------------------------------- |
-| Pas d’E2E Playwright                          | Parcours multi-pages non automatisés                             | Ajouter 2–3 scénarios critiques (login → créer liste)          |
-| Tests sécurité limités à l’API                | XSS stocké testé en JSON, pas le rendu React / navigateur        | Tests composants ou E2E avec payload XSS sur le front          |
-| ZAP Baseline API uniquement                   | Le front Next.js n’est pas scanné en DAST                        | Étendre ZAP à `web-docker` ou scan staging périodique          |
-| ZAP / audit non bloquants en CI               | CVE et alertes DAST documentées sans empêcher le merge           | Corriger les CVE high, puis retirer `continue-on-error`        |
-| CVE dans dépendances transitives              | `pnpm audit` remonte des vulnérabilités (ex. `axios`)            | PRs Dependabot + overrides / mises à jour des packages parents |
-| Upload : validation MIME seulement            | Un binaire malveillant avec `Content-Type: image/jpeg` passerait | Ajouter une détection par magic bytes (ex. `file-type`)        |
-| Rate limiting non exercé en tests intégration | `NODE_ENV=test` désactive le blocage réel                        | Tests dédiés avec `NODE_ENV=production` ou tests de charge     |
-| CSRF / SSRF non couverts explicitement        | API stateless JWT ; proxy Google Places côté serveur             | Tests ciblés refresh cookie + validation stricte des URLs      |
-| Conteneurs : pas de drop de capabilities      | `USER node` + HEALTHCHECK suffisent pour le MVP ANSSI            | `cap_drop: ALL` Compose / distroless plus tard                 |
-| Monitoring prod                               | Health check CI + HEALTHCHECK image ; pas d’alerting 5xx         | Prometheus / alertes HTTP 5xx                                  |
-| Mapbox / carte                                | Non couvert par tests automatisés                                | Tests manuels ou E2E visuels                                   |
-| Pentest manuel absent                         | Pas d’audit humain ni de fuzzing avancé                          | Audit externe avant mise en prod réelle                        |
+| Limite                                        | Impact                                                           | Piste d’amélioration                                                   |
+| --------------------------------------------- | ---------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| Tests sécurité limités à l’API                | XSS stocké testé en JSON, pas le rendu React / navigateur        | Tests composants ou E2E avec payload XSS sur le front                  |
+| ZAP Baseline API uniquement                   | Le front Next.js n’est pas scanné en DAST                        | Étendre ZAP à `web-docker` ou scan staging périodique                  |
+| ZAP / audit non bloquants en CI               | CVE et alertes DAST documentées sans empêcher le merge           | Corriger les CVE high, puis retirer `continue-on-error`                |
+| CVE dans dépendances transitives              | `pnpm audit` remonte des vulnérabilités (ex. `axios`)            | PRs Dependabot + overrides / mises à jour des packages parents         |
+| Upload : validation MIME seulement            | Un binaire malveillant avec `Content-Type: image/jpeg` passerait | Ajouter une détection par magic bytes (ex. `file-type`)                |
+| Rate limiting non exercé en tests intégration | `NODE_ENV=test` désactive le blocage réel                        | Tests dédiés avec `NODE_ENV=production` ou tests de charge             |
+| CSRF / SSRF non couverts explicitement        | API stateless JWT ; proxy Google Places côté serveur             | Tests ciblés refresh cookie + validation stricte des URLs              |
+| Conteneurs : pas de drop de capabilities      | `USER node` + HEALTHCHECK suffisent pour le MVP ANSSI            | `cap_drop: ALL` Compose / distroless plus tard                         |
+| Monitoring prod                               | Health check CI + HEALTHCHECK image ; pas d’alerting 5xx         | Prometheus / alertes HTTP 5xx                                          |
+| Mapbox / carte                                | Geste carte (clic droit) non exercé en E2E ; le formulaire l’est | Tests manuels du geste ; e2e ouvre le dialog via `nirby:create-poi-at` |
+| Pentest manuel absent                         | Pas d’audit humain ni de fuzzing avancé                          | Audit externe avant mise en prod réelle                                |
 
 ---
 
@@ -263,12 +279,16 @@ pnpm audit --audit-level=high
 
 # Web avec couverture
 pnpm -C apps/web test:coverage
+
+# E2E Playwright (Chromium ; PostGIS + Redis sur nirby_test)
+pnpm test:e2e
 ```
 
 **Rapports CI :** GitHub → onglet _Actions_ → workflow _CI/CD_ :
 
 - job `ci-api` → logs + artifact `api-coverage-report` (`apps/api/coverage`) ;
 - job `ci-web` → logs + artifact `web-coverage-report` (`apps/web/coverage`) ;
+- job `e2e` → logs + artifact `playwright-report` ;
 - job `security-audit` → artifact `pnpm-audit-report` ;
 - job `api-docker` → artifact `zap-baseline-report` ;
 - onglet _Security_ → alertes **Dependabot**.

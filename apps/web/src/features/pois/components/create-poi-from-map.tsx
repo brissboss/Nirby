@@ -21,6 +21,9 @@ import { useList } from "@/features/lists/hooks/use-list";
 import { useMap } from "@/features/map/context";
 import { createPoiMarkerElement } from "@/features/map/utils/poi-marker-element";
 
+/** Dispatched by e2e to open the create-POI form without a Mapbox gesture. */
+export const CREATE_POI_AT_EVENT = "nirby:create-poi-at";
+
 /** Map gesture entry for custom POI create: right-click (desktop) / long-press (mobile). */
 export function CreatePoiFromMap() {
   const { map } = useMap();
@@ -36,6 +39,22 @@ export function CreatePoiFromMap() {
   }, []);
 
   useMapCreatePoiGesture(map as MapCreatePoiGestureMap | null, handlePoint);
+
+  useEffect(() => {
+    function onCreatePoiAt(event: Event) {
+      const detail = (event as CustomEvent<Partial<MapCreatePoiPoint>>).detail;
+      if (typeof detail?.latitude !== "number" || typeof detail?.longitude !== "number") {
+        return;
+      }
+      if (!Number.isFinite(detail.latitude) || !Number.isFinite(detail.longitude)) {
+        return;
+      }
+      setDraft({ latitude: detail.latitude, longitude: detail.longitude });
+    }
+
+    window.addEventListener(CREATE_POI_AT_EVENT, onCreatePoiAt);
+    return () => window.removeEventListener(CREATE_POI_AT_EVENT, onCreatePoiAt);
+  }, []);
 
   useEffect(() => {
     if (!map || !draft) {
