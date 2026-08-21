@@ -30,6 +30,10 @@ function createWrapper(queryClient: QueryClient) {
   };
 }
 
+function apiResponse(value: { data?: unknown; error?: unknown }) {
+  return value as Awaited<ReturnType<typeof getLists>>;
+}
+
 describe("useListsInfinite", () => {
   let queryClient: QueryClient;
 
@@ -50,9 +54,7 @@ describe("useListsInfinite", () => {
   });
 
   it("fetches the first page and exposes the next page param", async () => {
-    vi.mocked(getLists).mockResolvedValue({ data: page(1, 2) } as Awaited<
-      ReturnType<typeof getLists>
-    >);
+    vi.mocked(getLists).mockResolvedValue(apiResponse({ data: page(1, 2) }));
 
     const { result } = renderHook(() => useListsInfinite({ visibility: "PRIVATE" }), {
       wrapper: createWrapper(queryClient),
@@ -70,8 +72,8 @@ describe("useListsInfinite", () => {
 
   it("fetches the next page until totalPages is reached", async () => {
     vi.mocked(getLists)
-      .mockResolvedValueOnce({ data: page(1, 2) } as Awaited<ReturnType<typeof getLists>>)
-      .mockResolvedValueOnce({ data: page(2, 2) } as Awaited<ReturnType<typeof getLists>>);
+      .mockResolvedValueOnce(apiResponse({ data: page(1, 2) }))
+      .mockResolvedValueOnce(apiResponse({ data: page(2, 2) }));
 
     const { result } = renderHook(() => useListsInfinite(), {
       wrapper: createWrapper(queryClient),
@@ -97,9 +99,7 @@ describe("useListsInfinite", () => {
 
   it("throws API error when a page has no data", async () => {
     const apiError = { message: "Unauthorized" };
-    vi.mocked(getLists).mockResolvedValue({ error: apiError } as Awaited<
-      ReturnType<typeof getLists>
-    >);
+    vi.mocked(getLists).mockResolvedValue(apiResponse({ error: apiError }));
 
     const { result } = renderHook(() => useListsInfinite(), {
       wrapper: createWrapper(queryClient),

@@ -23,6 +23,10 @@ function createWrapper(queryClient: QueryClient) {
   };
 }
 
+function apiResponse(value: { data?: unknown; error?: unknown }) {
+  return value as Awaited<ReturnType<typeof getListById>>;
+}
+
 describe("useList", () => {
   let queryClient: QueryClient;
 
@@ -50,7 +54,7 @@ describe("useList", () => {
 
   it("fetches a list by id", async () => {
     const data = { list: { id: "list-1", name: "Paris" } };
-    vi.mocked(getListById).mockResolvedValue({ data } as Awaited<ReturnType<typeof getListById>>);
+    vi.mocked(getListById).mockResolvedValue(apiResponse({ data }));
 
     const { result } = renderHook(() => useList("list-1"), {
       wrapper: createWrapper(queryClient),
@@ -66,9 +70,7 @@ describe("useList", () => {
 
   it("throws API error when response has no data", async () => {
     const apiError = { message: "Not found" };
-    vi.mocked(getListById).mockResolvedValue({ error: apiError } as Awaited<
-      ReturnType<typeof getListById>
-    >);
+    vi.mocked(getListById).mockResolvedValue(apiResponse({ error: apiError }));
 
     const { result } = renderHook(() => useList("list-1"), {
       wrapper: createWrapper(queryClient),
