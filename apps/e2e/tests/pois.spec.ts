@@ -1,20 +1,31 @@
-import { seedListWithCustomPoi } from "../src/seed";
-import { readE2eUser } from "../src/user";
-
 import { expect, test } from "./fixtures";
-import { loginSuccessfully, openShellView } from "./helpers";
+import {
+  createListFromIndex,
+  loginSuccessfully,
+  openCreatePoiDialog,
+  openShellView,
+} from "./helpers";
 
 test.describe("pois", () => {
-  test("shows a seeded custom POI on a list without Mapbox", async ({ page }) => {
-    const user = readE2eUser();
+  test("creates a custom POI and adds it to a list", async ({ page }) => {
     const listName = `E2E POI list ${Date.now()}`;
     const poiName = `E2E Café ${Date.now()}`;
 
-    await seedListWithCustomPoi({ userId: user.id, listName, poiName });
     await loginSuccessfully(page);
-    await openShellView(page, "Listes");
+    await createListFromIndex(page, listName);
+    await openShellView(page, "Explorer");
 
-    await page.getByRole("button", { name: listName }).click();
+    await openCreatePoiDialog(page);
+
+    const dialog = page.getByRole("dialog", { name: "Nouveau lieu" });
+    await dialog.getByLabel("Nom").fill(poiName);
+    await dialog.getByRole("combobox", { name: "Liste" }).click();
+    await page.getByRole("option", { name: listName }).click();
+    await dialog.getByRole("button", { name: "Créer" }).click();
+
+    await expect(page.getByText("Lieu ajouté à la liste")).toBeVisible();
+    await page.getByRole("button", { name: "Voir la liste" }).click();
+
     await expect(page.getByRole("heading", { name: listName })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Lieux" })).toBeVisible();
     await expect(page.getByRole("heading", { name: poiName })).toBeVisible();

@@ -40,3 +40,15 @@ export async function createListFromIndex(page: Page, listName: string): Promise
   await page.getByRole("button", { name: "Créer", exact: true }).click();
   await expect(page.getByRole("button", { name: listName })).toBeVisible();
 }
+
+/** Opens the real create-POI dialog. Mapbox is not loaded in CI; this matches a map pick. */
+export async function openCreatePoiDialog(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    window.dispatchEvent(
+      new CustomEvent("nirby:create-poi-at", {
+        detail: { latitude: 48.8566, longitude: 2.3522 },
+      })
+    );
+  });
+  await expect(page.getByRole("dialog", { name: "Nouveau lieu" })).toBeVisible();
+}
