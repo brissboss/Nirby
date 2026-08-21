@@ -19,11 +19,6 @@ export default async function MentionsPage() {
   return (
     <div className="bg-background text-foreground min-h-screen">
       <main id={MAIN_CONTENT_ID} tabIndex={-1} className="mx-auto max-w-2xl px-4 py-10 sm:py-14">
-        <p className="text-muted-foreground mb-8 rounded-lg border border-border bg-muted/30 px-4 py-3 text-sm">
-          <strong className="text-foreground">{t("disclaimer.title")}</strong> —{" "}
-          {t("disclaimer.mentions")}
-        </p>
-
         <header className="mb-10">
           <h1 className="font-display text-3xl font-semibold tracking-tight">
             {t("mentions.title")}
@@ -37,13 +32,7 @@ export default async function MentionsPage() {
             <p>
               <strong>{t("mentions.s1Name")}</strong>
               <br />
-              {t("mentions.s1Capital")}
-              <br />
-              {t("mentions.s1Rcs")}
-              <br />
-              {t("mentions.s1Address")}
-              <br />
-              {t("mentions.s1RepLabel")} <strong>{t("mentions.s1Rep")}</strong>
+              {t("mentions.s1Status")}
               <br />
               {t("mentions.s1Contact")}{" "}
               <a
@@ -66,9 +55,20 @@ export default async function MentionsPage() {
             <p>
               <strong>{t("mentions.s3Host")}</strong>
               <br />
+              {t("mentions.s3Legal")}
+              <br />
               {t("mentions.s3Address")}
               <br />
-              <span className="text-muted-foreground">{t("mentions.s3Site")}</span>
+              {t("mentions.s3Datacenter")}
+              <br />
+              <a
+                className="text-primary underline underline-offset-4 hover:no-underline"
+                href={t("mentions.s3Site")}
+                rel="noopener noreferrer"
+                target="_blank"
+              >
+                {t("mentions.s3Site")}
+              </a>
             </p>
           </section>
 
