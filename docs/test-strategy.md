@@ -26,7 +26,7 @@ Complète les slides Figma et sert de base si le jury demande les plans de tests
 | Sécurité (OWASP)         | Vitest + Supertest                   | Injection, IDOR, XSS stocké, upload malveillant                            | ✅ Implémenté |
 | Audit dépendances (SCA)  | `pnpm audit` + Dependabot            | CVE dans `pnpm-lock.yaml`, PRs de mise à jour hebdomadaires                | ✅ Implémenté |
 | DAST                     | OWASP ZAP Baseline (CI)              | Scan passif/actif sur l’API Docker en CI                                   | ✅ Implémenté |
-| E2E                      | Playwright (Chromium)                | Login (échec + succès) et création de liste                                | ✅ Implémenté |
+| E2E                      | Playwright (Chromium)                | Login, session (reload + logout), CRUD liste, POI custom seedé             | ✅ Implémenté |
 
 **Rapports de tests :**
 
@@ -51,7 +51,7 @@ Complète les slides Figma et sert de base si le jury demande les plans de tests
 - Déclenchement : **pull request** et **push** sur `main` / `staging`.
 - Job `ci-api` : PostGIS 16, base `nirby_test`, migrations Prisma, Redis, secrets factices (`JWT_SECRET`, `GOOGLE_PLACES_API_KEY`, …), tests + couverture (seuils 70 %) + artifact `api-coverage-report`.
 - Job `ci-web` : tests + couverture (seuils 36 / 30 / 26) + assertions axe (login, listes, create POI) + artifact `web-coverage-report` + build de vérification.
-- Job `e2e` : PostGIS 16 + Redis, migrations Prisma, Chromium, Playwright (login + création de liste) + artifact `playwright-report`.
+- Job `e2e` : PostGIS 16 + Redis, migrations Prisma, Chromium, Playwright (login, session, CRUD liste, POI seedé) + artifact `playwright-report`.
 - Job `setup` : `pnpm lint` (dont `jsx-a11y` recommended sur `apps/web`).
 - Job `api-docker` : image API (`USER node`), health check HTTP + assert uid ≠ 0, scan OWASP ZAP Baseline (rapport artifact).
 - Job `security-audit` : `pnpm audit --audit-level=high` (rapport artifact, non bloquant).
@@ -200,12 +200,15 @@ Les scénarios ci-dessous couvrent les risques les plus pertinents pour Nirby (A
 
 ### 6.8 E2E Playwright
 
-Les parcours vivent dans `apps/e2e/tests/`. User pré-vérifié via Prisma (`globalSetup`) ; bandeau cookies contourné par `localStorage`. Hors v1 : Mapbox, signup mail, collaborateurs.
+Les parcours vivent dans `apps/e2e/tests/`. User pré-vérifié via Prisma (`globalSetup`) ; bandeau cookies contourné par `localStorage`. Hors v1 : Mapbox / geste carte, signup mail, collaborateurs.
 
-| Scénario                     | Entrée                               | Sortie attendue                               | Résultat | Fichier                        |
-| ---------------------------- | ------------------------------------ | --------------------------------------------- | -------- | ------------------------------ |
-| Login mot de passe incorrect | email e2e, password `wrong-password` | toast « Erreur de connexion », reste `/login` | ✅ CI    | `apps/e2e/tests/auth.spec.ts`  |
-| Login + création de liste    | user `emailVerified`, nom unique     | liste visible dans l’index                    | ✅ CI    | `apps/e2e/tests/lists.spec.ts` |
+| Scénario                     | Entrée                               | Sortie attendue                                                     | Résultat | Fichier                          |
+| ---------------------------- | ------------------------------------ | ------------------------------------------------------------------- | -------- | -------------------------------- |
+| Login mot de passe incorrect | email e2e, password `wrong-password` | toast « Erreur de connexion », reste `/login`                       | ✅ CI    | `apps/e2e/tests/auth.spec.ts`    |
+| Session JWT + logout         | login, reload, Profil → Déconnexion  | toujours connecté après reload ; « Connexion requise » après logout | ✅ CI    | `apps/e2e/tests/session.spec.ts` |
+| Login + création de liste    | user `emailVerified`, nom unique     | liste visible dans l’index                                          | ✅ CI    | `apps/e2e/tests/lists.spec.ts`   |
+| Suppression de liste         | liste créée via l’UI, dialog confirm | toast succès, liste absente de l’index                              | ✅ CI    | `apps/e2e/tests/lists.spec.ts`   |
+| POI custom dans une liste    | POI seedé Prisma (pas Mapbox)        | nom du lieu visible dans le détail                                  | ✅ CI    | `apps/e2e/tests/pois.spec.ts`    |
 
 ---
 
@@ -213,7 +216,7 @@ Les parcours vivent dans `apps/e2e/tests/`. User pré-vérifié via Prisma (`glo
 
 ### Volume
 
-- **91 fichiers de test Vitest** (`apps/api` 18 + `apps/web` 73), dont `security/owasp.test.ts`, plus **2 specs Playwright** (`apps/e2e/tests`).
+- **91 fichiers de test Vitest** (`apps/api` 18 + `apps/web` 73), dont `security/owasp.test.ts`, plus **5 scénarios Playwright** (`apps/e2e/tests`).
 - **CI verte** requise pour merge (lint + tests Vitest + e2e Playwright + smoke Docker).
 
 ### Couverture (seuils Vitest)
