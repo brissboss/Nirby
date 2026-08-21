@@ -1,16 +1,14 @@
 import { readE2eUser } from "../src/user";
 
 import { expect, test } from "./fixtures";
+import { fillLoginForm } from "./helpers";
 
 test.describe("lists", () => {
   test("logs in and creates a list", async ({ page }) => {
     const user = readE2eUser();
     const listName = `E2E ${Date.now()}`;
 
-    await page.goto("/login");
-    await page.getByLabel("Email").fill(user.email);
-    await page.getByLabel("Mot de passe").fill(user.password);
-    await page.getByRole("button", { name: "Se connecter" }).click();
+    await fillLoginForm(page, user.email, user.password);
 
     await expect(page.getByRole("navigation", { name: "Navigation principale" })).toBeVisible();
 

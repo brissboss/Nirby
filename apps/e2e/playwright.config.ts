@@ -26,6 +26,9 @@ export default defineConfig({
   use: {
     baseURL: webUrl,
     locale: "fr-FR",
+    extraHTTPHeaders: {
+      "Accept-Language": "fr",
+    },
     trace: "on-first-retry",
     screenshot: "only-on-failure",
     video: "retain-on-failure",
@@ -46,13 +49,16 @@ export default defineConfig({
       env: mergeEnv(apiEnv),
     },
     {
-      command: isCi ? "pnpm start" : "pnpm build && pnpm start",
+      command: isCi
+        ? "bash ../e2e/scripts/start-web.sh"
+        : "pnpm build && bash ../e2e/scripts/start-web.sh",
       cwd: path.join(repoRoot, "apps/web"),
       url: webUrl,
       reuseExistingServer: !isCi,
       timeout: 180_000,
       env: mergeEnv({
         NODE_ENV: "production",
+        HOSTNAME: "127.0.0.1",
         PORT: webPort,
         NEXT_PUBLIC_API_URL: apiUrl,
         NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN:

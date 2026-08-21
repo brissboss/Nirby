@@ -3,6 +3,12 @@ import { test as base } from "@playwright/test";
 const CONSENT_STORAGE_KEY = "nirby.cookie-consent";
 
 export const test = base.extend({
+  context: async ({ context, baseURL }, use) => {
+    if (baseURL) {
+      await context.addCookies([{ name: "NEXT_LOCALE", value: "fr", url: baseURL }]);
+    }
+    await use(context);
+  },
   page: async ({ page }, use) => {
     await page.addInitScript((key: string) => {
       window.localStorage.setItem(
