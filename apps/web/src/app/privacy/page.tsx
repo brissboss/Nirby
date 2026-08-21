@@ -19,11 +19,6 @@ export default async function PrivacyPage() {
   return (
     <div className="bg-background text-foreground min-h-screen">
       <main id={MAIN_CONTENT_ID} tabIndex={-1} className="mx-auto max-w-2xl px-4 py-10 sm:py-14">
-        <p className="text-muted-foreground mb-8 rounded-lg border border-border bg-muted/30 px-4 py-3 text-sm">
-          <strong className="text-foreground">{t("disclaimer.title")}</strong> —{" "}
-          {t("disclaimer.privacy")}
-        </p>
-
         <header className="mb-10">
           <h1 className="font-display text-3xl font-semibold tracking-tight">
             {t("privacy.title")}
@@ -70,6 +65,15 @@ export default async function PrivacyPage() {
           <section className="space-y-3">
             <h2 className="font-display text-lg font-semibold">{t("privacy.s6Title")}</h2>
             <p>{t("privacy.s6Body")}</p>
+            <ul className="list-disc space-y-2 pl-5">
+              <li>{t("privacy.s6Ovh")}</li>
+              <li>{t("privacy.s6Aws")}</li>
+              <li>{t("privacy.s6Resend")}</li>
+              <li>{t("privacy.s6Mapbox")}</li>
+              <li>{t("privacy.s6Google")}</li>
+              <li>{t("privacy.s6Sentry")}</li>
+            </ul>
+            <p>{t("privacy.s6Transfers")}</p>
           </section>
 
           <section className="space-y-3">
@@ -88,6 +92,7 @@ export default async function PrivacyPage() {
                 ),
               })}
             </p>
+            <p>{t("privacy.s7Product")}</p>
           </section>
 
           <section className="space-y-3">
