@@ -104,13 +104,13 @@ const NEW_COMMON_KEYS = [
 ] as const;
 
 const NEW_LEGAL_KEYS = [
-  "disclaimer.title",
-  "disclaimer.privacy",
-  "disclaimer.mentions",
   "privacy.metaTitle",
   "privacy.title",
   "privacy.s6Body",
+  "privacy.s6Ovh",
+  "privacy.s6Transfers",
   "privacy.s7Body",
+  "privacy.s7Product",
   "privacy.s9Title",
   "privacy.s9Body",
   "privacy.s9Necessary",
@@ -118,7 +118,10 @@ const NEW_LEGAL_KEYS = [
   "privacy.s9Sentry",
   "mentions.metaTitle",
   "mentions.title",
+  "mentions.s1Status",
   "mentions.s3Body",
+  "mentions.s3Legal",
+  "mentions.s3Datacenter",
   "mentions.s5Body",
 ] as const;
 
@@ -319,7 +322,7 @@ describe("message resolution", () => {
 
     expect(tLegal("privacy.title")).toBe("Privacy policy");
     expect(tLegal("mentions.title")).toBe("Legal notice");
-    expect(tLegal("disclaimer.title")).toBe("Sample content");
+    expect(tLegal("mentions.s1Name")).toBe("Théo Brissiaud");
     expect(tLegal("privacy.s9Title")).toBe("9. Cookies and trackers");
   });
 
