@@ -50,8 +50,8 @@ export default defineConfig({
     },
     {
       command: isCi
-        ? "bash ../e2e/scripts/start-web.sh"
-        : "pnpm build && bash ../e2e/scripts/start-web.sh",
+        ? `bash ${JSON.stringify(path.join(repoRoot, "apps/e2e/scripts/start-web.sh"))}`
+        : `pnpm build && bash ${JSON.stringify(path.join(repoRoot, "apps/e2e/scripts/start-web.sh"))}`,
       cwd: path.join(repoRoot, "apps/web"),
       url: webUrl,
       reuseExistingServer: !isCi,
