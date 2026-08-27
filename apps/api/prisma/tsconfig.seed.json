@@ -5,11 +5,11 @@
     "moduleResolution": "Node",
     "strict": true,
     "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
-    "sourceMap": true,
-    "noEmit": true,
+    "noEmit": false,
+    "rootDir": ".",
+    "outDir": "../dist/prisma",
     "types": ["node"]
   },
-  "include": ["src/**/*.ts", "prisma.config.ts", "prisma/seed.ts", "prisma/seed-guard.ts"]
+  "include": ["seed.ts", "seed-guard.ts"]
 }
