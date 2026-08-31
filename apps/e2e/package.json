@@ -8,8 +8,8 @@
     "lint": "eslint ."
   },
   "devDependencies": {
-    "@playwright/test": "1.55.1",
-    "@types/node": "^22.7.4",
-    "typescript": "^5.9.3"
+    "@playwright/test": "1.62.1",
+    "@types/node": "^26.4.0",
+    "typescript": "^7.0.2"
   }
 }
