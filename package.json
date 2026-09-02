@@ -42,6 +42,18 @@
     "swagger-jsdoc": "^6.2.8"
   },
   "pnpm": {
+    "onlyBuiltDependencies": [
+      "@parcel/watcher",
+      "@prisma/client",
+      "@prisma/engines",
+      "@sentry/cli",
+      "@swc/core",
+      "bcrypt",
+      "esbuild",
+      "prisma",
+      "sharp",
+      "unrs-resolver"
+    ],
     "overrides": {
       "axios": ">=1.16.0",
       "jws": ">=3.2.3",
