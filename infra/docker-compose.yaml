@@ -1,6 +1,6 @@
 services:
   minio:
-    image: minio/minio
+    image: quay.io/minio/minio:latest
     ports:
       - "9000:9000"
       - "9001:9001"
@@ -12,7 +12,7 @@ services:
       - minio_data:/data
 
   mc-init:
-    image: minio/mc:latest
+    image: quay.io/minio/mc:latest
     depends_on:
       - minio
     entrypoint: /bin/sh
